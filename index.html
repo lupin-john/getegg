@@ -2101,8 +2101,21 @@ function createBackground(scene) {
     w.castShadow = true; w.receiveShadow = true;
     return w;
   }
-  scene.add(makeStep(-corridorX, -roomX, SAFE_START));
-  scene.add(makeStep(corridorX, roomX, SAFE_START));
+  // 복도→안전구역 전환 모서리 벽: 복도 폭과 안전구역 폭의 차이를 막아줌
+  // ROOM_EXTRA > 0이면(지금은 10) 복도 끝 양쪽에 'ㄷ'자 막음 벽이 필요
+  if (ROOM_WIDTH > PATH_WIDTH + 0.1) {
+    // corridorX와 roomX 사이 구간을 채우는 벽
+    const stepW = roomX - corridorX;
+    const makeTransWall = (sideSign) => {
+      const mx = sideSign * (corridorX + stepW / 2);
+      const w = new THREE.Mesh(new THREE.BoxGeometry(stepW, WALL_HEIGHT, WALL_THICK), wallMat);
+      w.position.set(mx, WALL_HEIGHT / 2, SAFE_START);
+      w.castShadow = true; w.receiveShadow = true;
+      return w;
+    };
+    scene.add(makeTransWall(-1));
+    scene.add(makeTransWall(1));
+  }
 
   // 안전구역 울타리
   const postMat = new THREE.MeshLambertMaterial({ color: 0x8a6a45 });
@@ -2570,12 +2583,14 @@ function createBackground(scene) {
     });
     addEventListener("keyup", e => { keys[e.key.toLowerCase()] = false; });
 
+    let _boxHelper = null, _highlightedGroup = null;   // 알 하이라이트(흰 테두리)
+
     let camYaw = Math.PI, camPitch = 0.22, dist = 4.2;
 
     renderer.domElement.addEventListener("wheel", e => {
       e.preventDefault();
       if (e.ctrlKey) {
-        dist = Math.max(1.2, Math.min(12, dist + e.deltaY * 0.01));
+        dist = Math.max(1.2, Math.min(12, dist + e.deltaY * 0.04));
       } else {
         camYaw -= e.deltaX * 0.003;
         camPitch = Math.max(-0.9, Math.min(1.1, camPitch + e.deltaY * 0.002));
@@ -2617,7 +2632,7 @@ function createBackground(scene) {
         lastMidX = m.x; lastMidY = m.y;
 
         const d = touchDist(e.touches[0], e.touches[1]);
-        dist = Math.max(1.2, Math.min(12, dist - (d - lastPinchDist) * 0.01));
+        dist = Math.max(1.2, Math.min(12, dist - (d - lastPinchDist) * 0.05));
         lastPinchDist = d;
       }
       e.preventDefault();
@@ -2703,8 +2718,20 @@ function createBackground(scene) {
       // 알은 rig.carryMount에 붙어 있어서 캐릭터 애니메이션이 알아서 처리
 
       // F 프롬프트: 가까운 알이 있을 때만 표시
-      const showPickup = !carriedEgg && !!findNearestEgg();
-      pickupPrompt.style.display = showPickup ? 'block' : 'none';
+      // 가장 가까운 알 찾기 + 하이라이트(흰 테두리) 업데이트
+      const nearTarget = !carriedEgg ? findNearestEgg() : null;
+      const nearEggGroup = nearTarget ? nearTarget.e.group : null;
+      if (nearEggGroup !== _highlightedGroup) {
+        if (_boxHelper) { scene.remove(_boxHelper); _boxHelper = null; }
+        _highlightedGroup = nearEggGroup;
+        if (nearEggGroup) {
+          _boxHelper = new THREE.BoxHelper(nearEggGroup, 0xffffff);
+          _boxHelper.material.linewidth = 2;
+          scene.add(_boxHelper);
+        }
+      }
+      if (_boxHelper) _boxHelper.update();
+      pickupPrompt.style.display = nearTarget ? 'block' : 'none';
       dropPrompt.style.display = carriedEgg ? 'block' : 'none';
 
       // 현재 플레이어가 위치한 생물 바이옴 구역 확인 및 하늘/안개 색상 부드럽게 전환
