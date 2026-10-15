@@ -1988,14 +1988,177 @@ function createBackground(scene) {
     const bg = createBackground(scene);
 
     // ---- 플레이어 캐릭터 색 & GLTF 로더 ----
-    const C = { skin: 0xf0c09a, shirt: 0xe8464b, shorts: 0x2f3f6e, shoe: 0xf5f5f5, sole: 0x333333, hair: 0x3a2614 };
-    const MODEL_URLS = [
-      "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/models/gltf/Xbot.glb",
-      "https://threejs.org/examples/models/gltf/Xbot.glb"
-    ];
-    let mixer = null, character = null;
-    const actions = {};
-    const loader = new THREE.GLTFLoader();
+    // ---- 블록형 로우폴리 사람 캐릭터 (원본 뷰어에서 그대로 이식) ----
+    let character = null;  // rig.root를 character로 씀
+
+    // damp 보간 함수
+    function damp(curr, target, lambda, dt) {
+      return THREE.MathUtils.lerp(curr, target, 1 - Math.exp(-lambda * dt));
+    }
+
+    const humanMat = (color, rough = 0.65) =>
+      new THREE.MeshStandardMaterial({ color, roughness: rough, flatShading: true });
+    const mSkin = humanMat(0xfbbf98, 0.6), mHair = humanMat(0x3b2314, 0.75),
+          mShirt = humanMat(0x0ea5e9, 0.65), mShirtD = humanMat(0x0284c7, 0.65),
+          mPants = humanMat(0x1e3a8a, 0.7), mShoe = humanMat(0x334155, 0.6),
+          mSole = humanMat(0xe2e8f0, 0.7);
+
+    function hJoint(name, x, y, z, parent) {
+      const g = new THREE.Group(); g.name = name;
+      g.position.set(x, y, z); if (parent) parent.add(g); return g;
+    }
+    function hBox(w, h, d, m, x, y, z, parent) {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+      mesh.position.set(x, y, z); mesh.castShadow = true; mesh.receiveShadow = true;
+      if (parent) parent.add(mesh); return mesh;
+    }
+
+    const rig = {};
+    rig.root = hJoint('Root', 0, 0.96, 0, scene);
+    rig.pelvis = hJoint('Pelvis', 0, 0, 0, rig.root);
+    hBox(0.50, 0.18, 0.28, mPants, 0, 0.02, 0, rig.pelvis);
+    rig.torso = hJoint('Torso', 0, 0.10, 0, rig.pelvis);
+    hBox(0.52, 0.68, 0.28, mShirt, 0, 0.34, 0, rig.torso);
+    hBox(0.53, 0.08, 0.29, mShirtD, 0, 0.04, 0, rig.torso);
+    hBox(0.24, 0.08, 0.29, mSkin, 0, 0.65, 0.01, rig.torso);
+    rig.neck = hJoint('Neck', 0, 0.68, 0, rig.torso);
+    hBox(0.20, 0.10, 0.20, mSkin, 0, 0.04, 0, rig.neck);
+    rig.head = hJoint('Head', 0, 0.08, 0, rig.neck);
+    hBox(0.50, 0.50, 0.50, mSkin, 0, 0.25, 0, rig.head);
+    hBox(0.54, 0.16, 0.54, mHair, 0, 0.46, 0, rig.head);
+    hBox(0.52, 0.08, 0.14, mHair, 0, 0.36, 0.22, rig.head);
+    hBox(0.54, 0.34, 0.16, mHair, 0, 0.28, -0.20, rig.head);
+    hBox(0.08, 0.24, 0.40, mHair, 0.24, 0.32, -0.04, rig.head);
+    hBox(0.08, 0.24, 0.40, mHair, -0.24, 0.32, -0.04, rig.head);
+    const mEyeW = humanMat(0xffffff, 0.3), mEyeP = humanMat(0x1e293b, 0.2), mMouth = humanMat(0x9a3412, 0.6);
+    hBox(0.11, 0.07, 0.04, mEyeW, 0.11, 0.24, 0.245, rig.head);
+    hBox(0.06, 0.07, 0.05, mEyeP, 0.10, 0.24, 0.248, rig.head);
+    hBox(0.11, 0.07, 0.04, mEyeW, -0.11, 0.24, 0.245, rig.head);
+    hBox(0.06, 0.07, 0.05, mEyeP, -0.10, 0.24, 0.248, rig.head);
+    hBox(0.12, 0.035, 0.05, mHair, 0.11, 0.31, 0.25, rig.head);
+    hBox(0.12, 0.035, 0.05, mHair, -0.11, 0.31, 0.25, rig.head);
+    hBox(0.07, 0.07, 0.05, mSkin, 0, 0.19, 0.255, rig.head);
+    hBox(0.12, 0.04, 0.04, mMouth, 0, 0.11, 0.248, rig.head);
+
+    function createHumanArm(prefix, isLeft) {
+      const dir = isLeft ? 1 : -1;
+      const shoulder = hJoint(`${prefix}_Shoulder`, dir * 0.38, 0.62, 0, rig.torso);
+      hBox(0.24, 0.24, 0.24, mShirtD, 0, -0.08, 0, shoulder);
+      hBox(0.20, 0.24, 0.20, mSkin, 0, -0.24, 0, shoulder);
+      const elbow = hJoint(`${prefix}_Elbow`, 0, -0.36, 0, shoulder);
+      hBox(0.19, 0.32, 0.19, mSkin, 0, -0.16, 0, elbow);
+      const hand = hJoint(`${prefix}_Hand`, 0, -0.32, 0, elbow);
+      hBox(0.20, 0.12, 0.20, mSkin, 0, -0.04, 0, hand);
+      return { shoulder, elbow, hand };
+    }
+    rig.armL = createHumanArm('Arm_L', true);
+    rig.armR = createHumanArm('Arm_R', false);
+
+    function createHumanLeg(prefix, isLeft) {
+      const dir = isLeft ? 1 : -1;
+      const hip = hJoint(`${prefix}_Hip`, dir * 0.14, -0.04, 0, rig.pelvis);
+      hBox(0.23, 0.44, 0.24, mPants, 0, -0.22, 0, hip);
+      const knee = hJoint(`${prefix}_Knee`, 0, -0.44, 0, hip);
+      hBox(0.21, 0.38, 0.22, mPants, 0, -0.19, 0, knee);
+      const ankle = hJoint(`${prefix}_Ankle`, 0, -0.38, 0, knee);
+      hBox(0.23, 0.12, 0.30, mShoe, 0, -0.05, 0.03, ankle);
+      hBox(0.24, 0.04, 0.31, mSole, 0, -0.10, 0.03, ankle);
+      return { hip, knee, ankle };
+    }
+    rig.legL = createHumanLeg('Leg_L', true);
+    rig.legR = createHumanLeg('Leg_R', false);
+
+    // 머리 위 물건 마운트 (알을 여기에 붙임)
+    rig.carryMount = hJoint('Carry_Mount', 0, 1.54, 0.06, rig.torso);
+    rig.carryMount.visible = false;
+
+    character = rig.root;  // 기존 코드가 character.position.copy(charPos) 등으로 씀
+    document.getElementById("loading").style.display = "none";
+
+    // 애니메이션 상태
+    let humanAnimTime = 0;
+    let isCarrying = false;
+    function updateHumanAnim(dt, isMoving) {
+      humanAnimTime += dt * (isMoving ? 1.0 : 1.0);
+      const s = 12;
+      if (isMoving) {
+        const t = humanAnimTime * 11.0;
+        const stride = Math.sin(t), bounce = Math.abs(Math.cos(t));
+        const runBaseY = isCarrying ? 0.90 : 0.94;
+        rig.root.position.y = damp(rig.root.position.y, runBaseY + bounce * (isCarrying ? 0.11 : 0.15), s, dt);
+        rig.root.position.x = damp(rig.root.position.x, stride * 0.03, s, dt);
+        rig.root.rotation.z = damp(rig.root.rotation.z, stride * 0.05, s, dt);
+        const lean = isCarrying ? 0.10 : 0.24, twist = isCarrying ? 0.08 : 0.18;
+        rig.torso.rotation.x = damp(rig.torso.rotation.x, lean, s, dt);
+        rig.torso.rotation.y = damp(rig.torso.rotation.y, -stride * twist, s, dt);
+        rig.head.rotation.x = damp(rig.head.rotation.x, -lean * 0.7, s, dt);
+        rig.head.rotation.y = damp(rig.head.rotation.y, stride * twist * 0.8, s, dt);
+        const legSwing = isCarrying ? 0.82 : 0.98;
+        rig.legL.hip.rotation.x = damp(rig.legL.hip.rotation.x, Math.sin(t) * legSwing, s, dt);
+        rig.legL.knee.rotation.x = damp(rig.legL.knee.rotation.x, Math.max(0, -Math.cos(t) * 1.35 + 0.25), s, dt);
+        rig.legL.ankle.rotation.x = damp(rig.legL.ankle.rotation.x, Math.sin(t - 0.5) * 0.35, s, dt);
+        rig.legR.hip.rotation.x = damp(rig.legR.hip.rotation.x, Math.sin(t + Math.PI) * legSwing, s, dt);
+        rig.legR.knee.rotation.x = damp(rig.legR.knee.rotation.x, Math.max(0, -Math.cos(t + Math.PI) * 1.35 + 0.25), s, dt);
+        rig.legR.ankle.rotation.x = damp(rig.legR.ankle.rotation.x, Math.sin(t + Math.PI - 0.5) * 0.35, s, dt);
+        if (!isCarrying) {
+          rig.armL.shoulder.rotation.x = damp(rig.armL.shoulder.rotation.x, Math.sin(t + Math.PI) * 0.95, s, dt);
+          rig.armL.shoulder.rotation.z = damp(rig.armL.shoulder.rotation.z, 0.10, s, dt);
+          rig.armL.elbow.rotation.x = damp(rig.armL.elbow.rotation.x, -0.85, s, dt);
+          rig.armR.shoulder.rotation.x = damp(rig.armR.shoulder.rotation.x, Math.sin(t) * 0.95, s, dt);
+          rig.armR.shoulder.rotation.z = damp(rig.armR.shoulder.rotation.z, -0.10, s, dt);
+          rig.armR.elbow.rotation.x = damp(rig.armR.elbow.rotation.x, -0.85, s, dt);
+        } else {
+          const cb = Math.sin(t * 2 - 0.4);
+          rig.armL.shoulder.rotation.x = damp(rig.armL.shoulder.rotation.x, -2.68 + cb * 0.08, s, dt);
+          rig.armL.shoulder.rotation.z = damp(rig.armL.shoulder.rotation.z, -0.16, s, dt);
+          rig.armL.elbow.rotation.x = damp(rig.armL.elbow.rotation.x, -0.42, s, dt);
+          rig.armL.hand.rotation.x = damp(rig.armL.hand.rotation.x, 0.48, s, dt);
+          rig.armR.shoulder.rotation.x = damp(rig.armR.shoulder.rotation.x, -2.68 + cb * 0.08, s, dt);
+          rig.armR.shoulder.rotation.z = damp(rig.armR.shoulder.rotation.z, 0.16, s, dt);
+          rig.armR.elbow.rotation.x = damp(rig.armR.elbow.rotation.x, -0.42, s, dt);
+          rig.armR.hand.rotation.x = damp(rig.armR.hand.rotation.x, 0.48, s, dt);
+          rig.carryMount.position.y = damp(rig.carryMount.position.y, 1.54 + Math.max(0, cb) * 0.07, s, dt);
+        }
+      } else {
+        const t = humanAnimTime * 2.4;
+        const breath = Math.sin(t), sway = Math.cos(t * 0.5);
+        const baseH = isCarrying ? 0.93 : 0.96;
+        rig.root.position.y = damp(rig.root.position.y, baseH + breath * 0.015, s, dt);
+        rig.root.position.x = damp(rig.root.position.x, sway * 0.015, s, dt);
+        rig.root.rotation.z = damp(rig.root.rotation.z, sway * 0.015, s, dt);
+        rig.torso.rotation.x = damp(rig.torso.rotation.x, isCarrying ? -0.05 : 0.02, s, dt);
+        rig.torso.rotation.y = damp(rig.torso.rotation.y, sway * 0.04, s, dt);
+        rig.head.rotation.x = damp(rig.head.rotation.x, isCarrying ? -0.10 : breath * 0.04, s, dt);
+        rig.head.rotation.y = damp(rig.head.rotation.y, sway * (isCarrying ? 0.05 : 0.12), s, dt);
+        rig.head.rotation.z = damp(rig.head.rotation.z, 0, s, dt);
+        const kb = isCarrying ? 0.18 : 0.04, hb = isCarrying ? -0.09 : -0.02;
+        rig.legL.hip.rotation.x = damp(rig.legL.hip.rotation.x, hb, s, dt);
+        rig.legL.knee.rotation.x = damp(rig.legL.knee.rotation.x, kb, s, dt);
+        rig.legL.ankle.rotation.x = damp(rig.legL.ankle.rotation.x, -kb * 0.5, s, dt);
+        rig.legR.hip.rotation.x = damp(rig.legR.hip.rotation.x, hb, s, dt);
+        rig.legR.knee.rotation.x = damp(rig.legR.knee.rotation.x, kb, s, dt);
+        rig.legR.ankle.rotation.x = damp(rig.legR.ankle.rotation.x, -kb * 0.5, s, dt);
+        if (!isCarrying) {
+          rig.armL.shoulder.rotation.x = damp(rig.armL.shoulder.rotation.x, Math.sin(t) * 0.05, s, dt);
+          rig.armL.shoulder.rotation.z = damp(rig.armL.shoulder.rotation.z, 0.06, s, dt);
+          rig.armL.elbow.rotation.x = damp(rig.armL.elbow.rotation.x, -0.15, s, dt);
+          rig.armR.shoulder.rotation.x = damp(rig.armR.shoulder.rotation.x, -Math.sin(t) * 0.05, s, dt);
+          rig.armR.shoulder.rotation.z = damp(rig.armR.shoulder.rotation.z, -0.06, s, dt);
+          rig.armR.elbow.rotation.x = damp(rig.armR.elbow.rotation.x, -0.15, s, dt);
+        } else {
+          rig.armL.shoulder.rotation.x = damp(rig.armL.shoulder.rotation.x, -2.75 + breath * 0.03, s, dt);
+          rig.armL.shoulder.rotation.z = damp(rig.armL.shoulder.rotation.z, -0.16, s, dt);
+          rig.armL.elbow.rotation.x = damp(rig.armL.elbow.rotation.x, -0.38, s, dt);
+          rig.armL.hand.rotation.x = damp(rig.armL.hand.rotation.x, 0.45, s, dt);
+          rig.armR.shoulder.rotation.x = damp(rig.armR.shoulder.rotation.x, -2.75 + breath * 0.03, s, dt);
+          rig.armR.shoulder.rotation.z = damp(rig.armR.shoulder.rotation.z, 0.16, s, dt);
+          rig.armR.elbow.rotation.x = damp(rig.armR.elbow.rotation.x, -0.38, s, dt);
+          rig.armR.hand.rotation.x = damp(rig.armR.hand.rotation.x, 0.45, s, dt);
+          rig.carryMount.position.y = damp(rig.carryMount.position.y, 1.54 + breath * 0.015, s, dt);
+          rig.carryMount.rotation.z = damp(rig.carryMount.rotation.z, sway * 0.02, s, dt);
+        }
+      }
+    }
 
     function stripRootMotionXZ(clip) {
       const track = clip.tracks.find(t => /Hips\.position$/.test(t.name));
@@ -2103,51 +2266,7 @@ function createBackground(scene) {
     }
 
     const standZ = (bg.safeZone.minZ + bg.safeZone.maxZ) / 2;
-
-    function loadModel(i) {
-      loader.load(MODEL_URLS[i], (gltf) => {
-        try {
-          const model = gltf.scene;
-          model.scale.setScalar(0.5);
-          scene.add(model);
-          model.updateMatrixWorld(true);
-
-          const meshes = [];
-          model.traverse(o => { if (o.isSkinnedMesh) meshes.push(o); });
-
-          character = model;
-          mixer = new THREE.AnimationMixer(model);
-          for (const clip of gltf.animations) {
-            const name = clip.name.toLowerCase();
-            if (!["idle", "walk", "run"].includes(name)) continue;
-            stripRootMotionXZ(clip);
-            const a = mixer.clipAction(clip);
-            a.play(); a.setEffectiveWeight(0);
-            actions[name] = a;
-          }
-          // 팔 뼈대 찾아두기 (알 들기 포즈용) — 실제 뼈 이름 로그 출력
-          const allBones = meshes[0] ? meshes[0].skeleton.bones : [];
-          console.log('뼈 이름들:', allBones.map(b => b.name).join(', '));
-          // Xbot은 mixamorig 접두사 사용
-          window._armBoneL  = allBones.find(b => /mixamorigLeftArm$/.test(b.name))   || allBones.find(b => /LeftArm$/.test(b.name));
-          window._armBoneR  = allBones.find(b => /mixamorigRightArm$/.test(b.name))  || allBones.find(b => /RightArm$/.test(b.name));
-          window._foreArmL  = allBones.find(b => /mixamorigLeftForeArm$/.test(b.name))  || allBones.find(b => /LeftForeArm$/.test(b.name));
-          window._foreArmR  = allBones.find(b => /mixamorigRightForeArm$/.test(b.name)) || allBones.find(b => /RightForeArm$/.test(b.name));
-          window._shoulderL = allBones.find(b => /LeftShoulder/.test(b.name));
-          window._shoulderR = allBones.find(b => /RightShoulder/.test(b.name));
-          console.log('팔 뼈:', window._armBoneL?.name, window._armBoneR?.name);
-          try { meshes.forEach(paintMesh); }
-          catch (e) { console.error("꾸미기 실패:", e); }
-        } finally {
-          document.getElementById("loading").style.display = "none";
-        }
-      }, undefined, (err) => {
-        console.error(err);
-        if (i + 1 < MODEL_URLS.length) loadModel(i + 1);
-        else document.getElementById("loading").textContent = "캐릭터를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.";
-      });
-    }
-    loadModel(0);
+    // 캐릭터는 이미 위에서 블록형으로 생성 완료 (rig.root = character)
 
     // ================= 조작 & 구역 순간이동 지원 =================
     const charPos = new THREE.Vector3(0, 0, standZ);
@@ -2177,16 +2296,15 @@ function createBackground(scene) {
       if (carriedEgg) return;
       if (!c.eggGroup) return;
       carriedEgg = c;
-      // 원래 위치/회전 저장 (드롭 시 복귀용)
       c._savedEggPos = c.eggGroup.position.clone();
       c._savedEggRot = c.eggGroup.rotation.clone();
-      // 알을 scene 직속으로 옮겨서 캐릭터와 독립적으로 이동
-      const wp = new THREE.Vector3();
-      c.eggGroup.getWorldPosition(wp);
+      // 알을 rig.carryMount에 붙여서 캐릭터 머리 위에 자연스럽게 얹힘
       c.root.remove(c.eggGroup);
-      scene.add(c.eggGroup);
-      c.eggGroup.position.copy(wp);
+      rig.carryMount.add(c.eggGroup);
+      c.eggGroup.position.set(0, 0.35, 0);
       c.eggGroup.rotation.set(0, 0, 0);
+      rig.carryMount.visible = true;
+      isCarrying = true;
       carryingHud.style.display = 'block';
       const zoneDef = BIOME_ZONES.find(z => z.id === c.id);
       carryingHud.textContent = `🥚 ${zoneDef ? zoneDef.name.split(' ')[0] : ''} 알 운반 중`;
@@ -2196,8 +2314,9 @@ function createBackground(scene) {
       if (!carriedEgg) return;
       const c = carriedEgg;
       carriedEgg = null;
-      // 알을 원래 root에 다시 붙이고 원래 위치/회전으로 복귀
-      scene.remove(c.eggGroup);
+      isCarrying = false;
+      rig.carryMount.visible = false;
+      rig.carryMount.remove(c.eggGroup);
       c.root.add(c.eggGroup);
       if (c._savedEggPos) c.eggGroup.position.copy(c._savedEggPos);
       if (c._savedEggRot) c.eggGroup.rotation.copy(c._savedEggRot);
@@ -2334,22 +2453,10 @@ function createBackground(scene) {
       const timeScale = absSpeed > 2 ? 1 + (absSpeed - 2) * 0.35 : 1;
       let groundSpeed = 0;
 
-      if (mixer && actions.walk && actions.run && actions.idle) {
-        const { idle, walk, run } = actions;
-        idle.setEffectiveWeight(wIdle); walk.setEffectiveWeight(wWalk); run.setEffectiveWeight(wRun);
-        const moving = wWalk + wRun;
-        if (moving > 0) {
-          const dur = (walk.getClip().duration * wWalk + run.getClip().duration * wRun) / moving;
-          const phaseStep = dt * timeScale / dur * Math.sign(speed || 1);
-          walk.time = ((walk.time + phaseStep * walk.getClip().duration) % walk.getClip().duration + walk.getClip().duration) % walk.getClip().duration;
-          run.time  = ((run.time  + phaseStep * run.getClip().duration)  % run.getClip().duration  + run.getClip().duration)  % run.getClip().duration;
-        }
-        idle.time = (idle.time + dt) % idle.getClip().duration;
-        mixer.update(0);
-        groundSpeed = Math.sign(speed) * (WALK_SPEED * wWalk + RUN_SPEED * wRun) * timeScale;
-      } else {
-        groundSpeed = speed * 2.5;
-      }
+      // 블록형 사람 캐릭터 애니메이션 업데이트
+      const isMoving = Math.abs(mx) > 0.01 || Math.abs(mz) > 0.01;
+      updateHumanAnim(dt, isMoving);
+      groundSpeed = isMoving ? Math.abs(targetSpeed) * 2.5 : 0;
 
       let nx = charPos.x + mx * groundSpeed * dt;
       let nz = charPos.z + mz * groundSpeed * dt;
@@ -2369,25 +2476,7 @@ function createBackground(scene) {
 
       if (character) { character.position.copy(charPos); character.rotation.y = charYaw; }
 
-      // 알 들기 — 두 팔을 위로 올리고 알을 머리 위에 고정
-      const armLerpK = Math.min(1, dt * 8);
-      if (carriedEgg && carriedEgg.eggGroup) {
-        // 어깨부터 위로 들어올리기 (x축: 앞으로, z축: 옆으로)
-        if (window._shoulderL) { window._shoulderL.rotation.x += (-1.4 - window._shoulderL.rotation.x) * armLerpK; }
-        if (window._shoulderR) { window._shoulderR.rotation.x += (-1.4 - window._shoulderR.rotation.x) * armLerpK; }
-        if (window._armBoneL)  { window._armBoneL.rotation.x  += (-0.6 - window._armBoneL.rotation.x)  * armLerpK; }
-        if (window._armBoneR)  { window._armBoneR.rotation.x  += (-0.6 - window._armBoneR.rotation.x)  * armLerpK; }
-        if (window._foreArmL)  { window._foreArmL.rotation.x  += (0    - window._foreArmL.rotation.x)  * armLerpK; }
-        if (window._foreArmR)  { window._foreArmR.rotation.x  += (0    - window._foreArmR.rotation.x)  * armLerpK; }
-        // 알을 두 손 사이(머리 위)에 고정
-        carriedEgg.eggGroup.position.set(charPos.x, charPos.y + 1.9, charPos.z);
-        carriedEgg.eggGroup.rotation.set(0, 0, 0);
-      } else {
-        // 팔 원래대로 복귀
-        ['_shoulderL','_shoulderR','_armBoneL','_armBoneR','_foreArmL','_foreArmR'].forEach(k => {
-          if (window[k]) { window[k].rotation.x += (0 - window[k].rotation.x) * armLerpK; }
-        });
-      }
+      // 알은 rig.carryMount에 붙어 있어서 캐릭터 애니메이션이 알아서 처리
 
       // F 프롬프트: 가까운 알이 있을 때만 표시
       let showPickup = false;
