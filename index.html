@@ -53,7 +53,7 @@
   <div id="zone-banner">🏡 안전구역 (출발점) — 북쪽(-Z) 통로를 따라 8종 생물과 알이 좌우 번갈아 아주 멀리 배치되어 있습니다</div>
   <div id="loading">캐릭터 불러오는 중...</div>
   <div id="pickup-prompt">🥚 F — 알 들기</div>
-  <div id="drop-prompt">📦 D — 내려놓기</div>
+  <div id="drop-prompt">📦 F — 내려놓기</div>
   <div id="carrying-hud">🥚 알 운반 중</div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -261,12 +261,7 @@ function createCreatureAndEgg(zone, corridorX) {
   creatureGroup.add(sanctumDisc);
 
   // 알 받침 단상
-  const eggPedestal = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.58, 0.72, 0.16, 20),
-    mat(zone.wallColor, 0.5, 0.35, zone.accentColor, 0.2)
-  );
-  eggPedestal.position.set(0, 0.08, 0);
-  eggGroup.add(eggPedestal);
+  // 받침대 없음 (eggPedestal 제거)
 
   const animParts = { id: zone.id, root, creatureGroup, eggGroup };
 
@@ -2161,7 +2156,7 @@ function createBackground(scene) {
     // 알 운반 상태
     let carriedEgg = null;       // 현재 들고 있는 알 { zone, eggGroup(원래 그룹), pivot(world의 Group) }
     let carryOffset = null;      // 캐릭터 머리 위 오프셋용 임시 그룹
-    const PICKUP_DIST = 3.2;     // 알 집을 수 있는 거리
+    const PICKUP_DIST = 1.6;     // 알 집을 수 있는 거리 (더 가까이)
 
     const pickupPrompt  = document.getElementById('pickup-prompt');
     const dropPrompt    = document.getElementById('drop-prompt');
@@ -2171,7 +2166,10 @@ function createBackground(scene) {
       if (carriedEgg) return;
       if (!c.eggGroup) return;
       carriedEgg = c;
-      // 알의 현재 world 위치를 구한 뒤 scene 직속으로 재부착
+      // 원래 위치/회전 저장 (드롭 시 복귀용)
+      c._savedEggPos = c.eggGroup.position.clone();
+      c._savedEggRot = c.eggGroup.rotation.clone();
+      // 알을 scene 직속으로 옮겨서 캐릭터와 독립적으로 이동
       const wp = new THREE.Vector3();
       c.eggGroup.getWorldPosition(wp);
       c.root.remove(c.eggGroup);
@@ -2185,12 +2183,13 @@ function createBackground(scene) {
 
     function dropEgg() {
       if (!carriedEgg) return;
-      // 현재 캐릭터 위치 앞에 내려놓음
-      if (carriedEgg.eggGroup) {
-        carriedEgg.eggGroup.position.set(charPos.x, 0, charPos.z);
-        carriedEgg.eggGroup.rotation.y = 0;
-      }
+      const c = carriedEgg;
       carriedEgg = null;
+      // 알을 원래 root에 다시 붙이고 원래 위치/회전으로 복귀
+      scene.remove(c.eggGroup);
+      c.root.add(c.eggGroup);
+      if (c._savedEggPos) c.eggGroup.position.copy(c._savedEggPos);
+      if (c._savedEggRot) c.eggGroup.rotation.copy(c._savedEggRot);
       carryingHud.style.display = 'none';
     }
 
@@ -2215,7 +2214,7 @@ function createBackground(scene) {
 
         }
       }
-      if (e.key.toLowerCase() === "d") {
+      if (e.key.toLowerCase() === "f") {
         if (carriedEgg) dropEgg();
       }
     });
@@ -2360,10 +2359,17 @@ function createBackground(scene) {
 
       if (character) { character.position.copy(charPos); character.rotation.y = charYaw; }
 
-      // 들고 있는 알을 캐릭터 머리 위에 붙여 따라오게 함
+      // 들고 있는 알을 캐릭터 머리 위(한 손 든 자세)에 붙여 따라오게 함 — 빙빙 안 돌고 고정
       if (carriedEgg && carriedEgg.eggGroup) {
-        carriedEgg.eggGroup.position.set(charPos.x, charPos.y + 1.55, charPos.z);
-        carriedEgg.eggGroup.rotation.y += dt * 1.2;
+        // 캐릭터가 바라보는 방향 기준 오른쪽 손 위치
+        const handOffsetX = Math.cos(charYaw + Math.PI / 2) * 0.32;
+        const handOffsetZ = Math.sin(charYaw + Math.PI / 2) * 0.32;
+        carriedEgg.eggGroup.position.set(
+          charPos.x + handOffsetX,
+          charPos.y + 1.45,
+          charPos.z + handOffsetZ
+        );
+        carriedEgg.eggGroup.rotation.set(0, 0, 0);
       }
 
       // F 프롬프트: 가까운 알이 있을 때만 표시
