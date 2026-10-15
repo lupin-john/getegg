@@ -2015,6 +2015,7 @@ function createBackground(scene) {
 
     const rig = {};
     rig.root = hJoint('Root', 0, 0.96, 0, scene);
+    rig.root.scale.setScalar(0.72);  // 캐릭터 크기 줄임
     rig.pelvis = hJoint('Pelvis', 0, 0, 0, rig.root);
     hBox(0.50, 0.18, 0.28, mPants, 0, 0.02, 0, rig.pelvis);
     rig.torso = hJoint('Torso', 0, 0.10, 0, rig.pelvis);
@@ -2082,7 +2083,7 @@ function createBackground(scene) {
       humanAnimTime += dt * (isMoving ? 1.0 : 1.0);
       const s = 12;
       if (isMoving) {
-        const t = humanAnimTime * 11.0;
+        const t = humanAnimTime * 16.0;  // 더 빠른 달리기 모션
         const stride = Math.sin(t), bounce = Math.abs(Math.cos(t));
         const runBaseY = isCarrying ? 0.90 : 0.94;
         rig.root.position.y = damp(rig.root.position.y, runBaseY + bounce * (isCarrying ? 0.11 : 0.15), s, dt);
@@ -2279,14 +2280,17 @@ function createBackground(scene) {
     let isOnGround = true; // 땅에 닿아 있는지
     const GRAVITY = -22;
     const JUMP_FORCE = 7.5;
-    const GROUND_Y = 0;    // 캐릭터 y 기준(바닥)
+    // rig.root의 y=0.96이 발바닥 기준 — scale 0.72 적용 시 발이 바닥(y=0)에 닿는 높이
+    // character.position.y = charPos.y이고 rig.root 자체가 0.96*0.72=0.69 위에 있으니
+    // charPos.y=0 일 때 발이 정확히 y=0에 맞음 (rig.root.position.y는 애니메이션이 조정)
+    const GROUND_Y = 0;
 
     const keys = {};
 
     // 알 운반 상태
     let carriedEgg = null;       // 현재 들고 있는 알 { zone, eggGroup(원래 그룹), pivot(world의 Group) }
     let carryOffset = null;      // 캐릭터 머리 위 오프셋용 임시 그룹
-    const PICKUP_DIST = 1.6;     // 알 집을 수 있는 거리 (더 가까이)
+    const PICKUP_DIST = 2.8;     // 알 집을 수 있는 거리
 
     const pickupPrompt  = document.getElementById('pickup-prompt');
     const dropPrompt    = document.getElementById('drop-prompt');
@@ -2474,7 +2478,12 @@ function createBackground(scene) {
       charPos.y += velY * dt;
       if (charPos.y <= GROUND_Y) { charPos.y = GROUND_Y; velY = 0; isOnGround = true; }
 
-      if (character) { character.position.copy(charPos); character.rotation.y = charYaw; }
+      if (character) {
+        // rig.root의 position.y는 애니메이션이 0.93~0.96 사이로 조정함
+        // scale=0.72이면 실제 높이=position.y*0.72≈0.69 → 발이 거의 정확히 y=0
+        character.position.set(charPos.x, charPos.y, charPos.z);
+        character.rotation.y = charYaw;
+      }
 
       // 알은 rig.carryMount에 붙어 있어서 캐릭터 애니메이션이 알아서 처리
 
