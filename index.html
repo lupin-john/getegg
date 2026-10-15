@@ -268,7 +268,7 @@ function createCreatureAndEgg(zone, corridorX) {
   eggPedestal.position.set(0, 0.08, 0);
   eggGroup.add(eggPedestal);
 
-  const animParts = { id: zone.id, creatureGroup, eggGroup };
+  const animParts = { id: zone.id, root, creatureGroup, eggGroup };
 
   // -------------------------------------------------------------------------
   // (1) 🐔 Lv.1 닭 (수면 자세) + 닭의 알
@@ -1889,7 +1889,7 @@ function createBackground(scene) {
   // ---- 8종 생물(자고 있는 상태) & 그 앞의 알 생성 ----
   const creatures = BIOME_ZONES.map(zone => {
     const c = createCreatureAndEgg(zone, corridorX);
-    scene.add(c.creatureGroup.parent);
+    scene.add(c.root);
     return c;
   });
 
@@ -2173,9 +2173,10 @@ function createBackground(scene) {
       // 알의 현재 world 위치를 구한 뒤 scene 직속으로 재부착
       const wp = new THREE.Vector3();
       c.eggGroup.getWorldPosition(wp);
-      if (c.eggGroup.parent) c.eggGroup.parent.remove(c.eggGroup);
+      c.root.remove(c.eggGroup);
       scene.add(c.eggGroup);
       c.eggGroup.position.copy(wp);
+      c.eggGroup.rotation.set(0, 0, 0);
       carryingHud.style.display = 'block';
       const zoneDef = BIOME_ZONES.find(z => z.id === c.id);
       carryingHud.textContent = `🥚 ${zoneDef ? zoneDef.name.split(' ')[0] : ''} 알 운반 중`;
