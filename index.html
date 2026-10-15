@@ -2125,7 +2125,13 @@ function createBackground(scene) {
             a.play(); a.setEffectiveWeight(0);
             actions[name] = a;
           }
-          try { meshes.forEach(paintMesh); }   // 얼굴(머리카락·눈 등) 추가 없이, 원래 모습에 색만 입힘
+          // 팔 뼈대 찾아두기 (알 들기 포즈용)
+          const allBones = meshes[0] ? meshes[0].skeleton.bones : [];
+          window._armBoneL = allBones.find(b => /LeftArm$/.test(b.name));
+          window._armBoneR = allBones.find(b => /RightArm$/.test(b.name));
+          window._foreArmL = allBones.find(b => /LeftForeArm$/.test(b.name));
+          window._foreArmR = allBones.find(b => /RightForeArm$/.test(b.name));
+          try { meshes.forEach(paintMesh); }
           catch (e) { console.error("꾸미기 실패:", e); }
         } finally {
           document.getElementById("loading").style.display = "none";
@@ -2358,17 +2364,24 @@ function createBackground(scene) {
 
       if (character) { character.position.copy(charPos); character.rotation.y = charYaw; }
 
-      // 들고 있는 알을 캐릭터 머리 위(한 손 든 자세)에 붙여 따라오게 함 — 빙빙 안 돌고 고정
+      // 알 들기 — 두 손을 위로 올리고 알을 머리 살짝 위에 고정
+      const CARRY_UP = -1.45;   // 팔 올리는 각도(앞으로+위로)
+      const armLerpK = Math.min(1, dt * 8);
       if (carriedEgg && carriedEgg.eggGroup) {
-        // 캐릭터가 바라보는 방향 기준 오른쪽 손 위치
-        const handOffsetX = Math.cos(charYaw + Math.PI / 2) * 0.32;
-        const handOffsetZ = Math.sin(charYaw + Math.PI / 2) * 0.32;
-        carriedEgg.eggGroup.position.set(
-          charPos.x + handOffsetX,
-          charPos.y + 1.45,
-          charPos.z + handOffsetZ
-        );
+        // 팔 뼈 올리기
+        if (window._armBoneL) window._armBoneL.rotation.z += (CARRY_UP - window._armBoneL.rotation.z) * armLerpK;
+        if (window._armBoneR) window._armBoneR.rotation.z += (-CARRY_UP - window._armBoneR.rotation.z) * armLerpK;
+        if (window._foreArmL) window._foreArmL.rotation.z += (0.3 - window._foreArmL.rotation.z) * armLerpK;
+        if (window._foreArmR) window._foreArmR.rotation.z += (-0.3 - window._foreArmR.rotation.z) * armLerpK;
+        // 알을 캐릭터 머리 바로 위(약 1.65 높이)에 고정
+        carriedEgg.eggGroup.position.set(charPos.x, charPos.y + 1.65, charPos.z);
         carriedEgg.eggGroup.rotation.set(0, 0, 0);
+      } else {
+        // 들고 있지 않을 때 팔 원래대로
+        if (window._armBoneL) window._armBoneL.rotation.z += (0 - window._armBoneL.rotation.z) * armLerpK;
+        if (window._armBoneR) window._armBoneR.rotation.z += (0 - window._armBoneR.rotation.z) * armLerpK;
+        if (window._foreArmL) window._foreArmL.rotation.z += (0 - window._foreArmL.rotation.z) * armLerpK;
+        if (window._foreArmR) window._foreArmR.rotation.z += (0 - window._foreArmR.rotation.z) * armLerpK;
       }
 
       // F 프롬프트: 가까운 알이 있을 때만 표시
