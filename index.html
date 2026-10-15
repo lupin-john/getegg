@@ -2125,12 +2125,17 @@ function createBackground(scene) {
             a.play(); a.setEffectiveWeight(0);
             actions[name] = a;
           }
-          // 팔 뼈대 찾아두기 (알 들기 포즈용)
+          // 팔 뼈대 찾아두기 (알 들기 포즈용) — 실제 뼈 이름 로그 출력
           const allBones = meshes[0] ? meshes[0].skeleton.bones : [];
-          window._armBoneL = allBones.find(b => /LeftArm$/.test(b.name));
-          window._armBoneR = allBones.find(b => /RightArm$/.test(b.name));
-          window._foreArmL = allBones.find(b => /LeftForeArm$/.test(b.name));
-          window._foreArmR = allBones.find(b => /RightForeArm$/.test(b.name));
+          console.log('뼈 이름들:', allBones.map(b => b.name).join(', '));
+          // Xbot은 mixamorig 접두사 사용
+          window._armBoneL  = allBones.find(b => /mixamorigLeftArm$/.test(b.name))   || allBones.find(b => /LeftArm$/.test(b.name));
+          window._armBoneR  = allBones.find(b => /mixamorigRightArm$/.test(b.name))  || allBones.find(b => /RightArm$/.test(b.name));
+          window._foreArmL  = allBones.find(b => /mixamorigLeftForeArm$/.test(b.name))  || allBones.find(b => /LeftForeArm$/.test(b.name));
+          window._foreArmR  = allBones.find(b => /mixamorigRightForeArm$/.test(b.name)) || allBones.find(b => /RightForeArm$/.test(b.name));
+          window._shoulderL = allBones.find(b => /LeftShoulder/.test(b.name));
+          window._shoulderR = allBones.find(b => /RightShoulder/.test(b.name));
+          console.log('팔 뼈:', window._armBoneL?.name, window._armBoneR?.name);
           try { meshes.forEach(paintMesh); }
           catch (e) { console.error("꾸미기 실패:", e); }
         } finally {
@@ -2364,24 +2369,24 @@ function createBackground(scene) {
 
       if (character) { character.position.copy(charPos); character.rotation.y = charYaw; }
 
-      // 알 들기 — 두 손을 위로 올리고 알을 머리 살짝 위에 고정
-      const CARRY_UP = -1.45;   // 팔 올리는 각도(앞으로+위로)
+      // 알 들기 — 두 팔을 위로 올리고 알을 머리 위에 고정
       const armLerpK = Math.min(1, dt * 8);
       if (carriedEgg && carriedEgg.eggGroup) {
-        // 팔 뼈 올리기
-        if (window._armBoneL) window._armBoneL.rotation.z += (CARRY_UP - window._armBoneL.rotation.z) * armLerpK;
-        if (window._armBoneR) window._armBoneR.rotation.z += (-CARRY_UP - window._armBoneR.rotation.z) * armLerpK;
-        if (window._foreArmL) window._foreArmL.rotation.z += (0.3 - window._foreArmL.rotation.z) * armLerpK;
-        if (window._foreArmR) window._foreArmR.rotation.z += (-0.3 - window._foreArmR.rotation.z) * armLerpK;
-        // 알을 캐릭터 머리 바로 위(약 1.65 높이)에 고정
-        carriedEgg.eggGroup.position.set(charPos.x, charPos.y + 1.65, charPos.z);
+        // 어깨부터 위로 들어올리기 (x축: 앞으로, z축: 옆으로)
+        if (window._shoulderL) { window._shoulderL.rotation.x += (-1.4 - window._shoulderL.rotation.x) * armLerpK; }
+        if (window._shoulderR) { window._shoulderR.rotation.x += (-1.4 - window._shoulderR.rotation.x) * armLerpK; }
+        if (window._armBoneL)  { window._armBoneL.rotation.x  += (-0.6 - window._armBoneL.rotation.x)  * armLerpK; }
+        if (window._armBoneR)  { window._armBoneR.rotation.x  += (-0.6 - window._armBoneR.rotation.x)  * armLerpK; }
+        if (window._foreArmL)  { window._foreArmL.rotation.x  += (0    - window._foreArmL.rotation.x)  * armLerpK; }
+        if (window._foreArmR)  { window._foreArmR.rotation.x  += (0    - window._foreArmR.rotation.x)  * armLerpK; }
+        // 알을 두 손 사이(머리 위)에 고정
+        carriedEgg.eggGroup.position.set(charPos.x, charPos.y + 1.9, charPos.z);
         carriedEgg.eggGroup.rotation.set(0, 0, 0);
       } else {
-        // 들고 있지 않을 때 팔 원래대로
-        if (window._armBoneL) window._armBoneL.rotation.z += (0 - window._armBoneL.rotation.z) * armLerpK;
-        if (window._armBoneR) window._armBoneR.rotation.z += (0 - window._armBoneR.rotation.z) * armLerpK;
-        if (window._foreArmL) window._foreArmL.rotation.z += (0 - window._foreArmL.rotation.z) * armLerpK;
-        if (window._foreArmR) window._foreArmR.rotation.z += (0 - window._foreArmR.rotation.z) * armLerpK;
+        // 팔 원래대로 복귀
+        ['_shoulderL','_shoulderR','_armBoneL','_armBoneR','_foreArmL','_foreArmR'].forEach(k => {
+          if (window[k]) { window[k].rotation.x += (0 - window[k].rotation.x) * armLerpK; }
+        });
       }
 
       // F 프롬프트: 가까운 알이 있을 때만 표시
