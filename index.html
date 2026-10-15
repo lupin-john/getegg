@@ -1974,6 +1974,7 @@ function createBackground(scene) {
     startZ: CORRIDOR_Z0,
     roomWidth: ROOM_WIDTH,
     wallThick: WALL_THICK,
+    creatures,   // 바깥 frame()에서 접근 가능하게 반환
     update
   };
 }
@@ -2203,7 +2204,7 @@ function createBackground(scene) {
         // 가장 가까운 알 집기
         if (!carriedEgg) {
           let nearest = null, nearestDist = PICKUP_DIST;
-          creatures.forEach(c => {
+          bg.creatures.forEach(c => {
             if (!c.eggGroup) return;
             const ep = new THREE.Vector3();
             c.eggGroup.getWorldPosition(ep);
@@ -2290,6 +2291,7 @@ function createBackground(scene) {
     const targetSkyColor = new THREE.Color(0x9fd8ef);
 
     function frame(now) {
+      try {
       const dt = Math.min((now - last) / 1000, 0.05);
       last = now;
 
@@ -2367,7 +2369,7 @@ function createBackground(scene) {
       // F 프롬프트: 가까운 알이 있을 때만 표시
       let showPickup = false;
       if (!carriedEgg) {
-        creatures.forEach(c => {
+        bg.creatures.forEach(c => {
           if (!c.eggGroup) return;
           const ep = new THREE.Vector3();
           c.eggGroup.getWorldPosition(ep);
@@ -2404,6 +2406,11 @@ function createBackground(scene) {
       bg.update(dt, charPos);
       renderer.render(scene, camera);
       requestAnimationFrame(frame);
+      } catch(e) {
+        // 오류 발생 시 화면에 직접 표시
+        document.body.style.background = '#fff';
+        document.body.innerHTML = '<pre style="color:red;padding:20px;font-size:14px">오류: ' + e.message + '\n\n' + e.stack + '</pre>';
+      }
     }
     requestAnimationFrame(frame);
   </script>
