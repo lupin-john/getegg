@@ -1,0 +1,2410 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>배경 + 8종 신수·초월 생물 & 알 월드시스템</title>
+  <style>
+    html, body { margin:0; height:100%; overflow:hidden; background:#9fd8ef; font-family:'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif; }
+    #hud {
+      position:absolute; top:12px; left:0; right:0; text-align:center;
+      color:#fff; text-shadow:0 2px 6px rgba(0,0,0,0.75);
+      font-weight:600; font-size:13.5px; pointer-events:none; z-index:10;
+    }
+    #zone-banner {
+      position:absolute; top:40px; left:50%; transform:translateX(-50%);
+      background:rgba(12, 10, 24, 0.82); backdrop-filter:blur(10px);
+      border:1px solid rgba(255,255,255,0.28); border-radius:999px;
+      padding:6px 18px; color:#f8fafc; font-size:13px; font-weight:700;
+      box-shadow:0 8px 24px rgba(0,0,0,0.45); pointer-events:none; z-index:10;
+      transition:all 0.25s ease;
+    }
+    #loading {
+      position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+      font-size:20px; font-weight:700; color:#222; pointer-events:none; z-index:20;
+    }
+    #pickup-prompt {
+      position:absolute; bottom:80px; left:50%; transform:translateX(-50%);
+      background:rgba(12,10,24,0.88); backdrop-filter:blur(12px);
+      border:1px solid rgba(255,255,255,0.3); border-radius:999px;
+      padding:8px 24px; color:#fff; font-size:15px; font-weight:700;
+      box-shadow:0 8px 28px rgba(0,0,0,0.5); pointer-events:none; z-index:15;
+      display:none; text-align:center;
+    }
+    #drop-prompt {
+      position:absolute; bottom:40px; left:50%; transform:translateX(-50%);
+      background:rgba(220,38,38,0.88); backdrop-filter:blur(12px);
+      border:1px solid rgba(255,180,180,0.4); border-radius:999px;
+      padding:6px 20px; color:#fff; font-size:13px; font-weight:700;
+      box-shadow:0 6px 20px rgba(0,0,0,0.4); pointer-events:none; z-index:15;
+      display:none;
+    }
+    #carrying-hud {
+      position:absolute; top:72px; right:20px;
+      background:rgba(12,10,24,0.80); backdrop-filter:blur(10px);
+      border:1px solid rgba(255,255,255,0.25); border-radius:14px;
+      padding:8px 16px; color:#fef08a; font-size:13px; font-weight:700;
+      box-shadow:0 6px 20px rgba(0,0,0,0.4); pointer-events:none; z-index:15;
+      display:none;
+    }
+  </style>
+</head>
+<body>
+  <div id="hud">로블록스처럼 W/A/S/D 이동(Shift: 고속 질주) · 트랙패드 두 손가락 쓸기/마우스 드래그: 화면 회전 · 핀치/휠: 확대·축소</div>
+  <div id="zone-banner">🏡 안전구역 (출발점) — 북쪽(-Z) 통로를 따라 8종 생물과 알이 좌우 번갈아 아주 멀리 배치되어 있습니다</div>
+  <div id="loading">캐릭터 불러오는 중...</div>
+  <div id="pickup-prompt">🥚 F — 알 들기</div>
+  <div id="drop-prompt">📦 D — 내려놓기</div>
+  <div id="carrying-hud">🥚 알 운반 중</div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script>
+// ============================================================================
+// 1. 8종 생물(사람 제외: 닭·호랑이·드래곤·청룡·성운사자·삼족오·대악마·대천사) 구역 정의
+// - 서로의 거리가 엄청 멀도록 Z축 간격을 140 유닛(약 140m)씩 띄워 배치
+// - 왼쪽(side: -1) / 오른쪽(side: +1) 벽에 번갈아가며(Alternating) 배치
+// - 각 생물 기준 앞뒤 배경(바닥·양옆 벽·갓돌·벽돌 패널·하늘·안개) 색상이 생물 특성에 맞게 설정됨
+// ============================================================================
+const BIOME_ZONES = [
+  {
+    id: 'chicken',
+    name: '🐔 Lv.1 닭의 보금자리 (왼쪽 벽)',
+    zCenter: 510,
+    zMin: 440,
+    zMax: 582,
+    side: -1, // 왼쪽 벽
+    floorColor: 0xc8b568,   // 따뜻한 밀밭/건초 빛깔 바닥
+    wallColor: 0xd99b52,    // 황토/목재 톤 벽
+    capColor: 0x9c6227,     // 진한 갈색 갓돌
+    panelColor: 0xb87b38,   // 목재 기둥 패널
+    skyColor: 0xfff3c4,     // 따스한 아침 햇살 하늘
+    accentColor: 0xef4444
+  },
+  {
+    id: 'tiger',
+    name: '🐯 Lv.2 야수 호랑이 영역 (오른쪽 벽)',
+    zCenter: 370,
+    zMin: 300,
+    zMax: 440,
+    side: 1,  // 오른쪽 벽
+    floorColor: 0xbf691f,   // 호박빛 황금 정글 바닥
+    wallColor: 0x4a2c14,    // 검은 호랑이 줄무늬 느낌의 다크 브라운 벽
+    capColor: 0xf97316,     // 선명한 호랑이 오렌지 갓돌
+    panelColor: 0x1c140d,   // 칠흑 줄무늬 패널
+    skyColor: 0xffb366,     // 타오르는 노을빛 야수 하늘
+    accentColor: 0xf59e0b
+  },
+  {
+    id: 'dragon',
+    name: '🐉 Lv.3 고대 서양 드래곤 레어 (왼쪽 벽)',
+    zCenter: 230,
+    zMin: 160,
+    zMax: 300,
+    side: -1, // 왼쪽 벽
+    floorColor: 0x261c38,   // 흑요석 다크 퍼플 바닥
+    wallColor: 0x161224,    // 엔더 흑요석 벽
+    capColor: 0x9333ea,     // 고대 마력 보라빛 갓돌
+    panelColor: 0x581c87,   // 보랏빛 크리스탈 결 패널
+    skyColor: 0x2a1245,     // 어두운 드래곤 협곡 하늘
+    accentColor: 0xa855f7
+  },
+  {
+    id: 'eastern',
+    name: '🐲 Lv.4 동양 청룡의 선계 (오른쪽 벽)',
+    zCenter: 90,
+    zMin: 20,
+    zMax: 160,
+    side: 1,  // 오른쪽 벽
+    floorColor: 0x0f766e,   // 비취색 옥(Jade) 바닥
+    wallColor: 0x115e59,    // 청록 신전 벽
+    capColor: 0xfacc15,     // 황금 여의주 빛 갓돌
+    panelColor: 0xd97706,   // 황금 기둥 패널
+    skyColor: 0x7dd3fc,     // 맑은 선계 옥빛 하늘
+    accentColor: 0x2dd4bf
+  },
+  {
+    id: 'lion',
+    name: '🌌 Lv.5 보라빛 성운 사자 성소 (왼쪽 벽)',
+    zCenter: -50,
+    zMin: -120,
+    zMax: 20,
+    side: -1, // 왼쪽 벽
+    floorColor: 0x4c1d95,   // 연보라 아스트랄 성운 바닥
+    wallColor: 0x3b0764,    // 파스텔 우주 성운 벽
+    capColor: 0xf472b6,     // 핑크 스타라이트 갓돌
+    panelColor: 0xc084fc,   // 반짝이는 라벤더 패널
+    skyColor: 0x1e0b3b,     // 별이 빛나는 보라빛 우주 하늘
+    accentColor: 0xe879f9
+  },
+  {
+    id: 'samjoko',
+    name: '🌑 Lv.6 어둠의 삼족오 흑일식 구역 (오른쪽 벽)',
+    zCenter: -190,
+    zMin: -260,
+    zMax: -120,
+    side: 1,  // 오른쪽 벽
+    floorColor: 0x14070c,   // 칠흑 흑요석 바닥
+    wallColor: 0x090408,    // 심연의 검은 깃털 벽
+    capColor: 0xe11d48,     // 진홍빛 흑일식 코로나 갓돌
+    panelColor: 0x881337,   // 핏빛 태양 문양 패널
+    skyColor: 0x1a040d,     // 검은 태양이 뜬 암흑 하늘
+    accentColor: 0xf43f5e
+  },
+  {
+    id: 'demon',
+    name: '🔥 Lv.7 심연 대악마(마왕) 지옥성 (왼쪽 벽)',
+    zCenter: -330,
+    zMin: -400,
+    zMax: -260,
+    side: -1, // 왼쪽 벽
+    floorColor: 0x3b0a0a,   // 검붉은 용암 대지 바닥
+    wallColor: 0x1f0707,    // 그을린 지옥 성벽
+    capColor: 0xff4500,     // 타오르는 마그마 갓돌
+    panelColor: 0xb91c1c,   // 핏빛 마그마 균열 패널
+    skyColor: 0x380808,     // 붉게 물든 지옥불 하늘
+    accentColor: 0xef4444
+  },
+  {
+    id: 'archangel',
+    name: '✨ Lv.8 신성 대천사(세라핌) 천상계 (오른쪽 벽)',
+    zCenter: -470,
+    zMin: -600,
+    zMax: -400,
+    side: 1,  // 오른쪽 벽
+    floorColor: 0xf8fafc,   // 순백색 천상 대리석 바닥
+    wallColor: 0xe2e8f0,    // 성스러운 아이보리 성벽
+    capColor: 0xfacc15,     // 순금 광륜(Halo) 갓돌
+    panelColor: 0x38bdf8,   // 로열 시안·골드 성기사 패널
+    skyColor: 0xdbeafe,     // 찬란한 천상의 빛 하늘
+    accentColor: 0xfacc15
+  }
+];
+
+// ============================================================================
+// 2. 생물 + 알 생성 및 수면(Sleep) 애니메이션 팩토리
+// - 각 생물은 벽 안쪽에 큼직하게 자리잡아 숨을 쉬며 잠들어 있고(Sleep),
+//   그 바로 앞(길 안쪽 방향)에 각 생물 특성에 맞는 디테일한 리깅 알(Egg)이 놓여 있음
+// ============================================================================
+function createCreatureAndEgg(zone, corridorX) {
+  const root = new THREE.Group();
+  // 벽 안쪽 면 x = zone.side * 8.0 (PATH_WIDTH=16, WALL_THICK=1.2)
+  // 생물을 벽에서 충분히 당겨서 가장 큰 생물도 벽과 겹치지 않게 함(±4.5)
+  // 알은 생물과 겹치지 않게 복도 중앙 쪽(±1.8)에 둠
+  root.position.set(0, 0, zone.zCenter);
+
+  const creatureGroup = new THREE.Group();
+  const eggGroup = new THREE.Group();
+
+  // 생물이 벽을 등지고 길 안쪽(자기 앞의 알 쪽)을 바라보도록 회전
+  const inwardYaw = zone.side === -1 ? Math.PI / 2 : -Math.PI / 2;
+  creatureGroup.position.set(zone.side * 4.5, 0, 0);
+  creatureGroup.rotation.y = inwardYaw;
+
+  // 생물 앞쪽, 겹치지 않을 만큼 떨어진 곳에 알 배치
+  eggGroup.position.set(zone.side * 1.8, 0, 0);
+  eggGroup.rotation.y = inwardYaw;
+
+  root.add(creatureGroup);
+  root.add(eggGroup);
+
+  const mat = (color, rough = 0.65, metal = 0.1, emissive = 0x000000, eInt = 0) =>
+    new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal, emissive, emissiveIntensity: eInt });
+
+  const box = (w, h, d, m, x = 0, y = 0, z = 0) => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+    mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    return mesh;
+  };
+  // 원본 개별 생물 뷰어 파일들과 같은 방식의 관절(Group) + 박스 조립 도우미
+  const createJoint = (name, x, y, z, parent) => {
+    const g = new THREE.Group();
+    g.name = name;
+    g.position.set(x, y, z);
+    if (parent) parent.add(g);
+    return g;
+  };
+  const addBox = (w, h, d, m, x, y, z, parent) => {
+    const mesh = box(w, h, d, m, x, y, z);
+    if (parent) parent.add(mesh);
+    return mesh;
+  };
+  // 알(egg) 컬렉션 원본 파일과 같은 인자 순서(parent가 맨 앞)의 박스 도우미 — 알 포팅 전용
+  const addBoxE = (parent, w, h, d, m, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) => {
+    const mesh = box(w, h, d, m, x, y, z);
+    mesh.rotation.set(rx, ry, rz);
+    parent.add(mesh);
+    return mesh;
+  };
+  // 계단식 블록형 알 껍데기(모든 등급 알이 공유하는 기본 형태) — 원본 컬렉션 파일에서 그대로 가져옴
+  function buildBlockyEggShell(rootGroup, scale, shellMat, accentMat, coreMat) {
+    const s = scale;
+    addBoxE(rootGroup, 0.85 * s, 0.18 * s, 0.85 * s, shellMat, 0, 0.09 * s, 0);
+    addBoxE(rootGroup, 1.15 * s, 0.34 * s, 1.15 * s, shellMat, 0, 0.34 * s, 0);
+    addBoxE(rootGroup, 1.28 * s, 0.44 * s, 1.28 * s, shellMat, 0, 0.72 * s, 0);
+    if (accentMat) addBoxE(rootGroup, 1.32 * s, 0.12 * s, 1.32 * s, accentMat, 0, 0.72 * s, 0);
+    const coreMesh = addBoxE(rootGroup, 0.82 * s, 0.38 * s, 0.82 * s, coreMat, 0, 1.05 * s, 0);
+    const topCap = createJoint('TopCap', 0, 1.21 * s, 0, rootGroup);
+    addBoxE(topCap, 1.12 * s, 0.30 * s, 1.12 * s, shellMat, 0, 0, 0);
+    addBoxE(topCap, 0.86 * s, 0.24 * s, 0.86 * s, shellMat, 0, 0.26 * s, 0);
+    addBoxE(topCap, 0.52 * s, 0.16 * s, 0.52 * s, shellMat, 0, 0.44 * s, 0);
+    return { topCap, coreMesh };
+  }
+
+  // 생물 자리 바닥 성소/둥지 러그
+  const sanctumDisc = new THREE.Mesh(
+    new THREE.CylinderGeometry(2.3, 2.5, 0.06, 28),
+    mat(zone.capColor, 0.5, 0.3, zone.accentColor, 0.25)
+  );
+  sanctumDisc.position.set(0, 0.03, 0);
+  creatureGroup.add(sanctumDisc);
+
+  // 알 받침 단상
+  const eggPedestal = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.58, 0.72, 0.16, 20),
+    mat(zone.wallColor, 0.5, 0.35, zone.accentColor, 0.2)
+  );
+  eggPedestal.position.set(0, 0.08, 0);
+  eggGroup.add(eggPedestal);
+
+  const animParts = { id: zone.id, creatureGroup, eggGroup };
+
+  // -------------------------------------------------------------------------
+  // (1) 🐔 Lv.1 닭 (수면 자세) + 닭의 알
+  // -------------------------------------------------------------------------
+  if (zone.id === 'chicken') {
+    const whiteM = mat(0xf8fafc, 0.75);
+    const combM = mat(0xef4444, 0.5, 0.05, 0xef4444, 0.2);
+    const beakM = mat(0xf59e0b, 0.5);
+    const strawM = mat(0xd97706, 0.9);
+    const eyeClosedM = mat(0x1e293b, 0.9);
+
+    // 짚단 둥지
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      const st = box(0.35, 0.14, 1.1, strawM, Math.cos(a) * 1.1, 0.08, Math.sin(a) * 1.1);
+      st.rotation.y = a;
+      creatureGroup.add(st);
+    }
+
+    // ---- 원본 "블록형 로우폴리 닭" 뷰어의 리깅을 그대로 가져와 조립 ----
+    const wingFeatherM = mat(0xe2e8f0, 0.65);
+    const legM = mat(0xfbbf24, 0.5);
+
+    const root = createJoint('Root', 0, 0.85, 0, creatureGroup);
+    const body = createJoint('Body', 0, 0, 0, root);
+    addBox(0.68, 0.58, 0.84, whiteM, 0, 0.08, 0, body);
+    addBox(0.60, 0.46, 0.22, whiteM, 0, 0.08, 0.46, body); // 앞가슴 돌출
+
+    const neck = createJoint('Neck', 0, 0.28, 0.34, body);
+    addBox(0.36, 0.36, 0.34, whiteM, 0, 0.14, 0.02, neck);
+
+    const headPivot = createJoint('Head', 0, 0.30, 0.04, neck);
+    addBox(0.42, 0.44, 0.44, whiteM, 0, 0.18, 0.02, headPivot);
+
+    const comb = createJoint('Comb', 0, 0.40, 0.02, headPivot);
+    addBox(0.10, 0.16, 0.38, combM, 0, 0.07, 0.02, comb);
+    addBox(0.10, 0.10, 0.24, combM, 0, 0.16, -0.01, comb);
+    addBox(0.10, 0.08, 0.12, combM, 0, 0.22, -0.03, comb);
+
+    addBox(0.24, 0.11, 0.26, beakM, 0, 0.19, 0.34, headPivot);
+    const lowerBeak = createJoint('LowerBeak', 0, 0.13, 0.22, headPivot);
+    addBox(0.20, 0.07, 0.22, beakM, 0, -0.02, 0.10, lowerBeak);
+
+    const wattle = createJoint('Wattle', 0, 0.10, 0.27, headPivot);
+    addBox(0.12, 0.18, 0.14, combM, 0, -0.08, 0.0, wattle);
+
+    // 눈: 자고 있으니 감은 눈만 보이게
+    addBox(0.05, 0.03, 0.11, eyeClosedM, 0.215, 0.24, 0.10, headPivot);
+    addBox(0.05, 0.03, 0.11, eyeClosedM, -0.215, 0.24, 0.10, headPivot);
+
+    const wingL = createJoint('Wing_L', 0.35, 0.28, 0.05, body);
+    addBox(0.11, 0.38, 0.56, wingFeatherM, 0.05, -0.16, -0.06, wingL);
+    addBox(0.09, 0.24, 0.20, wingFeatherM, 0.05, -0.14, -0.38, wingL);
+
+    const wingR = createJoint('Wing_R', -0.35, 0.28, 0.05, body);
+    addBox(0.11, 0.38, 0.56, wingFeatherM, -0.05, -0.16, -0.06, wingR);
+    addBox(0.09, 0.24, 0.20, wingFeatherM, -0.05, -0.14, -0.38, wingR);
+
+    const tail = createJoint('Tail', 0, 0.24, -0.40, body);
+    const tailMid = addBox(0.18, 0.42, 0.22, whiteM, 0, 0.16, -0.10, tail); tailMid.rotation.x = -0.45;
+    const tailTip = addBox(0.14, 0.34, 0.18, wingFeatherM, 0, 0.26, -0.24, tail); tailTip.rotation.x = -0.85;
+    const tailSideL = addBox(0.12, 0.30, 0.18, wingFeatherM, 0.11, 0.12, -0.12, tail); tailSideL.rotation.set(-0.5, 0.2, 0.15);
+    const tailSideR = addBox(0.12, 0.30, 0.18, wingFeatherM, -0.11, 0.12, -0.12, tail); tailSideR.rotation.set(-0.5, -0.2, -0.15);
+
+    function createChickenLeg(xOffset) {
+      const hip = createJoint('Hip', xOffset, -0.18, 0.02, body);
+      addBox(0.18, 0.22, 0.20, whiteM, 0, -0.08, 0, hip);
+      addBox(0.08, 0.36, 0.08, legM, 0, -0.32, 0, hip);
+      const ankle = createJoint('Ankle', 0, -0.52, 0, hip);
+      addBox(0.07, 0.18, 0.07, legM, 0, -0.08, 0, ankle);
+      const foot = createJoint('Foot', 0, -0.16, 0, ankle);
+      addBox(0.18, 0.05, 0.16, legM, 0, 0.025, 0.04, foot);
+      addBox(0.06, 0.05, 0.26, legM, 0, 0.025, 0.16, foot);
+      const toeL = addBox(0.05, 0.05, 0.22, legM, 0.09, 0.025, 0.14, foot); toeL.rotation.y = -0.32;
+      const toeR = addBox(0.05, 0.05, 0.22, legM, -0.09, 0.025, 0.14, foot); toeR.rotation.y = 0.32;
+      addBox(0.05, 0.04, 0.12, legM, 0, 0.02, -0.06, foot);
+      // 자는 자세: 다리를 몸통 아래로 완전히 접어 넣음
+      hip.rotation.x = -1.25; ankle.rotation.x = 2.15; foot.rotation.x = -0.90;
+      return { hip, ankle, foot };
+    }
+    createChickenLeg(0.18);
+    createChickenLeg(-0.18);
+
+    // ---- 수면 자세(원본의 'sleep' 상태 값을 그대로 고정 자세로 적용) ----
+    root.position.y = 0.34; root.rotation.z = 0.04;
+    body.rotation.x = 0.06;
+    neck.rotation.x = -0.38;
+    headPivot.rotation.x = 0.52; headPivot.rotation.y = 0.25; headPivot.rotation.z = 0.12;
+    lowerBeak.rotation.x = 0.02;
+    comb.rotation.z = 0.05;
+    wingL.rotation.z = 0.06; wingL.rotation.x = 0.08;
+    wingR.rotation.z = -0.06; wingR.rotation.x = 0.08;
+    tail.rotation.x = -0.25;
+
+    animParts.body = body;
+    animParts.headPivot = headPivot;
+    animParts.wingL = wingL;
+    animParts.wingR = wingR;
+
+    // [앞에 놓인 닭의 알 — 원본 알 컬렉션 뷰어에서 그대로 포팅]
+    const eggRoot = createJoint('ChickenEgg_Root', 0, 0.30, 0, eggGroup);
+    const eShellM = mat(0xfef3c7, 0.65, 0.05);
+    const eSpotM = mat(0xd97706, 0.7, 0.05);
+    const eCombM = mat(0xef4444, 0.45, 0.1, 0xef4444, 0.2);
+    const eCoreM = mat(0xfde047, 0.2, 0.1, 0xfde047, 0.8);
+    const eggS = 0.76;
+    const { topCap: eTopCap } = buildBlockyEggShell(eggRoot, eggS, eShellM, null, eCoreM);
+    addBoxE(eggRoot, 0.14, 0.14, 0.05, eSpotM, 0.28, 0.55, 0.48);
+    addBoxE(eggRoot, 0.10, 0.10, 0.05, eSpotM, -0.32, 0.42, 0.46);
+    addBoxE(eggRoot, 0.12, 0.12, 0.05, eSpotM, 0.12, 0.72, -0.49);
+    const eggComb = createJoint('ChickenEgg_Comb', 0, 0.48 * eggS, 0, eTopCap);
+    addBoxE(eggComb, 0.08, 0.16, 0.26, eCombM, 0, 0.08, 0);
+    addBoxE(eggComb, 0.08, 0.22, 0.10, eCombM, 0, 0.12, 0.08);
+    addBoxE(eggComb, 0.08, 0.18, 0.10, eCombM, 0, 0.10, -0.05);
+    animParts.eggRoot = eggRoot;
+    animParts.eggComb = eggComb;
+  }
+
+  // -------------------------------------------------------------------------
+  // (2) 🐯 Lv.2 호랑이 (둥글게 말아 자는 자세) + 호랑이 알
+  // -------------------------------------------------------------------------
+  else if (zone.id === 'tiger') {
+    // ---- 원본 "로우폴리 호랑이" 뷰어(단순 블록 스타일 버전)의 리깅을 그대로 가져와 조립 ----
+    // 알(egg)은 기존 스타일을 유지하므로, 알에서 쓰는 이름(orangeM/creamM/stripeM)은 그대로 둠
+    const orangeM = mat(0xf97316, 0.65);
+    const creamM = mat(0xf8fafc, 0.7);
+    const stripeM = mat(0x18181b, 0.8);
+    const noseM = mat(0xf472b6, 0.5);
+    const eyeYellowM = mat(0xfacc15, 0.3, 0, 0x422006, 0.3);
+
+    const root = createJoint('Root', 0, 1.38, 0, creatureGroup);
+
+    const body = createJoint('Chest', 0, 0, 0.25, root); // update()가 쓰는 이름(body)
+    body.add(box(0.95, 0.88, 1.15, orangeM, 0, 0, 0.25));
+    body.add(box(0.78, 0.65, 0.9, creamM, 0, -0.16, 0.32));
+    [-0.05, 0.25, 0.55].forEach((zPos, idx) => {
+      const sH = idx === 1 ? 0.65 : 0.52;
+      body.add(box(0.98, sH, 0.1, stripeM, 0, 0.12, zPos));
+    });
+
+    const abdomen = createJoint('Abdomen', 0, 0.02, -0.32, body);
+    abdomen.add(box(0.84, 0.76, 1.05, orangeM, 0, -0.02, -0.52));
+    abdomen.add(box(0.68, 0.2, 0.92, creamM, 0, -0.34, -0.52));
+    [-0.25, -0.55, -0.85].forEach((zPos) => {
+      abdomen.add(box(0.87, 0.55, 0.1, stripeM, 0, 0.1, zPos));
+    });
+
+    const neck = createJoint('Neck', 0, 0.28, 0.78, body);
+    const neckMesh = box(0.62, 0.6, 0.45, orangeM, 0, 0.12, 0.12);
+    neckMesh.rotation.x = -0.3;
+    neck.add(neckMesh);
+
+    const headPivot = createJoint('Head', 0, 0.28, 0.26, neck);
+    headPivot.add(box(0.78, 0.68, 0.68, orangeM, 0, 0, 0.2));
+    headPivot.add(box(0.14, 0.42, 0.45, creamM, 0.38, -0.08, 0.18));
+    headPivot.add(box(0.14, 0.42, 0.45, creamM, -0.38, -0.08, 0.18));
+    headPivot.add(box(0.1, 0.26, 0.7, stripeM, 0, 0.24, 0.21));
+    headPivot.add(box(0.24, 0.08, 0.7, stripeM, 0.22, 0.26, 0.21));
+    headPivot.add(box(0.24, 0.08, 0.7, stripeM, -0.22, 0.26, 0.21));
+    headPivot.add(box(0.46, 0.26, 0.38, creamM, 0, -0.08, 0.62));
+    headPivot.add(box(0.32, 0.16, 0.38, orangeM, 0, 0.06, 0.61));
+    headPivot.add(box(0.18, 0.12, 0.1, noseM, 0, 0.04, 0.82));
+
+    const jaw = createJoint('Jaw', 0, -0.22, 0.42, headPivot);
+    jaw.add(box(0.36, 0.12, 0.34, creamM, 0, -0.02, 0.15));
+
+    const earL = createJoint('EarL', 0.3, 0.36, 0.02, headPivot);
+    earL.add(box(0.18, 0.22, 0.12, orangeM, 0, 0.08, 0));
+    earL.add(box(0.1, 0.1, 0.13, creamM, 0, 0.08, -0.01));
+    const earR = createJoint('EarR', -0.3, 0.36, 0.02, headPivot);
+    earR.add(box(0.18, 0.22, 0.12, orangeM, 0, 0.08, 0));
+    earR.add(box(0.1, 0.1, 0.13, creamM, 0, 0.08, -0.01));
+
+    const eyesClosed = new THREE.Group();
+    eyesClosed.add(box(0.16, 0.04, 0.07, stripeM, 0.2, 0.08, 0.53));
+    eyesClosed.add(box(0.16, 0.04, 0.07, stripeM, -0.2, 0.08, 0.53));
+    headPivot.add(eyesClosed);
+    // (뜬 눈은 생략 — 항상 자는 중이라 감은 눈만 사용)
+    void eyeYellowM;
+
+    const tail1 = createJoint('Tail1', 0, 0.2, -0.98, abdomen);
+    tail1.add(box(0.16, 0.16, 0.55, orangeM, 0, 0, -0.25));
+    tail1.add(box(0.17, 0.17, 0.1, stripeM, 0, 0, -0.3));
+    const tail2 = createJoint('Tail2', 0, 0, -0.5, tail1);
+    tail2.add(box(0.14, 0.14, 0.55, orangeM, 0, 0, -0.25));
+    tail2.add(box(0.15, 0.15, 0.1, stripeM, 0, 0, -0.28));
+    const tail3 = createJoint('Tail3', 0, 0, -0.5, tail2);
+    tail3.add(box(0.12, 0.12, 0.45, orangeM, 0, 0, -0.2));
+    tail3.add(box(0.13, 0.13, 0.2, stripeM, 0, 0, -0.35));
+    const tailPivot = tail1; // update()가 쓰는 이름(tailPivot)
+
+    function createLeg(isFront, sideSign, parent, xOffset, yOffset, zOffset) {
+      const upperLen = isFront ? 0.62 : 0.68;
+      const lowerLen = isFront ? 0.58 : 0.62;
+      const upperW = isFront ? 0.28 : 0.32;
+
+      const hip = createJoint('Hip', xOffset * sideSign, yOffset, zOffset, parent);
+      hip.add(box(upperW, upperLen, upperW * 1.1, orangeM, 0, -upperLen / 2, 0));
+      hip.add(box(upperW + 0.02, 0.09, upperW * 1.12, stripeM, 0, -upperLen * 0.45, 0));
+
+      const knee = createJoint('Knee', 0, -upperLen, 0, hip);
+      knee.add(box(upperW * 0.82, lowerLen, upperW * 0.85, orangeM, 0, -lowerLen / 2, 0));
+      knee.add(box(upperW * 0.85, 0.08, upperW * 0.88, stripeM, 0, -lowerLen * 0.4, 0));
+
+      const paw = createJoint('Paw', 0, -lowerLen, 0, knee);
+      paw.add(box(upperW * 0.95, 0.16, 0.34, creamM, 0, -0.06, 0.06));
+
+      return { hip, knee, paw };
+    }
+    const frontL = createLeg(true, 1, body, 0.36, -0.18, 0.55);
+    const frontR = createLeg(true, -1, body, 0.36, -0.18, 0.55);
+    const backL = createLeg(false, 1, abdomen, 0.34, -0.12, -0.78);
+    const backR = createLeg(false, -1, abdomen, 0.34, -0.12, -0.78);
+
+    // ---- 수면(옆으로 몸을 둥글게 말고 누운) 자세 ----
+    root.position.y = 0.52; root.rotation.x = 0.05; root.rotation.z = 0.38;
+    body.rotation.x = 0.12; body.rotation.y = 0.28;
+    abdomen.rotation.x = -0.15; abdomen.rotation.y = 0.42;
+    neck.rotation.x = 0.32;
+    headPivot.rotation.set(0.18, 0.35, -0.25);
+    jaw.rotation.x = 0.02;
+    earL.rotation.x = 0.1; earR.rotation.x = 0.1;
+    frontL.hip.rotation.set(-1.25, 0, -0.2); frontL.knee.rotation.x = 1.85; frontL.paw.rotation.x = -0.5;
+    frontR.hip.rotation.set(-1.15, 0, 0.15); frontR.knee.rotation.x = 1.65; frontR.paw.rotation.x = -0.4;
+    backL.hip.rotation.set(-1.35, 0, -0.25); backL.knee.rotation.x = -1.45; backL.paw.rotation.x = 0.8;
+    backR.hip.rotation.set(-1.2, 0, 0.2); backR.knee.rotation.x = -1.3; backR.paw.rotation.x = 0.7;
+    tail1.rotation.set(-0.1, 0.65, 0);
+    tail2.rotation.set(0.05, 0.75, 0);
+
+    animParts.body = body;
+    animParts.headPivot = headPivot;
+    animParts.tailPivot = tailPivot;
+    animParts.earL = earL;
+    animParts.earR = earR;
+
+    // [앞에 놓인 호랑이 알 — 원본 알 컬렉션 뷰어에서 그대로 포팅]
+    const eggRoot = createJoint('TigerEgg_Root', 0, 0.28, 0, eggGroup);
+    const eOrangeM = mat(0xf97316, 0.55, 0.1);
+    const eCreamM = mat(0xfffbeb, 0.65, 0.05);
+    const eStripeM = mat(0x18181b, 0.8, 0.1);
+    const eGoldCoreM = mat(0xf59e0b, 0.2, 0.2, 0xf59e0b, 1.1);
+    const eggS = 0.84;
+    const { topCap: eTopCap } = buildBlockyEggShell(eggRoot, eggS, eOrangeM, eStripeM, eGoldCoreM);
+    addBoxE(eggRoot, 0.68 * eggS, 0.72 * eggS, 0.10 * eggS, eCreamM, 0, 0.56 * eggS, 0.62 * eggS);
+    addBoxE(eggRoot, 0.22 * eggS, 0.22 * eggS, 0.06 * eggS, eGoldCoreM, 0, 0.58 * eggS, 0.68 * eggS);
+    for (const side of [-1, 1]) {
+      addBoxE(eggRoot, 0.10, 0.12, 0.92 * eggS, eStripeM, side * 0.62 * eggS, 0.52 * eggS, 0);
+      addBoxE(eggRoot, 0.10, 0.12, 0.82 * eggS, eStripeM, side * 0.60 * eggS, 0.85 * eggS, 0);
+    }
+    addBoxE(eTopCap, 0.36 * eggS, 0.06 * eggS, 0.06 * eggS, eStripeM, 0, 0.16 * eggS, 0.45 * eggS);
+    addBoxE(eTopCap, 0.28 * eggS, 0.06 * eggS, 0.06 * eggS, eStripeM, 0, 0.06 * eggS, 0.55 * eggS);
+    addBoxE(eTopCap, 0.07 * eggS, 0.24 * eggS, 0.06 * eggS, eStripeM, 0, 0.08 * eggS, 0.52 * eggS);
+    const eEarL = createJoint('TigerEgg_EarL', 0.34 * eggS, 0.28 * eggS, 0, eTopCap);
+    addBoxE(eEarL, 0.20, 0.24, 0.12, eStripeM, 0, 0.10, 0, 0, 0, -0.25);
+    addBoxE(eEarL, 0.10, 0.10, 0.13, eCreamM, 0, 0.12, 0, 0, 0, -0.25);
+    const eEarR = createJoint('TigerEgg_EarR', -0.34 * eggS, 0.28 * eggS, 0, eTopCap);
+    addBoxE(eEarR, 0.20, 0.24, 0.12, eStripeM, 0, 0.10, 0, 0, 0, 0.25);
+    addBoxE(eEarR, 0.10, 0.10, 0.13, eCreamM, 0, 0.12, 0, 0, 0, 0.25);
+    const eTailPivot = createJoint('TigerEgg_Tail', 0, 0.22 * eggS, -0.58 * eggS, eggRoot);
+    addBoxE(eTailPivot, 0.14, 0.14, 0.45, eOrangeM, 0.22, 0.05, -0.15, 0.2, 0.6, 0);
+    addBoxE(eTailPivot, 0.15, 0.15, 0.14, eStripeM, 0.36, 0.10, -0.22, 0.2, 0.6, 0);
+    animParts.eggRoot = eggRoot;
+    // animParts.earL/earR은 위에서 이미 실제 호랑이 귀로 설정해둠(알의 장식 귀로 덮어쓰지 않음)
+  }
+
+  // -------------------------------------------------------------------------
+  // (3) 🐉 Lv.3 서양 드래곤 (날개를 접고 엎드려 자는 자세) + 드래곤 알
+  // -------------------------------------------------------------------------
+  else if (zone.id === 'dragon') {
+    // ---- 원본 "블록형 로우폴리 드래곤" 뷰어의 리깅을 그대로 가져와 조립 ----
+    const scaleM = mat(0x1e1b2e, 0.65, 0.3);
+    const scaleDarkM = mat(0x110f1a, 0.7, 0.3);
+    const bellyM = mat(0x3b3355, 0.65, 0.2);
+    const wingBoneM = mat(0x2e2640, 0.6, 0.2);
+    const wingMembraneM = mat(0x4c1d95, 0.5, 0.2);
+    const spinePlateM = mat(0x9333ea, 0.4, 0.3, 0x9333ea, 0.5);
+    const hornM = mat(0xd8b4fe, 0.45, 0.3);
+    const eyeClosedM = mat(0x09070d, 0.8);
+    const nostrilM = mat(0xa855f7, 0.5, 0.2, 0x7e22ce, 0.5);
+
+    // 원본과 같은 호출 순서(parent 먼저)의 블록 도우미
+    const addBlock = (parent, w, h, d, m, x, y, z, rx, ry, rz) => {
+      const o = box(w, h, d, m, x, y, z);
+      if (rx) o.rotation.x = rx; if (ry) o.rotation.y = ry; if (rz) o.rotation.z = rz;
+      parent.add(o);
+      return o;
+    };
+
+    const root = createJoint('Root', 0, 2.2, 0, creatureGroup);
+    const body = createJoint('Chest', 0, 0, 0, root);   // update()가 쓰는 이름(body) 유지
+    addBlock(body, 1.15, 0.92, 1.55, scaleM, 0, 0, 0.15);
+    addBlock(body, 0.88, 0.22, 1.42, bellyM, 0, -0.42, 0.15);
+    addBlock(body, 0.14, 0.26, 0.26, spinePlateM, 0, 0.56, 0.65);
+    addBlock(body, 0.14, 0.28, 0.28, spinePlateM, 0, 0.57, 0.15);
+    addBlock(body, 0.14, 0.26, 0.26, spinePlateM, 0, 0.56, -0.35);
+
+    const abdomen = createJoint('Abdomen', 0, 0.02, -0.62, body);
+    addBlock(abdomen, 0.92, 0.76, 1.15, scaleM, 0, -0.04, -0.52);
+    addBlock(abdomen, 0.70, 0.18, 1.05, bellyM, 0, -0.38, -0.52);
+    addBlock(abdomen, 0.12, 0.24, 0.24, spinePlateM, 0, 0.44, -0.35);
+    addBlock(abdomen, 0.12, 0.22, 0.24, spinePlateM, 0, 0.43, -0.82);
+
+    const neck1 = createJoint('Neck1', 0, 0.18, 0.88, body);
+    addBlock(neck1, 0.54, 0.52, 0.65, scaleM, 0, 0.10, 0.26, -0.25, 0, 0);
+    addBlock(neck1, 0.40, 0.14, 0.58, bellyM, 0, -0.12, 0.28, -0.25, 0, 0);
+    addBlock(neck1, 0.10, 0.20, 0.20, spinePlateM, 0, 0.40, 0.25, -0.25, 0, 0);
+
+    const neck2 = createJoint('Neck2', 0, 0.16, 0.52, neck1);
+    addBlock(neck2, 0.46, 0.46, 0.60, scaleM, 0, 0.08, 0.24, -0.15, 0, 0);
+    addBlock(neck2, 0.34, 0.12, 0.54, bellyM, 0, -0.12, 0.24, -0.15, 0, 0);
+    addBlock(neck2, 0.09, 0.18, 0.18, spinePlateM, 0, 0.34, 0.24, -0.15, 0, 0);
+
+    const headPivot = createJoint('Head', 0, 0.10, 0.48, neck2);
+    addBlock(headPivot, 0.68, 0.52, 0.68, scaleM, 0, 0.06, 0.26);
+    addBlock(headPivot, 0.48, 0.28, 0.68, scaleM, 0, 0.0, 0.85);
+    addBlock(headPivot, 0.12, 0.10, 0.12, scaleDarkM, -0.14, 0.14, 1.08);
+    addBlock(headPivot, 0.12, 0.10, 0.12, scaleDarkM, 0.14, 0.14, 1.08);
+    addBlock(headPivot, 0.06, 0.06, 0.04, nostrilM, -0.14, 0.13, 1.14);
+    addBlock(headPivot, 0.06, 0.06, 0.04, nostrilM, 0.14, 0.13, 1.14);
+    addBlock(headPivot, 0.14, 0.16, 0.72, hornM, -0.24, 0.38, -0.12, 0.42, -0.15, 0);
+    addBlock(headPivot, 0.14, 0.16, 0.72, hornM, 0.24, 0.38, -0.12, 0.42, 0.15, 0);
+    addBlock(headPivot, 0.10, 0.10, 0.38, hornM, -0.32, 0.18, -0.05, 0.2, -0.25, 0);
+    addBlock(headPivot, 0.10, 0.10, 0.38, hornM, 0.32, 0.18, -0.05, 0.2, 0.25, 0);
+    // 감은 눈
+    addBlock(headPivot, 0.06, 0.04, 0.24, eyeClosedM, -0.345, 0.09, 0.38);
+    addBlock(headPivot, 0.06, 0.04, 0.24, eyeClosedM, 0.345, 0.09, 0.38);
+
+    const jaw = createJoint('Jaw', 0, -0.14, 0.48, headPivot);
+    addBlock(jaw, 0.42, 0.14, 0.64, scaleDarkM, 0, -0.04, 0.32);
+
+    function createDragonWing(side) {
+      const s = side === 'L' ? 1 : -1;
+      const inner = createJoint(`WingInner_${side}`, s * 0.55, 0.38, 0.45, body);
+      addBlock(inner, s * 1.45, 0.14, 0.18, wingBoneM, s * 0.72, 0, 0.28);
+      addBlock(inner, 1.42, 0.04, 1.35, wingMembraneM, s * 0.72, -0.02, -0.36);
+      const outer = createJoint(`WingOuter_${side}`, s * 1.42, 0, 0.28, inner);
+      addBlock(outer, 1.85, 0.11, 0.14, wingBoneM, s * 0.92, 0, 0);
+      addBlock(outer, 0.10, 0.10, 0.26, hornM, 0, 0.04, 0.18);
+      addBlock(outer, 0.08, 0.08, 1.45, wingBoneM, s * 0.55, 0, -0.68, 0, s * -0.25, 0);
+      addBlock(outer, 1.80, 0.04, 1.45, wingMembraneM, s * 0.90, -0.02, -0.68);
+      return { inner, outer };
+    }
+    const wingL = createDragonWing('L');
+    const wingR = createDragonWing('R');
+
+    const tail1 = createJoint('Tail1', 0, 0.04, -1.08, abdomen);
+    addBlock(tail1, 0.58, 0.52, 0.78, scaleM, 0, -0.02, -0.36);
+    addBlock(tail1, 0.10, 0.20, 0.22, spinePlateM, 0, 0.32, -0.36);
+    const tail2 = createJoint('Tail2', 0, 0, -0.72, tail1);
+    addBlock(tail2, 0.44, 0.40, 0.78, scaleM, 0, -0.02, -0.36);
+    addBlock(tail2, 0.09, 0.18, 0.20, spinePlateM, 0, 0.26, -0.36);
+    const tail3 = createJoint('Tail3', 0, 0, -0.72, tail2);
+    addBlock(tail3, 0.32, 0.28, 0.76, scaleM, 0, -0.01, -0.35);
+    addBlock(tail3, 0.08, 0.16, 0.18, spinePlateM, 0, 0.20, -0.35);
+    const tail4 = createJoint('Tail4', 0, 0, -0.70, tail3);
+    addBlock(tail4, 0.20, 0.18, 0.75, scaleM, 0, 0, -0.35);
+    addBlock(tail4, 0.58, 0.06, 0.48, spinePlateM, 0, 0, -0.62, 0, Math.PI / 4, 0);
+
+    function createDragonLeg(parent, x, y, z, isHind) {
+      const hip = createJoint('Hip', x, y, z, parent);
+      const upperW = isHind ? 0.36 : 0.30, upperH = isHind ? 0.62 : 0.54;
+      addBlock(hip, upperW, upperH, upperW + 0.06, scaleDarkM, 0, -upperH * 0.42, 0);
+      const knee = createJoint('Knee', 0, -upperH * 0.82, 0, hip);
+      addBlock(knee, upperW * 0.82, 0.52, upperW * 0.82, scaleM, 0, -0.24, 0);
+      const paw = createJoint('Paw', 0, -0.48, 0, knee);
+      addBlock(paw, upperW * 0.95, 0.16, 0.44, scaleDarkM, 0, -0.06, 0.08);
+      addBlock(paw, 0.07, 0.08, 0.18, hornM, -0.09, -0.09, 0.34);
+      addBlock(paw, 0.07, 0.08, 0.20, hornM, 0, -0.09, 0.36);
+      addBlock(paw, 0.07, 0.08, 0.18, hornM, 0.09, -0.09, 0.34);
+      // 자는 자세로 접음
+      if (isHind) { hip.rotation.x = -0.95; knee.rotation.x = 1.45; paw.rotation.x = -0.50; }
+      else        { hip.rotation.x = -1.15; knee.rotation.x = 0.30; paw.rotation.x = 0.85; }
+      return { hip, knee, paw };
+    }
+    createDragonLeg(body, 0.52, -0.25, 0.52, false);
+    createDragonLeg(body, -0.52, -0.25, 0.52, false);
+    createDragonLeg(abdomen, 0.44, -0.18, -0.68, true);
+    createDragonLeg(abdomen, -0.44, -0.18, -0.68, true);
+
+    // ---- 수면 자세(원본 'sleep' 상태 값을 고정 자세로) ----
+    root.position.y = 0.54; root.rotation.z = 0.06;
+    body.rotation.x = 0.06; body.rotation.y = 0.18;
+    abdomen.rotation.x = -0.08; abdomen.rotation.y = 0.28;
+    wingL.inner.rotation.set(-0.25, -0.35, 0.42); wingL.outer.rotation.z = -1.65;
+    wingR.inner.rotation.set(-0.25, 0.35, -0.42); wingR.outer.rotation.z = 1.65;
+    neck1.rotation.set(0.42, 0.25, 0);
+    neck2.rotation.set(0.22, 0.30, 0);
+    headPivot.rotation.set(-0.45, 0.25, -0.12);
+    jaw.rotation.x = 0.04;
+    tail1.rotation.set(-0.05, 0.42, 0);
+    tail2.rotation.set(0.02, 0.48, 0);
+    tail3.rotation.set(0.05, 0.52, 0);
+    tail4.rotation.set(0.08, 0.45, 0);
+
+    animParts.body = body;
+    animParts.wingL = wingL;
+    animParts.wingR = wingR;
+    animParts.headPivot = headPivot;
+
+    // [앞에 놓인 서양 드래곤 알 — 원본 알 컬렉션 뷰어에서 그대로 포팅]
+    const eggRoot = createJoint('DragonEgg_Root', 0, 0.28, 0, eggGroup);
+    const eObsidianM = mat(0x181326, 0.4, 0.35);
+    const eScaleM = mat(0x2e1065, 0.45, 0.3);
+    const eEnderM = mat(0xc084fc, 0.2, 0.1, 0xa855f7, 1.65);
+    const eHornM = mat(0xfacc15, 0.3, 0.6, 0xca8a04, 0.25);
+    const eggS = 0.90;
+    const { topCap: eTopCap } = buildBlockyEggShell(eggRoot, eggS, eObsidianM, eEnderM, eEnderM);
+    addBoxE(eggRoot, 0.34, 0.34, 0.14, eEnderM, 0, 0.68 * eggS, 0.62 * eggS, 0, 0, Math.PI / 4);
+    for (let i = 0; i < 4; i++) addBoxE(eggRoot, 0.12, 0.18, 0.22, eHornM, 0, (0.35 + i * 0.22) * eggS, -0.64 * eggS, -0.35, 0, 0);
+    for (const side of [-1, 1]) {
+      const hGroup = new THREE.Group();
+      hGroup.position.set(side * 0.32 * eggS, 0.28 * eggS, -0.05);
+      hGroup.rotation.set(-0.45, 0, side * -0.42);
+      eTopCap.add(hGroup);
+      addBoxE(hGroup, 0.14, 0.38, 0.14, eHornM, 0, 0.16, 0);
+      addBoxE(hGroup, 0.10, 0.32, 0.10, eHornM, 0, 0.44, -0.08, -0.35, 0, 0);
+    }
+    const eWingL = createJoint('DragonEgg_WingL', 0.62 * eggS, 0.78 * eggS, 0, eggRoot);
+    const eWingR = createJoint('DragonEgg_WingR', -0.62 * eggS, 0.78 * eggS, 0, eggRoot);
+    for (const { w, side } of [{ w: eWingL, side: 1 }, { w: eWingR, side: -1 }]) {
+      addBoxE(w, 0.48, 0.10, 0.10, eObsidianM, side * 0.22, 0.12, 0, 0, 0, side * 0.35);
+      addBoxE(w, 0.45, 0.48, 0.04, eScaleM, side * 0.26, -0.08, -0.02, 0, 0, side * 0.2);
+    }
+    animParts.eggRoot = eggRoot;
+    animParts.eWingL = eWingL;
+    animParts.eWingR = eWingR;
+  }
+
+  // -------------------------------------------------------------------------
+  // (4) 🐲 Lv.4 동양 청룡 (또아리를 틀고 여의주를 품은 수면 자세) + 청룡 알
+  // -------------------------------------------------------------------------
+  else if (zone.id === 'eastern') {
+    // ---- 원본 "블록형 로우폴리 동양 청룡" 뷰어의 리깅을 그대로 가져와 조립 ----
+    const jadeM = mat(0x0d9488, 0.55, 0.2);
+    const jadeDarkM = mat(0x115e59, 0.65, 0.2);
+    const goldM = mat(0xfacc15, 0.45, 0.3);
+    const antlerM = mat(0xfde047, 0.4, 0.2);
+    const maneM = mat(0xe11d48, 0.6, 0.1);
+    const whiskerM = mat(0xfef9c3, 0.4, 0.1);
+    const eyeClosedM = mat(0x062c28, 0.8);
+    const orbM = mat(0x67e8f9, 0.15, 0.1, 0x06b6d4, 0.85);
+
+    const addBlockE = (parent, w, h, d, m, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) => {
+      const o = box(w, h, d, m, x, y, z);
+      if (rx) o.rotation.x = rx; if (ry) o.rotation.y = ry; if (rz) o.rotation.z = rz;
+      parent.add(o);
+      return o;
+    };
+
+    const body = createJoint('Root_Spine0', 0, 2.5, 1.5, creatureGroup); // update()가 쓰는 이름(body) 유지
+
+    function buildSegmentMesh(joint, w, h, len, zOffset = 0, hasMane = true) {
+      addBlockE(joint, w, h, len, jadeM, 0, 0, zOffset);
+      addBlockE(joint, w * 0.82, h * 0.18, len * 0.96, jadeDarkM, 0, h * 0.52, zOffset);
+      addBlockE(joint, w * 0.78, h * 0.22, len * 0.95, goldM, 0, -h * 0.52, zOffset);
+      if (hasMane) {
+        addBlockE(joint, w * 0.18, h * 0.45, len * 0.42, maneM, 0, h * 0.72, zOffset - len * 0.12, -0.25, 0, 0);
+        addBlockE(joint, w * 0.14, h * 0.30, len * 0.30, antlerM, 0, h * 0.65, zOffset + len * 0.22, -0.2, 0, 0);
+      }
+    }
+    buildSegmentMesh(body, 0.76, 0.72, 0.95, 0, true);
+
+    const neck1 = createJoint('Neck_1', 0, 0.08, 0.45, body);
+    buildSegmentMesh(neck1, 0.68, 0.66, 0.82, 0.35, true);
+    const neck2 = createJoint('Neck_2', 0, 0.12, 0.72, neck1);
+    buildSegmentMesh(neck2, 0.62, 0.60, 0.75, 0.32, true);
+
+    const headPivot = createJoint('Head', 0, 0.10, 0.66, neck2);
+    addBlockE(headPivot, 0.78, 0.66, 0.78, jadeM, 0, 0.05, 0.32);
+    addBlockE(headPivot, 0.84, 0.22, 0.42, jadeDarkM, 0, 0.32, 0.38);
+    addBlockE(headPivot, 0.62, 0.36, 0.75, jadeM, 0, -0.02, 0.98);
+    addBlockE(headPivot, 0.42, 0.14, 0.70, jadeDarkM, 0, 0.20, 0.96);
+    addBlockE(headPivot, 0.14, 0.14, 0.14, jadeDarkM, 0.20, 0.18, 1.25);
+    addBlockE(headPivot, 0.14, 0.14, 0.14, jadeDarkM, -0.20, 0.18, 1.25);
+    addBlockE(headPivot, 0.09, 0.18, 0.09, antlerM, 0.23, -0.24, 1.20);
+    addBlockE(headPivot, 0.09, 0.18, 0.09, antlerM, -0.23, -0.24, 1.20);
+    for (const side of [-1, 1]) {
+      addBlockE(headPivot, 0.18, 0.58, 0.45, maneM, side * 0.44, 0.02, 0.15, 0, side * 0.25, 0);
+      addBlockE(headPivot, 0.14, 0.24, 0.48, jadeM, side * 0.42, 0.25, 0.08, 0.2, side * 0.3, 0);
+      addBlockE(headPivot, 0.12, 0.12, 0.85, antlerM, side * 0.26, 0.55, -0.08, 0.45, -side * 0.22, 0);
+      addBlockE(headPivot, 0.09, 0.36, 0.09, antlerM, side * 0.32, 0.78, -0.05, -0.2, 0, -side * 0.25);
+      addBlockE(headPivot, 0.09, 0.42, 0.09, antlerM, side * 0.38, 0.88, -0.35, 0.3, 0, -side * 0.15);
+    }
+    addBlockE(headPivot, 0.56, 0.35, 0.45, maneM, 0, 0.42, 0.02, -0.35, 0, 0);
+    // 감은 눈
+    addBlockE(headPivot, 0.11, 0.05, 0.26, eyeClosedM, 0.38, 0.12, 0.48);
+    addBlockE(headPivot, 0.11, 0.05, 0.26, eyeClosedM, -0.38, 0.12, 0.48);
+
+    function createWhisker(side, parent) {
+      const wBase = createJoint(`WhiskerBase_${side}`, side * 0.28, -0.02, 1.15, parent);
+      addBlockE(wBase, 0.07, 0.07, 0.65, whiskerM, side * 0.12, -0.10, -0.25, -0.25, side * 0.35, 0);
+      const wTip = createJoint(`WhiskerTip_${side}`, side * 0.22, -0.20, -0.52, wBase);
+      addBlockE(wTip, 0.06, 0.06, 0.65, whiskerM, side * 0.08, -0.08, -0.28, -0.15, side * 0.2, 0);
+      wBase.rotation.x = -0.25; wTip.rotation.x = 0.20;
+      return { base: wBase, tip: wTip };
+    }
+    createWhisker(1, headPivot);
+    createWhisker(-1, headPivot);
+
+    const jaw = createJoint('Jaw', 0, -0.18, 0.55, headPivot);
+    addBlockE(jaw, 0.50, 0.18, 0.68, goldM, 0, -0.06, 0.34);
+    addBlockE(jaw, 0.34, 0.26, 0.28, maneM, 0, -0.22, 0.55, 0.3, 0, 0);
+    jaw.rotation.x = 0.04;
+
+    // 8단 척추/꼬리 — 둥글게 또아리를 튼 자세로 고정
+    const spineSpecs = [
+      { w: 0.76, h: 0.72, len: 0.95, dist: -0.88 }, { w: 0.72, h: 0.68, len: 0.95, dist: -0.88 },
+      { w: 0.68, h: 0.65, len: 0.95, dist: -0.88 }, { w: 0.64, h: 0.62, len: 0.95, dist: -0.88 },
+      { w: 0.56, h: 0.55, len: 0.90, dist: -0.85 }, { w: 0.48, h: 0.46, len: 0.85, dist: -0.80 },
+      { w: 0.38, h: 0.38, len: 0.80, dist: -0.75 }, { w: 0.28, h: 0.28, len: 0.75, dist: -0.70 }
+    ];
+    const coilAnglesY = [-0.46, -0.50, -0.52, -0.52, -0.50, -0.48, -0.45, -0.40];
+    const spines = [];
+    let parentJoint = body;
+    spineSpecs.forEach((spec, idx) => {
+      const joint = createJoint(`Spine_${idx + 1}`, 0, 0, spec.dist, parentJoint);
+      buildSegmentMesh(joint, spec.w, spec.h, spec.len, -spec.len * 0.42, true);
+      joint.rotation.x = idx === 7 ? 0.12 : 0;
+      joint.rotation.y = coilAnglesY[idx];
+      spines.push(joint);
+      parentJoint = joint;
+    });
+    const tailEnd = spines[spines.length - 1];
+    addBlockE(tailEnd, 0.22, 0.48, 0.95, maneM, 0, 0.08, -0.85, 0.15, 0, 0);
+    addBlockE(tailEnd, 0.46, 0.24, 0.75, maneM, 0, 0.04, -0.78, 0, 0, 0);
+    addBlockE(tailEnd, 0.14, 0.28, 0.65, antlerM, 0, 0.22, -0.75, 0.25, 0, 0);
+
+    function createDragonClawLeg(parent, xOffset, zOffset) {
+      const hip = createJoint('Hip', xOffset, -0.18, zOffset, parent);
+      addBlockE(hip, 0.32, 0.56, 0.36, jadeDarkM, 0, -0.22, 0, 0.25, 0, 0);
+      addBlockE(hip, 0.16, 0.32, 0.28, maneM, 0, -0.20, -0.22, -0.3, 0, 0);
+      const knee = createJoint('Knee', 0, -0.46, 0.08, hip);
+      addBlockE(knee, 0.25, 0.48, 0.28, jadeM, 0, -0.20, -0.04, -0.2, 0, 0);
+      const paw = createJoint('Paw', 0, -0.42, -0.05, knee);
+      addBlockE(paw, 0.34, 0.16, 0.42, jadeDarkM, 0, -0.05, 0.10);
+      for (let c = -1; c <= 1; c++) addBlockE(paw, 0.07, 0.10, 0.24, antlerM, c * 0.11, -0.07, 0.34, 0.25, 0, 0);
+      addBlockE(paw, 0.07, 0.09, 0.18, antlerM, 0, -0.06, -0.14, -0.2, 0, 0);
+      // 자는 자세
+      hip.rotation.x = -1.05; knee.rotation.x = 1.35; paw.rotation.x = -0.30;
+      return { hip, knee, paw };
+    }
+    createDragonClawLeg(spines[0], 0.48, -0.35);
+    createDragonClawLeg(spines[0], -0.48, -0.35);
+    createDragonClawLeg(spines[3], 0.42, -0.35);
+    createDragonClawLeg(spines[3], -0.42, -0.35);
+
+    // 또아리 중심에 품은 여의주
+    const pearl = new THREE.Mesh(new THREE.OctahedronGeometry(0.35, 1), orbM);
+    pearl.position.set(0.15, 0.42, 0.25);
+    body.add(pearl);
+
+    // ---- 수면(또아리) 자세 ----
+    body.position.set(-0.85, 0.46, 0.55);
+    body.rotation.set(0, 0.55, 0.05);
+    neck1.rotation.set(0.08, 0.42, 0);
+    neck2.rotation.set(0.12, 0.45, 0);
+    headPivot.rotation.set(-0.18, 0.35, -0.10);
+
+    animParts.body = body;
+    animParts.pearl = pearl;
+    animParts.headPivot = headPivot;
+
+    // [앞에 놓인 동양 청룡 알 + 공전 여의주 — 원본 알 컬렉션 뷰어에서 그대로 포팅]
+    const eggRoot = createJoint('EasternEgg_Root', 0, 0.42, 0, eggGroup);
+    const eJadeM = mat(0x0d9488, 0.35, 0.25, 0x0f766e, 0.25);
+    const eGoldM = mat(0xfacc15, 0.25, 0.75, 0xf59e0b, 0.4);
+    const eCrimsonManeM = mat(0xef4444, 0.4, 0.15, 0xdc2626, 0.6);
+    const ePearlM = mat(0x67e8f9, 0.1, 0.1, 0x22d3ee, 2.0);
+    const eggS = 0.94;
+    const { topCap: eTopCap } = buildBlockyEggShell(eggRoot, eggS, eJadeM, eGoldM, ePearlM);
+    for (let i = 0; i < 4; i++) addBoxE(eggRoot, 0.56 * eggS, 0.15 * eggS, 0.10 * eggS, eGoldM, 0, (0.30 + i * 0.20) * eggS, 0.62 * eggS);
+    for (let i = 0; i < 5; i++) addBoxE(eggRoot, 0.14, 0.24, 0.26, eCrimsonManeM, 0, (0.30 + i * 0.22) * eggS, -0.64 * eggS, 0.4, 0, 0);
+    for (const side of [-1, 1]) {
+      const antler = new THREE.Group();
+      antler.position.set(side * 0.28 * eggS, 0.32 * eggS, 0);
+      antler.rotation.set(-0.2, 0, side * -0.35);
+      eTopCap.add(antler);
+      addBoxE(antler, 0.10, 0.48, 0.10, eGoldM, 0, 0.22, 0);
+      addBoxE(antler, 0.08, 0.26, 0.08, eGoldM, side * 0.12, 0.30, 0.08, 0.3, 0, side * -0.6);
+      addBoxE(antler, 0.08, 0.24, 0.08, eGoldM, side * -0.10, 0.42, -0.06, -0.3, 0, side * 0.5);
+    }
+    const eWhiskerL = createJoint('EasternEgg_WhiskerL', 0.48 * eggS, 0.76 * eggS, 0.48 * eggS, eggRoot);
+    addBoxE(eWhiskerL, 0.46, 0.06, 0.06, eGoldM, 0.22, -0.06, 0.10, 0, -0.3, -0.25);
+    const eWhiskerR = createJoint('EasternEgg_WhiskerR', -0.48 * eggS, 0.76 * eggS, 0.48 * eggS, eggRoot);
+    addBoxE(eWhiskerR, 0.46, 0.06, 0.06, eGoldM, -0.22, -0.06, 0.10, 0, 0.3, 0.25);
+    const orbitPivot = createJoint('EasternEgg_Orbit', 0, 0.75 * eggS, 0, eggRoot);
+    const miniPearl = new THREE.Mesh(new THREE.IcosahedronGeometry(0.14, 0), ePearlM);
+    miniPearl.position.set(0, 0.15, 0.98 * eggS);
+    orbitPivot.add(miniPearl);
+    for (let i = 0; i < 8; i++) {
+      const ang = (i / 8) * Math.PI * 2;
+      addBoxE(orbitPivot, 0.24, 0.10, 0.14, eGoldM, Math.cos(ang) * 0.92 * eggS, Math.sin(ang * 2) * 0.12, Math.sin(ang) * 0.92 * eggS, 0, -ang, 0);
+    }
+    animParts.eggRoot = eggRoot;
+    animParts.orbitPivot = orbitPivot;
+  }
+
+  // -------------------------------------------------------------------------
+  // (5) 🌌 Lv.5 보라빛 성운 사자 (연한 라벤더·흩날리는 성운 갈기·강렬한 십자 안광/별빛) + 성운 사자 알
+  // -------------------------------------------------------------------------
+  else if (zone.id === 'lion') {
+    // ---- 원본 "블록형 로우폴리 성운 사자" 뷰어의 리깅을 그대로 가져와 조립 ----
+    const bodyLavM = mat(0xa855f7, 0.5, 0.2, 0x6b21a8, 0.5);
+    const nebulaFurM = mat(0xd8b4fe, 0.55, 0.15, 0x9333ea, 0.55);
+    const maneDeepM = mat(0xc084fc, 0.45, 0.1, 0x7e22ce, 0.6);
+    const maneMagentaM = mat(0xf472b6, 0.4, 0.1, 0xdb2777, 0.68);
+    const maneStarlightM = mat(0xfdf4ff, 0.35, 0.1, 0xe9d5ff, 0.6);
+    const starGoldM = mat(0xfacc15, 0.3, 0.3, 0xf59e0b, 1.2);
+    const starCyanM = mat(0x67e8f9, 0.3, 0.3, 0x06b6d4, 1.2);
+    const starFlareM = mat(0xffffff, 0.1, 0.1, 0xffffff, 1.4);
+    const eyeClosedM = mat(0x2a1a3a, 0.8);
+
+    const stars = [];
+    function addStarCrystal(parent, size, x, y, z, isCyan) {
+      const g = new THREE.Group();
+      g.position.set(x, y, z);
+      parent.add(g);
+      g.add(box(size, size, size, isCyan ? starCyanM : starGoldM));
+      const sp = size * 3.1, th = size * 0.28;
+      g.add(box(sp, th, th, starFlareM));
+      g.add(box(th, sp, th, starFlareM));
+      g.add(box(th, th, sp, starFlareM));
+      stars.push(g);
+      return g;
+    }
+    const addBlockLi = (parent, w, h, d, x, y, z, m, rx = 0, ry = 0, rz = 0) => {
+      const o = box(w, h, d, m, x, y, z);
+      if (rx) o.rotation.x = rx; if (ry) o.rotation.y = ry; if (rz) o.rotation.z = rz;
+      parent.add(o);
+      return o;
+    };
+
+    const body = createJoint('Chest', 0, 0.35, 0, creatureGroup); // update()가 쓰는 이름(body) 유지, root는 바로 위에서 흡수
+    addBlockLi(body, 1.26, 1.18, 1.45, 0, 0.05, 0, bodyLavM);
+    addBlockLi(body, 1.32, 0.88, 0.86, 0, -0.10, 0.38, nebulaFurM);
+    addBlockLi(body, 0.62, 0.22, 1.30, 0, 0.68, 0.02, maneDeepM);
+    addStarCrystal(body, 0.24, 0, -0.05, 0.84, false);
+    addStarCrystal(body, 0.12, 0.66, 0.32, 0.35, true);
+    addStarCrystal(body, 0.12, -0.66, 0.32, 0.35, true);
+
+    const abdomen = createJoint('Abdomen', 0, 0.02, -0.72, body);
+    addBlockLi(abdomen, 1.04, 0.98, 1.38, 0, 0, -0.58, bodyLavM);
+    addBlockLi(abdomen, 0.92, 0.35, 1.25, 0, -0.42, -0.55, nebulaFurM);
+    addStarCrystal(abdomen, 0.11, 0.54, 0.24, -0.45, false);
+    addStarCrystal(abdomen, 0.11, -0.54, 0.24, -0.45, false);
+
+    const neck = createJoint('Neck', 0, 0.35, 0.65, body);
+    addBlockLi(neck, 0.92, 0.92, 0.75, 0, 0.10, 0.25, maneDeepM);
+    const maneCrown = createJoint('ManeCrown', 0, 0.15, 0.35, neck);
+
+    // 12방향 방사형 성운 갈기 — update()가 쓰는 manePivots 형태({pivot,baseZ,phase})로 담음
+    const manePivots = [];
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      const cx = Math.cos(angle), cy = Math.sin(angle);
+      const strandPivot = new THREE.Group();
+      strandPivot.position.set(cx * 0.52, cy * 0.52, 0);
+      strandPivot.rotation.z = angle - Math.PI / 2;
+      maneCrown.add(strandPivot);
+      addBlockLi(strandPivot, 0.48, 0.44, 0.98, cx * 0.28, cy * 0.30, -0.28, maneDeepM);
+      addBlockLi(strandPivot, 0.40, 0.36, 0.78, cx * 0.20, cy * 0.22, -0.05, maneMagentaM);
+      addBlockLi(strandPivot, 0.30, 0.28, 0.54, cx * 0.12, cy * 0.14, 0.16, maneStarlightM);
+      addStarCrystal(strandPivot, i % 2 === 0 ? 0.11 : 0.09, cx * 0.44, cy * 0.46, -0.58, i % 2 === 0);
+      manePivots.push({ pivot: strandPivot, baseZ: strandPivot.rotation.z, phase: i * 0.5 });
+    }
+    // 등/옆으로 흘러내리는 장식 스트리머 2가닥 + 가슴 갈기도 같은 방식으로 흔들리게 포함
+    for (const s of [-1, 1]) {
+      const sp = new THREE.Group();
+      sp.position.set(s * 0.42, 0.58, -0.15);
+      sp.rotation.z = Math.PI * 0.5 + s * 0.4 - Math.PI / 2;
+      maneCrown.add(sp);
+      addBlockLi(sp, 0.36, 0.28, 1.15, 0, 0.08, -0.48, maneMagentaM, 0.22, 0, 0);
+      addStarCrystal(sp, 0.11, 0, 0.14, -1.02, s !== 0);
+      manePivots.push({ pivot: sp, baseZ: sp.rotation.z, phase: (s + 2) * 1.1 });
+    }
+
+    const headPivot = createJoint('Head', 0, 0.22, 0.62, neck);
+    addBlockLi(headPivot, 0.86, 0.78, 0.76, 0, 0.04, 0.22, bodyLavM);
+    addBlockLi(headPivot, 1.04, 0.46, 0.48, 0, -0.06, 0.18, maneMagentaM);
+    addStarCrystal(headPivot, 0.16, 0, 0.28, 0.62, true);
+    addBlockLi(headPivot, 0.54, 0.36, 0.52, 0, -0.08, 0.72, nebulaFurM);
+    addBlockLi(headPivot, 0.24, 0.28, 0.16, 0.38, 0.48, 0.08, bodyLavM, 0, 0, -0.2);
+    addBlockLi(headPivot, 0.24, 0.28, 0.16, -0.38, 0.48, 0.08, bodyLavM, 0, 0, 0.2);
+    // 감은 눈
+    addBlockLi(headPivot, 0.19, 0.04, 0.10, 0.27, 0.11, 0.60, eyeClosedM);
+    addBlockLi(headPivot, 0.19, 0.04, 0.10, -0.27, 0.11, 0.60, eyeClosedM);
+
+    const jaw = createJoint('Jaw', 0, -0.24, 0.45, headPivot);
+    addBlockLi(jaw, 0.44, 0.18, 0.48, 0, -0.04, 0.24, bodyLavM);
+    addBlockLi(jaw, 0.32, 0.20, 0.35, 0, -0.14, 0.26, maneStarlightM);
+
+    function createLionLeg(parent, x, y, z, isFront) {
+      const hip = createJoint('Hip', x, y, z, parent);
+      const upperLen = isFront ? 0.78 : 0.86, upperW = isFront ? 0.38 : 0.42;
+      addBlockLi(hip, upperW, upperLen, 0.44, 0, -upperLen / 2 + 0.08, 0, bodyLavM);
+      addStarCrystal(hip, 0.11, x > 0 ? upperW * 0.54 : -upperW * 0.54, -0.22, 0.08, isFront);
+      const knee = createJoint('Knee', 0, -upperLen + 0.12, 0, hip);
+      const lowerLen = 0.72;
+      addBlockLi(knee, 0.30, lowerLen, 0.32, 0, -lowerLen / 2, 0, nebulaFurM);
+      addBlockLi(knee, 0.18, 0.46, 0.24, 0, -0.28, -0.20, maneMagentaM, 0.18, 0, 0);
+      const paw = createJoint('Paw', 0, -lowerLen + 0.05, 0, knee);
+      addBlockLi(paw, 0.38, 0.22, 0.46, 0, -0.08, 0.08, bodyLavM);
+      addBlockLi(paw, 0.07, 0.10, 0.14, -0.11, -0.13, 0.33, starCyanM);
+      addBlockLi(paw, 0.07, 0.10, 0.14, 0.0, -0.13, 0.35, starGoldM);
+      addBlockLi(paw, 0.07, 0.10, 0.14, 0.11, -0.13, 0.33, starCyanM);
+      return { hip, knee, paw };
+    }
+    const legFL = createLionLeg(body, 0.52, -0.22, 0.36, true);
+    const legFR = createLionLeg(body, -0.52, -0.22, 0.36, true);
+    const legBL = createLionLeg(abdomen, 0.46, -0.15, -0.95, false);
+    const legBR = createLionLeg(abdomen, -0.46, -0.15, -0.95, false);
+
+    const tail = [];
+    let tailParent = abdomen;
+    for (let i = 0; i < 4; i++) {
+      const tz = i === 0 ? -1.22 : -0.52, ty = i === 0 ? 0.20 : 0;
+      const tJoint = createJoint(`Tail_${i + 1}`, 0, ty, tz, tailParent);
+      const thick = 0.20 - i * 0.025;
+      addBlockLi(tJoint, thick, thick, 0.56, 0, 0, -0.25, i < 2 ? bodyLavM : nebulaFurM);
+      if (i === 3) {
+        addBlockLi(tJoint, 0.42, 0.42, 0.62, 0, 0, -0.62, maneMagentaM, 0, 0, Math.PI / 4);
+        addBlockLi(tJoint, 0.28, 0.28, 0.52, 0, 0, -0.82, maneStarlightM);
+        addStarCrystal(tJoint, 0.16, 0, 0, -1.12, true);
+      }
+      tail.push(tJoint);
+      tailParent = tJoint;
+    }
+
+    // ---- 수면 자세(원본 'sleep' 상태 값을 고정 자세로) ----
+    body.position.set(0, 0.62, 0.35);   // Chest가 Root 역할까지 겸함(0.35는 원래 chest의 root 기준 오프셋)
+    body.rotation.set(0.08 + 0.04, 0.12, 0.18);
+    abdomen.rotation.set(-0.12, 0.28, 0);
+    neck.rotation.set(0.28, -0.18, 0);
+    headPivot.rotation.set(0.15, 0, -0.22);
+    jaw.rotation.x = 0.05;
+    legFL.hip.rotation.set(-1.25, 0, -0.18);
+    legFL.knee.rotation.x = -0.35; legFL.paw.rotation.x = 0.25;
+    legFR.hip.rotation.set(-1.32, 0, 0.22);
+    legFR.knee.rotation.x = -0.28; legFR.paw.rotation.x = 0.20;
+    legBL.hip.rotation.set(-1.35, 0, 0.25); legBL.knee.rotation.x = 2.05; legBL.paw.rotation.x = -0.65;
+    legBR.hip.rotation.set(-1.35, 0, -0.15); legBR.knee.rotation.x = 2.05; legBR.paw.rotation.x = -0.65;
+    tail.forEach((tJoint, idx) => { tJoint.rotation.x = -0.08; tJoint.rotation.y = 0.42; });
+
+    animParts.body = body;
+    animParts.headPivot = headPivot;
+    animParts.manePivots = manePivots;
+    animParts.stars = stars;
+
+    // [앞에 놓인 성운 사자 알 — 원본 알 컬렉션 뷰어에서 그대로 포팅]
+    const eggRoot = createJoint('LionEgg_Root', 0, 0.34, 0, eggGroup);
+    const eVioletM = mat(0xa855f7, 0.35, 0.2, 0x6b21a8, 0.55);
+    const eLavenderM = mat(0xe9d5ff, 0.25, 0.15, 0xc084fc, 0.85);
+    const ePinkManeM = mat(0xf472b6, 0.25, 0.15, 0xdb2777, 0.95);
+    const eStarCoreM = mat(0xffffff, 0.05, 0.0, 0xfef08a, 3.0);
+    const eCyanBeamM = mat(0x67e8f9, 0.1, 0.1, 0x38bdf8, 2.5);
+    const eggS = 1.0;
+    const { topCap: eTopCap } = buildBlockyEggShell(eggRoot, eggS, eVioletM, eLavenderM, eStarCoreM);
+    const eEyePivot = createJoint('LionEgg_StarEye', 0, 0.76 * eggS, 0.66 * eggS, eggRoot);
+    addBoxE(eEyePivot, 0.26, 0.26, 0.10, eStarCoreM, 0, 0, 0.04, 0, 0, Math.PI / 4);
+    addBoxE(eEyePivot, 0.68, 0.05, 0.04, eCyanBeamM, 0, 0, 0.08);
+    addBoxE(eEyePivot, 0.05, 0.68, 0.04, eStarCoreM, 0, 0, 0.08);
+    const eggMane = [];
+    for (let i = 0; i < 12; i++) {
+      const ang = (i / 12) * Math.PI * 2;
+      const mp = createJoint(`LionEgg_Mane_${i}`, Math.cos(ang) * 0.64 * eggS, 0.92 * eggS, Math.sin(ang) * 0.64 * eggS, eggRoot);
+      mp.rotation.y = -ang;
+      addBoxE(mp, 0.38, 0.18, 0.22, i % 2 === 0 ? eLavenderM : ePinkManeM, 0.18, 0.06, 0, 0, 0, 0.35);
+      addBoxE(mp, 0.12, 0.12, 0.12, eStarCoreM, 0.40, 0.15, 0, Math.PI / 4, Math.PI / 4, 0);
+      eggMane.push({ pivot: mp, phase: i * 0.55, baseZ: 0.25 });
+    }
+    const eGemCoords = [[0.42,0.48,0.52],[-0.42,0.48,0.52],[0.52,0.62,-0.42],[-0.52,0.62,-0.42],[0,0.42,0.42]];
+    eGemCoords.forEach(([gx, gy, gz], idx) => {
+      const g = new THREE.Group();
+      g.position.set(gx * eggS, gy * eggS, gz * eggS);
+      (idx === 4 ? eTopCap : eggRoot).add(g);
+      addBoxE(g, 0.26, 0.04, 0.04, eStarCoreM); addBoxE(g, 0.04, 0.26, 0.04, eStarCoreM); addBoxE(g, 0.04, 0.04, 0.26, eCyanBeamM);
+    });
+
+    animParts.eggRoot = eggRoot;
+    animParts.eggMane = eggMane;
+  }
+
+  // -------------------------------------------------------------------------
+  // (6) 🌑 Lv.6 어둠의 삼족오 (흑일식 광륜 + 3개의 다리 + 칠흑 날개 수면 자세) + 삼족오 알
+  // -------------------------------------------------------------------------
+  else if (zone.id === 'samjoko') {
+    // ---- 원본 "블록형 로우폴리 어둠의 삼족오" 뷰어의 리깅을 그대로 가져와 조립(일부 장식은 간소화) ----
+    const obsidianM = mat(0x110c1d, 0.6, 0.3, 0x090414, 0.3);
+    const abyssM = mat(0x1e1136, 0.65, 0.25, 0x2e1065, 0.4);
+    const shadowEdgeM = mat(0x3b0764, 0.55, 0.2, 0x581c87, 0.5);
+    const crimsonM = mat(0xf43f5e, 0.3, 0.1, 0xe11d48, 1.4);
+    const hellGoldM = mat(0xfbbf24, 0.4, 0.3, 0xd97706, 0.7);
+    const darkBeakM = mat(0x18181b, 0.45, 0.3);
+    const voidSunM = mat(0x0a0612, 0.3, 0.2, 0x090414, 0.6);
+    const eyeClosedM = mat(0x2a0a1a, 0.8);
+
+    const addBlockSj = (parent, w, h, d, x, y, z, m, rx = 0, ry = 0, rz = 0) => {
+      const o = box(w, h, d, m, x, y, z);
+      if (rx) o.rotation.x = rx; if (ry) o.rotation.y = ry; if (rz) o.rotation.z = rz;
+      parent.add(o);
+      return o;
+    };
+
+    const body = createJoint('Chest', 0, 0.9, 0.15, creatureGroup); // update()가 쓰는 이름(body) 유지
+    addBlockSj(body, 1.35, 1.15, 1.45, 0, 0.02, 0.1, obsidianM, 0.18, 0, 0);
+    addBlockSj(body, 1.48, 0.75, 1.05, 0, 0.22, 0.28, abyssM, 0.25, 0, 0);
+    addBlockSj(body, 0.55, 0.55, 0.18, 0, 0.08, 0.85, crimsonM, 0.18, 0, Math.PI / 4);
+    addBlockSj(body, 0.32, 0.32, 0.22, 0, 0.08, 0.88, voidSunM, 0.18, 0, Math.PI / 4);
+    for (const side of [-1, 1]) {
+      addBlockSj(body, 0.28, 0.45, 0.95, side * 0.72, 0.25, 0.15, shadowEdgeM, 0.2, side * 0.22, -side * 0.25);
+      addBlockSj(body, 0.18, 0.25, 0.55, side * 0.82, 0.18, -0.25, crimsonM, 0.15, side * 0.3, 0);
+    }
+
+    const abdomen = createJoint('Abdomen', 0, -0.18, -0.78, body);
+    addBlockSj(abdomen, 1.08, 0.88, 1.15, 0, 0, -0.35, obsidianM, -0.12, 0, 0);
+    addBlockSj(abdomen, 0.92, 0.65, 0.85, 0, -0.12, -0.55, abyssM, -0.18, 0, 0);
+
+    // 등 뒤 흑일식 광륜(코로나 링) — 원본의 haloPivot 역할
+    const haloPivot = createJoint('EclipseHalo', 0, 1.15, -0.25, body);
+    addBlockSj(haloPivot, 0.88, 0.88, 0.14, 0, 0, 0, voidSunM);
+    addBlockSj(haloPivot, 0.88, 0.88, 0.14, 0, 0, 0, voidSunM, 0, 0, Math.PI / 4);
+    for (let i = 0; i < 12; i++) {
+      const ang = (i / 12) * Math.PI * 2;
+      const r = 0.72, cx = Math.cos(ang) * r, cy = Math.sin(ang) * r;
+      const spikeLen = i % 2 === 0 ? 0.55 : 0.34;
+      addBlockSj(haloPivot, 0.16, spikeLen, 0.08, cx, cy, -0.02, i % 3 === 0 ? hellGoldM : crimsonM, 0, 0, ang - Math.PI / 2);
+    }
+
+    const neck = createJoint('Neck', 0, 0.52, 0.68, body);
+    addBlockSj(neck, 0.72, 0.78, 0.72, 0, 0.22, 0.15, obsidianM, 0.35, 0, 0);
+
+    const headPivot = createJoint('Head', 0, 0.52, 0.32, neck);
+    addBlockSj(headPivot, 0.74, 0.66, 0.82, 0, 0.06, 0.12, obsidianM);
+    for (const side of [-1, 1]) addBlockSj(headPivot, 0.22, 0.14, 0.58, side * 0.32, 0.26, 0.22, abyssM, 0.12, side * 0.15, -side * 0.28);
+    addBlockSj(headPivot, 0.38, 0.30, 0.68, 0, -0.02, 0.72, darkBeakM, 0.12, 0, 0);
+    addBlockSj(headPivot, 0.24, 0.28, 0.32, 0, -0.14, 1.08, darkBeakM, 0.65, 0, 0);
+    // 감은 세 개의 마안
+    for (const side of [-1, 1]) addBlockSj(headPivot, 0.08, 0.05, 0.28, side * 0.37, 0.08, 0.26, crimsonM, -0.12, 0, 0);
+    addBlockSj(headPivot, 0.05, 0.22, 0.12, 0, 0.28, 0.50, hellGoldM, -0.15, 0, 0);
+
+    const jaw = createJoint('Jaw', 0, -0.18, 0.45, headPivot);
+    addBlockSj(jaw, 0.30, 0.14, 0.58, 0, -0.02, 0.26, darkBeakM, -0.05, 0, 0);
+    addBlockSj(jaw, 0.18, 0.08, 0.42, 0, 0.05, 0.24, crimsonM);
+
+    // 머리 위 3가닥 암흑 제왕 볏
+    for (let c = -1; c <= 1; c++) {
+      const crestPivot = createJoint(`Crest_${c + 1}`, c * 0.18, 0.36, -0.05, headPivot);
+      const len = c === 0 ? 0.95 : 0.75;
+      crestPivot.rotation.set(0.45 + Math.abs(c) * 0.12, c * 0.22, 0);
+      addBlockSj(crestPivot, 0.16, 0.16, len, 0, 0, -len * 0.45, obsidianM);
+      addBlockSj(crestPivot, 0.14, 0.14, len * 0.55, 0, 0.04, -len * 0.85, c === 0 ? hellGoldM : crimsonM);
+    }
+
+    // 초대형 2단 관절 칠흑 날개(장식 깃은 간소화)
+    function createDarkWing(side, parent) {
+      const inner = createJoint(side === 1 ? 'Wing_L_Inner' : 'Wing_R_Inner', side * 0.62, 0.42, 0.22, parent);
+      addBlockSj(inner, side * 1.45, 0.22, 0.42, side * 0.72, 0.05, 0.18, obsidianM, 0, 0, side * 0.05);
+      addBlockSj(inner, side * 1.35, 0.16, 0.75, side * 0.68, 0.0, -0.12, abyssM);
+      for (let i = 0; i < 4; i++) {
+        const fx = side * (0.28 + i * 0.3), fLen = 1.0 + i * 0.1;
+        addBlockSj(inner, 0.22, 0.10, fLen, fx, -0.04, -0.35 - fLen * 0.35, obsidianM, -0.06, side * 0.08, 0);
+      }
+      const outer = createJoint(side === 1 ? 'Wing_L_Outer' : 'Wing_R_Outer', side * 1.42, 0.06, 0.15, inner);
+      addBlockSj(outer, side * 1.65, 0.18, 0.34, side * 0.82, 0.02, 0.12, obsidianM);
+      for (let j = 0; j < 5; j++) {
+        const px = side * (0.22 + j * 0.3), pLen = 1.5 - Math.abs(j - 2) * 0.15;
+        addBlockSj(outer, 0.22, 0.09, pLen, px, -0.02, -0.25 - pLen * 0.32, obsidianM, -0.04, side * 0.2, 0);
+        addBlockSj(outer, 0.15, 0.07, 0.5, px, -0.03, -0.45 - pLen * 0.88, j % 2 === 0 ? crimsonM : shadowEdgeM, -0.04, side * 0.2, 0);
+      }
+      return { inner, outer };
+    }
+    const wingL = createDarkWing(1, body);
+    const wingR = createDarkWing(-1, body);
+
+    // 삼족(좌·중앙·우 황금 발톱 다리)
+    function createCrowLeg(x, y, z, isCenter, parent) {
+      const hip = createJoint('Hip', x, y, z, parent);
+      addBlockSj(hip, 0.34, 0.58, 0.38, 0, -0.22, 0.04, isCenter ? abyssM : obsidianM, 0.25, 0, 0);
+      addBlockSj(hip, 0.26, 0.24, 0.28, 0, -0.42, -0.05, crimsonM, 0.2, 0, 0);
+      const knee = createJoint('Knee', 0, -0.48, 0.10, hip);
+      addBlockSj(knee, 0.16, 0.56, 0.18, 0, -0.26, -0.06, darkBeakM, -0.28, 0, 0);
+      addBlockSj(knee, 0.18, 0.38, 0.08, 0, -0.24, 0.04, hellGoldM, -0.28, 0, 0);
+      const talon = createJoint('Talon', 0, -0.52, -0.14, knee);
+      addBlockSj(talon, 0.22, 0.12, 0.24, 0, -0.04, 0.04, darkBeakM);
+      [-0.10, 0, 0.10].forEach((tx, idx) => {
+        const yaw = (idx - 1) * -0.25;
+        addBlockSj(talon, 0.07, 0.08, 0.32, tx, -0.06, 0.22, darkBeakM, 0.15, yaw, 0);
+        addBlockSj(talon, 0.06, 0.12, 0.18, tx * 1.35, -0.11, 0.38, isCenter ? crimsonM : hellGoldM, 0.55, yaw, 0);
+      });
+      return { hip, knee, talon };
+    }
+    const legL = createCrowLeg(0.44, -0.28, -0.18, false, abdomen);
+    const legCenter = createCrowLeg(0.0, -0.32, 0.12, true, abdomen);
+    const legR = createCrowLeg(-0.44, -0.28, -0.18, false, abdomen);
+
+    // 5가닥 암흑 봉황형 꼬리깃
+    const tailBase = createJoint('Tail_Base', 0, 0.05, -0.82, abdomen);
+    addBlockSj(tailBase, 0.68, 0.32, 0.55, 0, 0, -0.22, obsidianM, -0.1, 0, 0);
+    const tailPlumes = [];
+    for (let t = -2; t <= 2; t++) {
+      const tPivot = createJoint(`TailPlume_${t + 2}`, t * 0.18, 0.02, -0.38, tailBase);
+      const isCenterPlume = t === 0;
+      const pLen = isCenterPlume ? 2.35 : (Math.abs(t) === 1 ? 1.95 : 1.55);
+      addBlockSj(tPivot, 0.24, 0.08, pLen * 0.65, 0, 0, -pLen * 0.32, obsidianM);
+      addBlockSj(tPivot, 0.28, 0.09, pLen * 0.55, 0, 0.01, -pLen * 0.68, abyssM);
+      addBlockSj(tPivot, 0.34, 0.10, 0.58, 0, 0.02, -pLen * 0.96, crimsonM);
+      addBlockSj(tPivot, 0.18, 0.12, 0.28, 0, 0.02, -pLen * 0.96, isCenterPlume ? voidSunM : hellGoldM);
+      tailPlumes.push(tPivot);
+    }
+
+    // ---- 수면 자세(원본 'sleep' 상태 값을 고정 자세로) ----
+    body.position.y = 1.05; body.rotation.x = 0.12 - 0.18;
+    abdomen.rotation.x = -0.18;
+    neck.rotation.set(0.45, 0.12, 0);
+    headPivot.rotation.set(0.42, 0, -0.10);
+    jaw.rotation.x = 0.02;
+    wingL.inner.rotation.set(0.35, -0.82, -0.52);
+    wingL.outer.rotation.z = -1.15;
+    wingR.inner.rotation.set(0.35, 0.82, 0.52);
+    wingR.outer.rotation.z = 1.15;
+    [legL, legCenter, legR].forEach((leg, idx) => {
+      leg.hip.rotation.x = idx === 1 ? 0.55 : 0.42;
+      leg.knee.rotation.x = -0.95;
+      leg.talon.rotation.x = 0.48;
+    });
+    tailBase.rotation.x = -0.22;
+    tailPlumes.forEach(tp => { tp.rotation.x = 0.08; });
+
+    animParts.body = body;
+    animParts.headPivot = headPivot;
+    animParts.haloPivot = haloPivot;
+    animParts.wingL = wingL;
+    animParts.wingR = wingR;
+
+    // [앞에 놓인 어둠의 삼족오 알 — 원본 알 컬렉션 뷰어에서 그대로 포팅]
+    const eggRoot = createJoint('SamjokoEgg_Root', 0, 0.54, 0, eggGroup);
+    const eObsidianM = mat(0x0b0714, 0.3, 0.45, 0x1e1b4b, 0.25);
+    const eDarkFeatherM = mat(0x181028, 0.4, 0.35);
+    const eCrimsonM = mat(0xe11d48, 0.15, 0.2, 0xf43f5e, 2.2);
+    const eEclipseGoldM = mat(0xfbbf24, 0.2, 0.85, 0xd97706, 0.9);
+    const eLaserWhiteM = mat(0xffffff, 0.05, 0.0, 0xffe4e6, 3.2);
+    const eggS = 1.05;
+    const { topCap: eTopCap } = buildBlockyEggShell(eggRoot, eggS, eObsidianM, eCrimsonM, eCrimsonM);
+    const eThirdEye = createJoint('SamjokoEgg_ThirdEye', 0, 0.78 * eggS, 0.66 * eggS, eggRoot);
+    addBoxE(eThirdEye, 0.18, 0.38, 0.10, eCrimsonM, 0, 0, 0.02);
+    addBoxE(eThirdEye, 0.08, 0.26, 0.12, eLaserWhiteM, 0, 0, 0.04);
+    addBoxE(eThirdEye, 0.65, 0.04, 0.04, eCrimsonM, 0, 0, 0.07);
+    addBoxE(eThirdEye, 0.04, 0.65, 0.04, eEclipseGoldM, 0, 0, 0.07);
+    for (let i = -1; i <= 1; i++) {
+      addBoxE(eTopCap, 0.10, 0.42 - Math.abs(i) * 0.08, 0.18, eDarkFeatherM, i * 0.16, 0.52 * eggS, -0.05, -0.35, 0, i * -0.18);
+      addBoxE(eTopCap, 0.06, 0.18, 0.10, eCrimsonM, i * 0.16, 0.70 * eggS, -0.10, -0.35, 0, i * -0.18);
+    }
+    const eggHalo = createJoint('SamjokoEgg_Halo', 0, 0.92 * eggS, -0.72 * eggS, eggRoot);
+    addBoxE(eggHalo, 0.95, 0.95, 0.08, eObsidianM, 0, 0, -0.04, 0, 0, Math.PI / 4);
+    for (let i = 0; i < 12; i++) {
+      const ang = (i / 12) * Math.PI * 2;
+      addBoxE(eggHalo, 0.12, 0.42, 0.06, i % 2 === 0 ? eCrimsonM : eEclipseGoldM, Math.cos(ang) * 0.86, Math.sin(ang) * 0.86, 0, 0, 0, ang - Math.PI / 2);
+    }
+    for (const { w, side } of [{ w: createJoint('SamjokoEgg_WingL', 0.66 * eggS, 0.82 * eggS, 0, eggRoot), side: 1 }, { w: createJoint('SamjokoEgg_WingR', -0.66 * eggS, 0.82 * eggS, 0, eggRoot), side: -1 }]) {
+      for (let b = 0; b < 4; b++) {
+        addBoxE(w, 0.56 - b * 0.06, 0.12, 0.10, eDarkFeatherM, side * (0.28 + b * 0.08), 0.16 - b * 0.12, 0, 0, 0, side * (0.3 - b * 0.15));
+        addBoxE(w, 0.18, 0.08, 0.11, eCrimsonM, side * (0.54 + b * 0.06), 0.22 - b * 0.12, 0);
+      }
+    }
+    for (const lp of [{ x: 0.46, z: 0.24, ry: -0.35 }, { x: 0.0, z: 0.56, ry: 0 }, { x: -0.46, z: 0.24, ry: 0.35 }]) {
+      const legPivot = createJoint('SamjokoEgg_Leg', lp.x, 0.05, lp.z, eggRoot);
+      legPivot.rotation.y = lp.ry;
+      addBoxE(legPivot, 0.14, 0.28, 0.14, eEclipseGoldM, 0, -0.12, 0.06, -0.25, 0, 0);
+      addBoxE(legPivot, 0.18, 0.08, 0.24, eEclipseGoldM, 0, -0.25, 0.14);
+      for (const tx of [-0.07, 0, 0.07]) addBoxE(legPivot, 0.05, 0.06, 0.14, eCrimsonM, tx, -0.26, 0.28, 0.2, 0, 0);
+    }
+    animParts.eggRoot = eggRoot;
+    animParts.eggHalo = eggHalo;
+  }
+
+  // -------------------------------------------------------------------------
+  // (7) 🔥 Lv.7 대악마(마왕) (가고일처럼 날개를 감싸 무릎 꿇고 잠든 자세 + 지옥불 대검) + 대악마 알
+  // -------------------------------------------------------------------------
+  else if (zone.id === 'demon') {
+    // ---- 원본 "블록형 로우폴리 대악마" 뷰어의 리깅을 그대로 가져와 조립(장식 일부는 간소화) ----
+    const crimsonSkinM = mat(0x991b1b, 0.6, 0.1);
+    const darkSkinM = mat(0x450a0a, 0.7, 0.1);
+    const armorM = mat(0x18181b, 0.35, 0.4);
+    const boneHornM = mat(0x27272a, 0.45, 0.2);
+    const wingMembraneM = mat(0x2e0711, 0.75, 0.1);
+    const magmaM = mat(0xffedd5, 0.2, 0.1, 0xea580c, 1.2);
+    const hellfireM = mat(0xfef08a, 0.2, 0.1, 0xdc2626, 1.0);
+    const eyeClosedM = mat(0x180408, 0.8);
+
+    const addBoxD = (parent, w, h, d, m, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) => {
+      const o = box(w, h, d, m, x, y, z);
+      if (rx) o.rotation.x = rx; if (ry) o.rotation.y = ry; if (rz) o.rotation.z = rz;
+      parent.add(o);
+      return o;
+    };
+
+    const pelvis = createJoint('Pelvis', 0, 1.3, 0, creatureGroup);
+    addBoxD(pelvis, 0.95, 0.45, 0.62, armorM, 0, 0, 0);
+    addBoxD(pelvis, 0.30, 0.32, 0.68, magmaM, 0, 0.02, 0);
+    addBoxD(pelvis, 0.42, 0.55, 0.12, armorM, 0, -0.35, 0.30);
+
+    const body = createJoint('Abdomen', 0, 0.25, 0, pelvis); // update()가 쓰는 이름(body)
+    addBoxD(body, 1.05, 0.62, 0.66, crimsonSkinM, 0, 0.30, 0);
+    addBoxD(body, 0.65, 0.10, 0.70, magmaM, 0, 0.22, 0);
+    addBoxD(body, 0.16, 0.26, 0.24, boneHornM, 0, 0.32, -0.40, -0.3, 0, 0);
+
+    const chest = createJoint('Chest', 0, 0.60, 0, body);
+    addBoxD(chest, 1.55, 0.90, 0.88, crimsonSkinM, 0, 0.45, 0);
+    addBoxD(chest, 1.62, 0.45, 0.92, armorM, 0, 0.62, 0);
+    const coreMesh = addBoxD(chest, 0.50, 0.50, 0.96, magmaM, 0, 0.50, 0);
+    addBoxD(chest, 0.22, 0.75, 0.95, magmaM, 0, 0.46, 0);
+    addBoxD(chest, 0.20, 0.35, 0.30, boneHornM, 0, 0.35, -0.52, -0.35, 0, 0);
+
+    const neck = createJoint('Neck', 0, 0.90, 0.08, chest);
+    addBoxD(neck, 0.52, 0.34, 0.50, darkSkinM, 0, 0.12, 0);
+
+    const headPivot = createJoint('Head', 0, 0.26, 0.06, neck);
+    addBoxD(headPivot, 0.68, 0.62, 0.72, crimsonSkinM, 0, 0.28, 0);
+    addBoxD(headPivot, 0.72, 0.22, 0.75, armorM, 0, 0.48, 0.02);
+    addBoxD(headPivot, 0.16, 0.28, 0.78, magmaM, 0, 0.42, 0.03);
+    addBoxD(headPivot, 0.74, 0.12, 0.20, armorM, 0, 0.34, 0.34, 0.15, 0, 0);
+    // 감은 눈
+    addBoxD(headPivot, 0.20, 0.04, 0.08, eyeClosedM, 0.18, 0.24, 0.36, 0, 0, -0.12);
+    addBoxD(headPivot, 0.20, 0.04, 0.08, eyeClosedM, -0.18, 0.24, 0.36, 0, 0, 0.12);
+    // 거대한 3단 곡선 뿔
+    for (const side of [-1, 1]) {
+      addBoxD(headPivot, 0.26, 0.26, 0.55, armorM, side * 0.42, 0.48, -0.10, 0.35, side * -0.45, 0);
+      addBoxD(headPivot, 0.20, 0.58, 0.22, boneHornM, side * 0.65, 0.76, -0.35, 0.25, 0, side * -0.25);
+      addBoxD(headPivot, 0.14, 0.45, 0.14, magmaM, side * 0.76, 1.18, -0.25, 0.40, 0, side * -0.10);
+    }
+
+    const jaw = createJoint('Jaw', 0, 0.06, 0.10, headPivot);
+    addBoxD(jaw, 0.56, 0.22, 0.56, darkSkinM, 0, -0.06, 0.10);
+    addBoxD(jaw, 0.32, 0.16, 0.18, armorM, 0, -0.14, 0.36);
+    addBoxD(jaw, 0.08, 0.16, 0.08, hellfireM, 0.18, 0.08, 0.32);
+    addBoxD(jaw, 0.08, 0.16, 0.08, hellfireM, -0.18, 0.08, 0.32);
+
+    function buildDemonWing(side) {
+      const inner = createJoint(side > 0 ? 'WingInner_L' : 'WingInner_R', side * 0.55, 0.72, -0.38, chest);
+      addBoxD(inner, side * 1.45, 0.22, 0.24, armorM, side * 0.72, 0.32, 0, 0, 0, side * 0.42);
+      addBoxD(inner, 0.14, 0.42, 0.14, magmaM, side * 1.35, 0.72, 0.10, 0.3, 0, side * -0.2);
+      addBoxD(inner, side * 1.40, 0.06, 1.35, wingMembraneM, side * 0.72, 0.12, -0.58, 0.15, 0, side * 0.35);
+      const outer = createJoint(side > 0 ? 'WingOuter_L' : 'WingOuter_R', side * 1.38, 0.60, 0, inner);
+      addBoxD(outer, side * 2.10, 0.18, 0.18, armorM, side * 1.05, 0.10, 0, 0, 0, side * 0.10);
+      addBoxD(outer, 0.35, 0.14, 0.14, magmaM, side * 2.15, 0.20, 0, 0, 0, side * 0.10);
+      addBoxD(outer, 0.10, 0.10, 1.6, boneHornM, side * 0.9, 0.08, -0.75, 0, side * 0.3, 0);
+      addBoxD(outer, side * 2.15, 0.05, 1.70, wingMembraneM, side * 1.05, 0.04, -0.80, 0, 0, side * 0.08);
+      return { inner, outer };
+    }
+    const wingL = buildDemonWing(1);
+    const wingR = buildDemonWing(-1);
+
+    function buildDemonArm(side) {
+      const shoulder = createJoint(side > 0 ? 'Shoulder_L' : 'Shoulder_R', side * 0.92, 0.72, 0, chest);
+      addBoxD(shoulder, 0.58, 0.46, 0.62, armorM, side * 0.12, 0.08, 0, 0, 0, side * -0.2);
+      addBoxD(shoulder, 0.16, 0.45, 0.16, magmaM, side * 0.28, 0.38, 0, 0, 0, side * -0.45);
+      addBoxD(shoulder, 0.42, 0.72, 0.44, crimsonSkinM, side * 0.10, -0.36, 0);
+      const elbow = createJoint(side > 0 ? 'Elbow_L' : 'Elbow_R', side * 0.12, -0.72, 0, shoulder);
+      addBoxD(elbow, 0.38, 0.68, 0.40, armorM, 0, -0.32, 0);
+      addBoxD(elbow, 0.42, 0.14, 0.44, magmaM, 0, -0.52, 0);
+      const hand = createJoint(side > 0 ? 'Hand_L' : 'Hand_R', 0, -0.68, 0, elbow);
+      addBoxD(hand, 0.34, 0.32, 0.36, darkSkinM, 0, -0.14, 0);
+      let sword = null;
+      if (side < 0) {
+        sword = createJoint('Hellfire_Sword', 0, -0.18, 0.15, hand);
+        addBoxD(sword, 0.12, 0.12, 0.75, armorM, 0, 0, -0.15);
+        addBoxD(sword, 0.22, 0.22, 0.22, magmaM, 0, 0, -0.58);
+        addBoxD(sword, 0.95, 0.24, 0.22, armorM, 0, 0, 0.25);
+        addBoxD(sword, 0.36, 0.10, 2.35, armorM, 0, 0, 1.48);
+        addBoxD(sword, 0.50, 0.06, 2.20, hellfireM, 0, 0, 1.45);
+      }
+      return { shoulder, elbow, hand, sword };
+    }
+    const armL = buildDemonArm(1);
+    const armR = buildDemonArm(-1);
+
+    function buildDemonLeg(side) {
+      const hip = createJoint(side > 0 ? 'Hip_L' : 'Hip_R', side * 0.42, -0.12, 0, pelvis);
+      addBoxD(hip, 0.48, 0.82, 0.52, armorM, 0, -0.38, 0.05, -0.2, 0, 0);
+      addBoxD(hip, 0.20, 0.30, 0.18, magmaM, 0, -0.68, 0.32);
+      const knee = createJoint(side > 0 ? 'Knee_L' : 'Knee_R', 0, -0.76, 0.14, hip);
+      addBoxD(knee, 0.36, 0.75, 0.38, crimsonSkinM, 0, -0.34, -0.14, 0.42, 0, 0);
+      const ankle = createJoint(side > 0 ? 'Ankle_L' : 'Ankle_R', 0, -0.66, -0.26, knee);
+      addBoxD(ankle, 0.42, 0.28, 0.62, armorM, 0, -0.12, 0.20);
+      addBoxD(ankle, 0.16, 0.22, 0.22, magmaM, 0.12, -0.15, 0.52);
+      addBoxD(ankle, 0.16, 0.22, 0.22, magmaM, -0.12, -0.15, 0.52);
+      return { hip, knee, ankle };
+    }
+    const legL = buildDemonLeg(1);
+    const legR = buildDemonLeg(-1);
+
+    const tailLen = [0.65, 0.65, 0.60, 0.55];
+    const tails = [];
+    let parentTail = pelvis;
+    for (let i = 0; i < 4; i++) {
+      const tz = i === 0 ? -0.28 : -tailLen[i - 1];
+      const ty = i === 0 ? -0.05 : 0;
+      const tJoint = createJoint(`Tail_${i + 1}`, 0, ty, tz, parentTail);
+      const len = tailLen[i], th = [0.22, 0.18, 0.15, 0.12][i];
+      addBoxD(tJoint, th, th, len, crimsonSkinM, 0, 0, -len / 2);
+      if (i === 3) {
+        addBoxD(tJoint, 0.48, 0.08, 0.46, hellfireM, 0, 0, -len - 0.16);
+        addBoxD(tJoint, 0.22, 0.10, 0.30, armorM, 0, 0, -len - 0.32);
+      }
+      tails.push(tJoint);
+      parentTail = tJoint;
+    }
+
+    // ---- 수면(무릎 꿇고 날개로 몸을 감싼) 자세 ----
+    pelvis.position.y = 1.05; pelvis.rotation.x = 0.18;
+    body.rotation.x = 0.22;
+    chest.rotation.x = 0.28;
+    neck.rotation.x = 0.25;
+    headPivot.rotation.x = 0.35;
+    jaw.rotation.x = 0.05;
+    wingL.inner.rotation.set(0, 1.15, -0.35); wingL.outer.rotation.z = -0.85;
+    wingR.inner.rotation.set(0, -1.15, 0.35); wingR.outer.rotation.z = 0.85;
+    armL.shoulder.rotation.set(-0.55, 0, -0.15); armL.elbow.rotation.x = -0.75;
+    armR.shoulder.rotation.set(-0.50, 0, 0.15); armR.elbow.rotation.x = -0.55;
+    if (armR.sword) armR.sword.rotation.set(0.65, -0.25, 0);
+    legL.hip.rotation.x = -1.25; legL.knee.rotation.x = 1.85; legL.ankle.rotation.x = -0.60;
+    legR.hip.rotation.x = -1.25; legR.knee.rotation.x = 1.85; legR.ankle.rotation.x = -0.60;
+    tails.forEach((t, idx) => { t.rotation.x = idx === 0 ? -0.35 : 0.08; t.rotation.y = 0.42; });
+
+    animParts.body = body;
+    animParts.headPivot = headPivot;
+    animParts.wingL = wingL;
+    animParts.wingR = wingR;
+    animParts.coreMesh = coreMesh;
+
+    // [앞에 놓인 대악마(마왕) 알 — 원본 알 컬렉션 뷰어에서 그대로 포팅]
+    const eggRoot = createJoint('DemonEgg_Root', 0, 0.36, 0, eggGroup);
+    const eDarkArmorM = mat(0x16090d, 0.4, 0.55);
+    const eCrimsonSkinM = mat(0x7f1d1d, 0.5, 0.25);
+    const eMagmaM = mat(0xff4500, 0.15, 0.1, 0xdc2626, 2.5);
+    const eYellowCoreM = mat(0xfef08a, 0.1, 0.1, 0xf97316, 3.0);
+    const eHornM = mat(0x1c1917, 0.5, 0.4);
+    const eggS = 1.08;
+    const { topCap: eTopCap, coreMesh: eCoreMesh } = buildBlockyEggShell(eggRoot, eggS, eCrimsonSkinM, eMagmaM, eYellowCoreM);
+    addBoxE(eggRoot, 0.92 * eggS, 0.55 * eggS, 0.14 * eggS, eDarkArmorM, 0, 0.72 * eggS, 0.62 * eggS);
+    addBoxE(eggRoot, 0.34 * eggS, 0.34 * eggS, 0.16 * eggS, eYellowCoreM, 0, 0.75 * eggS, 0.66 * eggS, 0, 0, Math.PI / 4);
+    for (const side of [-1, 1]) {
+      const hornGroup = new THREE.Group();
+      hornGroup.position.set(side * 0.38 * eggS, 0.24 * eggS, 0);
+      eTopCap.add(hornGroup);
+      addBoxE(hornGroup, 0.26, 0.24, 0.24, eHornM, side * 0.12, 0.06, 0, 0, 0, side * -0.45);
+      addBoxE(hornGroup, 0.20, 0.38, 0.20, eHornM, side * 0.30, 0.28, -0.06, -0.2, 0, side * -0.15);
+      addBoxE(hornGroup, 0.14, 0.36, 0.14, eMagmaM, side * 0.26, 0.58, -0.12, -0.35, 0, side * 0.25);
+    }
+    const eWingL = createJoint('DemonEgg_WingL', 0.68 * eggS, 0.85 * eggS, -0.10, eggRoot);
+    const eWingR = createJoint('DemonEgg_WingR', -0.68 * eggS, 0.85 * eggS, -0.10, eggRoot);
+    for (const { w, side } of [{ w: eWingL, side: 1 }, { w: eWingR, side: -1 }]) {
+      addBoxE(w, 0.62, 0.12, 0.12, eDarkArmorM, side * 0.28, 0.22, 0, 0, 0, side * 0.42);
+      addBoxE(w, 0.10, 0.24, 0.10, eMagmaM, side * 0.55, 0.42, 0.05, 0.3, 0, side * -0.2);
+      addBoxE(w, 0.60, 0.62, 0.04, eCrimsonSkinM, side * 0.34, -0.06, -0.03, 0, 0, side * 0.22);
+      addBoxE(w, 0.58, 0.06, 0.06, eMagmaM, side * 0.34, -0.36, -0.02, 0, 0, side * 0.22);
+    }
+    const eTailPivot = createJoint('DemonEgg_Tail', 0, 0.26 * eggS, -0.64 * eggS, eggRoot);
+    addBoxE(eTailPivot, 0.14, 0.14, 0.55, eCrimsonSkinM, 0.28, 0.08, -0.18, 0.25, 0.65, 0);
+    addBoxE(eTailPivot, 0.28, 0.08, 0.28, eMagmaM, 0.48, 0.18, -0.32, 0.25, 0.65, Math.PI / 4);
+
+    animParts.eggRoot = eggRoot;
+    animParts.eWingL = eWingL;
+    animParts.eWingR = eWingR;
+  }
+
+  // -------------------------------------------------------------------------
+  // (8) ✨ Lv.8 대천사(세라핌) (6장의 천사 날개를 접고 성검·성방패와 함께 안식하는 자세) + 대천사 알
+  // -------------------------------------------------------------------------
+  else if (zone.id === 'archangel') {
+    // ---- 원본 "블록형 로우폴리 대천사" 뷰어의 리깅을 그대로 가져와 조립(장식 일부는 간소화) ----
+    const marbleM = mat(0xf8fafc, 0.35, 0.3);
+    const silverM = mat(0xcbd5e1, 0.4, 0.4);
+    const goldM = mat(0xfacc15, 0.3, 0.55);
+    const royalBlueM = mat(0x1e3a8a, 0.65, 0.1);
+    const shadowHoodM = mat(0x090d16, 0.85, 0.1);
+    const featherPureM = mat(0xffffff, 0.45, 0.1);
+    const featherLightM = mat(0xfef9c3, 0.4, 0.1, 0xfde047, 0.4);
+    const holyCyanM = mat(0xe0f2fe, 0.2, 0.1, 0x38bdf8, 1.2);
+    const haloGlowM = mat(0xfef08a, 0.15, 0.2, 0xf59e0b, 1.3);
+    const holyBladeM = mat(0xffffff, 0.2, 0.1, 0xfacc15, 1.1);
+    const eyeClosedM = mat(0x334155, 0.7);
+
+    const addBlockA = (parent, w, h, d, x, y, z, m, rx = 0, ry = 0, rz = 0) => {
+      const o = box(w, h, d, m, x, y, z);
+      if (rx) o.rotation.x = rx; if (ry) o.rotation.y = ry; if (rz) o.rotation.z = rz;
+      parent.add(o);
+      return o;
+    };
+
+    const pelvis = createJoint('Pelvis', 0, 1.35, 0, creatureGroup);
+    addBlockA(pelvis, 0.86, 0.34, 0.56, 0, 0, 0, marbleM);
+    addBlockA(pelvis, 0.92, 0.14, 0.62, 0, 0.10, 0, goldM);
+    addBlockA(pelvis, 0.24, 0.24, 0.10, 0, 0.10, 0.30, holyCyanM);
+
+    const tabardFront = createJoint('Tabard_Front', 0, -0.08, 0.28, pelvis);
+    addBlockA(tabardFront, 0.38, 0.85, 0.05, 0, -0.42, 0, royalBlueM);
+    addBlockA(tabardFront, 0.28, 0.78, 0.06, 0, -0.42, 0.01, goldM);
+    const tabardBack = createJoint('Tabard_Back', 0, -0.05, -0.28, pelvis);
+    addBlockA(tabardBack, 0.76, 1.15, 0.06, 0, -0.55, 0, royalBlueM);
+
+    const body = createJoint('Abdomen', 0, 0.20, 0, pelvis); // update()가 쓰는 이름(body)
+    addBlockA(body, 0.80, 0.48, 0.52, 0, 0.24, 0, silverM);
+    addBlockA(body, 0.62, 0.42, 0.56, 0, 0.24, 0.02, marbleM);
+    addBlockA(body, 0.16, 0.40, 0.58, 0, 0.24, 0.03, goldM);
+
+    const chest = createJoint('Chest', 0, 0.46, 0, body);
+    addBlockA(chest, 1.24, 0.82, 0.72, 0, 0.40, 0, marbleM);
+    addBlockA(chest, 0.96, 0.16, 0.76, 0, 0.46, 0.02, goldM);
+    addBlockA(chest, 0.20, 0.72, 0.76, 0, 0.40, 0.02, goldM);
+    addBlockA(chest, 0.30, 0.30, 0.78, 0, 0.46, 0.04, holyCyanM);
+    addBlockA(chest, 0.72, 0.68, 0.22, 0, 0.42, -0.38, goldM);
+
+    const neck = createJoint('Neck', 0, 0.82, 0.02, chest);
+    addBlockA(neck, 0.42, 0.24, 0.42, 0, 0.10, 0, silverM);
+
+    const headPivot = createJoint('Head', 0, 0.20, 0, neck);
+    addBlockA(headPivot, 0.68, 0.66, 0.68, 0, 0.32, -0.02, marbleM);
+    addBlockA(headPivot, 0.72, 0.42, 0.64, 0, 0.46, -0.04, royalBlueM);
+    addBlockA(headPivot, 0.54, 0.54, 0.56, 0, 0.30, 0.06, shadowHoodM);
+    addBlockA(headPivot, 0.58, 0.22, 0.12, 0, 0.16, 0.32, marbleM);
+    addBlockA(headPivot, 0.12, 0.46, 0.14, 0, 0.32, 0.34, goldM);
+    addBlockA(headPivot, 0.66, 0.14, 0.66, 0, 0.58, 0.02, goldM);
+    addBlockA(headPivot, 0.14, 0.38, 0.12, 0, 0.74, 0.32, goldM);
+    // 감은 눈
+    addBlockA(headPivot, 0.16, 0.03, 0.06, 0.15, 0.32, 0.34, eyeClosedM);
+    addBlockA(headPivot, 0.16, 0.03, 0.06, -0.15, 0.32, 0.34, eyeClosedM);
+
+    const haloPivot = createJoint('Halo', 0, 0.92, -0.12, headPivot);
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      addBlockA(haloPivot, 0.46, 0.07, 0.09, Math.cos(angle) * 0.56, 0, Math.sin(angle) * 0.56, haloGlowM, 0, -angle + Math.PI / 2, 0);
+    }
+    addBlockA(haloPivot, 0.22, 0.08, 0.22, 0, 0, 0, holyCyanM, 0, Math.PI / 4, 0);
+
+    // 세라핌 6장의 날개(상/중/하 3쌍) — 각 쌍이 inner→outer 2단 관절
+    const seraphWings = [];
+    function buildSeraphWingPair(yPos, zPos, scale) {
+      const pair = {};
+      for (const side of [-1, 1]) {
+        const key = side === 1 ? 'L' : 'R';
+        const inner = createJoint(`Wing_Inner_${key}_${yPos}`, side * 0.38, yPos, zPos, chest);
+        addBlockA(inner, 1.35 * scale, 0.22 * scale, 0.20 * scale, side * 0.65 * scale, 0.32 * scale, 0, goldM, 0, 0, side * 0.38);
+        addBlockA(inner, 1.30 * scale, 0.18 * scale, 0.16 * scale, side * 0.65 * scale, 0.22 * scale, 0.02, marbleM, 0, 0, side * 0.38);
+        for (let f = 0; f < 3; f++) {
+          const fx = side * (0.28 + f * 0.38) * scale, fh = (0.95 - f * 0.1) * scale;
+          addBlockA(inner, 0.22 * scale, fh, 0.09 * scale, fx, (0.1 + f * 0.1 - 0.3) * scale, -0.02, f % 2 === 0 ? featherPureM : featherLightM, 0, 0, side * 0.14);
+        }
+        const outer = createJoint(`Wing_Outer_${key}_${yPos}`, side * 1.25 * scale, 0.56 * scale, 0, inner);
+        addBlockA(outer, 1.65 * scale, 0.16 * scale, 0.15 * scale, side * 0.80 * scale, 0.18 * scale, 0, goldM, 0, 0, side * 0.16);
+        for (let f = 0; f < 4; f++) {
+          const fx = side * (0.22 + f * 0.32) * scale, fh = (1.2 - f * 0.14) * scale;
+          addBlockA(outer, 0.23 * scale, fh, 0.08 * scale, fx, (-0.1 + f * 0.05) * scale, -0.02, f === 0 ? featherLightM : featherPureM, 0, 0, side * (0.22 + f * 0.08));
+        }
+        pair[key] = { inner, outer };
+      }
+      return pair;
+    }
+    const wingsUpper = buildSeraphWingPair(0.66, -0.36, 1.08);
+    const wingsMid = buildSeraphWingPair(0.38, -0.40, 0.82);
+    const wingsLower = buildSeraphWingPair(0.10, -0.36, 0.60);
+
+    function buildArm(side) {
+      const shoulder = createJoint(side === 1 ? 'Shoulder_L' : 'Shoulder_R', side * 0.80, 0.62, 0, chest);
+      addBlockA(shoulder, 0.54, 0.42, 0.58, side * 0.16, 0.12, 0, marbleM, 0, 0, -side * 0.18);
+      addBlockA(shoulder, 0.58, 0.14, 0.62, side * 0.18, 0.28, 0, goldM, 0, 0, -side * 0.18);
+      addBlockA(shoulder, 0.36, 0.66, 0.36, side * 0.12, -0.30, 0, silverM);
+      const elbow = createJoint(side === 1 ? 'Elbow_L' : 'Elbow_R', side * 0.12, -0.62, 0, shoulder);
+      addBlockA(elbow, 0.38, 0.64, 0.38, 0, -0.28, 0, marbleM);
+      addBlockA(elbow, 0.42, 0.16, 0.42, 0, -0.48, 0, goldM);
+      const hand = createJoint(side === 1 ? 'Hand_L' : 'Hand_R', 0, -0.62, 0, elbow);
+      addBlockA(hand, 0.30, 0.28, 0.32, 0, -0.10, 0, goldM);
+      let sword = null, shield = null;
+      if (side === -1) {
+        sword = createJoint('Celestial_Sword', 0, -0.14, 0.12, hand);
+        addBlockA(sword, 0.10, 0.10, 0.85, 0, 0, -0.10, silverM);
+        addBlockA(sword, 0.20, 0.20, 0.20, 0, 0, -0.56, goldM);
+        addBlockA(sword, 0.96, 0.18, 0.22, 0, 0, 0.32, goldM);
+        addBlockA(sword, 0.24, 0.24, 0.24, 0, 0, 0.34, holyCyanM);
+        addBlockA(sword, 0.10, 0.34, 2.30, 0, 0, 1.55, holyBladeM);
+        addBlockA(sword, 0.14, 0.14, 2.10, 0, 0, 1.45, goldM);
+      }
+      if (side === 1) {
+        shield = createJoint('Aegis_Shield', 0.22, 0.12, 0.12, hand);
+        addBlockA(shield, 0.12, 1.25, 0.86, 0, 0, 0, marbleM);
+        addBlockA(shield, 0.15, 1.32, 0.14, 0.02, 0, 0, goldM);
+        addBlockA(shield, 0.18, 0.32, 0.32, 0.04, 0.16, 0, holyCyanM);
+      }
+      return { shoulder, elbow, hand, sword, shield };
+    }
+    const armL = buildArm(1);
+    const armR = buildArm(-1);
+
+    function buildLeg(side) {
+      const hip = createJoint(side === 1 ? 'Hip_L' : 'Hip_R', side * 0.30, -0.14, 0, pelvis);
+      addBlockA(hip, 0.40, 0.78, 0.44, 0, -0.36, 0, silverM);
+      addBlockA(hip, 0.36, 0.68, 0.46, 0, -0.36, 0.03, marbleM);
+      const knee = createJoint(side === 1 ? 'Knee_L' : 'Knee_R', 0, -0.76, 0, hip);
+      addBlockA(knee, 0.38, 0.28, 0.20, 0, 0.04, 0.22, goldM);
+      addBlockA(knee, 0.36, 0.78, 0.38, 0, -0.38, 0, marbleM);
+      const ankle = createJoint(side === 1 ? 'Ankle_L' : 'Ankle_R', 0, -0.76, 0, knee);
+      addBlockA(ankle, 0.38, 0.22, 0.62, 0, -0.10, 0.12, marbleM);
+      addBlockA(ankle, 0.40, 0.10, 0.66, 0, -0.16, 0.12, goldM);
+      return { hip, knee, ankle };
+    }
+    const legL = buildLeg(1);
+    const legR = buildLeg(-1);
+
+    // ---- 수면(무릎 꿇고 6날개로 몸을 겹겹이 감싼) 자세 ----
+    pelvis.position.y = 1.12; pelvis.rotation.x = 0.14;
+    body.rotation.x = 0.16;
+    chest.rotation.x = 0.22;
+    tabardFront.rotation.x = -0.25; tabardBack.rotation.x = 0.12;
+    neck.rotation.x = 0.22;
+    headPivot.rotation.x = 0.34;
+    function foldWingPair(pair, zAngle, yAngle, outerZ) {
+      pair.L.inner.rotation.set(0, yAngle, zAngle);
+      pair.L.outer.rotation.z = -outerZ;
+      pair.R.inner.rotation.set(0, -yAngle, -zAngle);
+      pair.R.outer.rotation.z = outerZ;
+    }
+    foldWingPair(wingsUpper, -0.20, 1.15, 0.78);
+    foldWingPair(wingsMid, -0.35, 1.00, 0.65);
+    foldWingPair(wingsLower, -0.50, 0.85, 0.50);
+    // 접은 자세가 완전히 정해진 뒤에, 그 최종 각도를 기준(baseZ)으로 숨쉬기 흔들림을 적용하게 등록
+    for (const pair of [wingsUpper, wingsMid, wingsLower]) {
+      seraphWings.push({ pivot: pair.L.inner, side: 1, baseZ: pair.L.inner.rotation.z });
+      seraphWings.push({ pivot: pair.R.inner, side: -1, baseZ: pair.R.inner.rotation.z });
+    }
+    armL.shoulder.rotation.set(-0.58, 0, -0.18); armL.elbow.rotation.x = -0.68;
+    armR.shoulder.rotation.set(-0.52, 0, 0.18); armR.elbow.rotation.x = -0.58;
+    if (armR.sword) armR.sword.rotation.set(0.68, -0.15, 0);
+    legL.hip.rotation.x = -1.25; legL.knee.rotation.x = 1.90; legL.ankle.rotation.x = -0.55;
+    legR.hip.rotation.x = -1.25; legR.knee.rotation.x = 1.90; legR.ankle.rotation.x = -0.55;
+
+    animParts.body = body;
+    animParts.headPivot = headPivot;
+    animParts.haloPivot = haloPivot;
+    animParts.seraphWings = seraphWings;
+
+    // [앞에 놓인 대천사(세라핌) 알 — 원본 알 컬렉션 뷰어에서 그대로 포팅]
+    const eggRoot = createJoint('ArchangelEgg_Root', 0, 0.58, 0, eggGroup);
+    const eMarbleM = mat(0xf8fafc, 0.25, 0.15, 0xe2e8f0, 0.2);
+    const eHolyGoldM = mat(0xfacc15, 0.18, 0.85, 0xf59e0b, 0.55);
+    const eRoyalBlueM = mat(0x1d4ed8, 0.35, 0.3, 0x1e40af, 0.3);
+    const eHolyCyanM = mat(0x7dd3fc, 0.05, 0.1, 0x38bdf8, 2.8);
+    const eSunCoreM = mat(0xffffff, 0.05, 0, 0xfef08a, 3.2);
+    const eggS = 1.12;
+    const { topCap: eTopCap } = buildBlockyEggShell(eggRoot, eggS, eMarbleM, eHolyGoldM, eSunCoreM);
+    addBoxE(eggRoot, 0.54 * eggS, 0.75 * eggS, 0.10 * eggS, eRoyalBlueM, 0, 0.65 * eggS, 0.62 * eggS);
+    addBoxE(eggRoot, 0.12 * eggS, 0.68 * eggS, 0.14 * eggS, eHolyGoldM, 0, 0.68 * eggS, 0.64 * eggS);
+    addBoxE(eggRoot, 0.48 * eggS, 0.12 * eggS, 0.14 * eggS, eHolyGoldM, 0, 0.76 * eggS, 0.64 * eggS);
+    addBoxE(eggRoot, 0.22 * eggS, 0.22 * eggS, 0.16 * eggS, eHolyCyanM, 0, 0.76 * eggS, 0.66 * eggS, 0, 0, Math.PI / 4);
+    addBoxE(eTopCap, 0.62 * eggS, 0.14 * eggS, 0.62 * eggS, eHolyGoldM, 0, 0.36 * eggS, 0);
+    addBoxE(eTopCap, 0.16 * eggS, 0.28 * eggS, 0.12 * eggS, eHolyCyanM, 0, 0.48 * eggS, 0.28 * eggS);
+
+    const eggHalo = createJoint('ArchangelEgg_Halo', 0, 0.78 * eggS, -0.12, eTopCap);
+    eggHalo.rotation.x = 0.32;
+    for (let i = 0; i < 8; i++) {
+      const ang = (i / 8) * Math.PI * 2;
+      addBoxE(eggHalo, 0.28, 0.06, 0.08, eSunCoreM, Math.cos(ang) * 0.56, 0, Math.sin(ang) * 0.56, 0, -ang, 0);
+      addBoxE(eggHalo, 0.10, 0.08, 0.24, eHolyGoldM, Math.cos(ang) * 0.72, 0, Math.sin(ang) * 0.72, 0, -ang, 0);
+    }
+    addBoxE(eggHalo, 0.24, 0.08, 0.24, eHolyCyanM, 0, 0, 0, 0, Math.PI / 4, 0);
+
+    const eggWings = [];
+    const eWingConfigs = [
+      { name: 'Upper', y: 1.05 * eggS, scale: 1.05 },
+      { name: 'Mid', y: 0.72 * eggS, scale: 0.85 },
+      { name: 'Lower', y: 0.40 * eggS, scale: 0.68 }
+    ];
+    eWingConfigs.forEach((wc) => {
+      for (const side of [-1, 1]) {
+        const wp = createJoint(`ArchangelEgg_Wing_${wc.name}_${side > 0 ? 'L' : 'R'}`, side * 0.62 * eggS, wc.y, -0.12, eggRoot);
+        const ws = wc.scale;
+        addBoxE(wp, 0.56 * ws, 0.12 * ws, 0.10 * ws, eHolyGoldM, side * 0.26 * ws, 0.12 * ws, 0, 0, 0, side * 0.25);
+        for (let f = 0; f < 3; f++) {
+          addBoxE(wp, (0.58 - f * 0.10) * ws, 0.14 * ws, 0.08 * ws, f === 2 ? eSunCoreM : eMarbleM, side * (0.34 + f * 0.08) * ws, (0 - f * 0.12) * ws, 0, 0, 0, side * (0.18 - f * 0.08));
+        }
+        eggWings.push({ pivot: wp, side });
+      }
+    });
+
+    animParts.eggRoot = eggRoot;
+    animParts.eggHalo = eggHalo;
+    animParts.eggWings = eggWings;
+  }
+
+  return animParts;
+}
+
+// ============================================================================
+// 3. 배경 생성 (길게 이어진 복도 + 구역별 맞춤 배경색 + 8종 생물 & 알 배치)
+// ============================================================================
+function createBackground(scene) {
+  const PATH_WIDTH = 16;      // 길의 폭 (벽 사이 간격을 더 넓힘)
+  const PATH_LENGTH = 1200;   // 8종 생물이 서로 엄청 멀리 떨어져 배치되도록 길을 1200으로 대폭 확장
+  const WALL_HEIGHT = 9;      // 벽 높이
+  const WALL_THICK = 1.2;     // 벽 두께
+
+  scene.background = new THREE.Color(0x9fd8ef);
+  scene.fog = new THREE.Fog(0x9fd8ef, 55, 210);
+
+  // ---- 조명 ----
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x6a8a6a, 1.0);
+  scene.add(hemi);
+
+  const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+  sun.position.set(6, 14, -4);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.camera.left = -16; sun.shadow.camera.right = 16;
+  sun.shadow.camera.top = 16;   sun.shadow.camera.bottom = -16;
+  sun.shadow.camera.far = 70;
+  sun.shadow.bias = -0.0006;
+  scene.add(sun);
+
+  // ---- 끝/안전구역 치수 ----
+  const SAFE_LENGTH = 36;   // 안전구역 가로·세로를 2배로 (ROOM_WIDTH도 이 값과 같이 늘어남, 정사각형 유지)
+  const ROOM_EXTRA = (SAFE_LENGTH - PATH_WIDTH) / 2;
+  const ROOM_WIDTH = PATH_WIDTH + ROOM_EXTRA * 2;
+  const END_Z = PATH_LENGTH / 2;                // +600
+  const SAFE_START = END_Z - SAFE_LENGTH;       // +582
+  const SAFE_END = END_Z;                       // +600
+  const CORRIDOR_Z0 = -PATH_LENGTH / 2;         // -600
+  const CORRIDOR_LEN = SAFE_START - CORRIDOR_Z0;
+  const corridorX = PATH_WIDTH / 2 + WALL_THICK / 2;
+
+  // ---- 생물 기준 앞뒤 배경 색을 각 생물 특성에 맞게 구간별로 생성 ----
+  const biomeWallGroups = [];
+  BIOME_ZONES.forEach(zone => {
+    const segLen = zone.zMax - zone.zMin;
+    const segMidZ = (zone.zMin + zone.zMax) / 2;
+
+    const zFloorMat = new THREE.MeshStandardMaterial({ color: zone.floorColor, roughness: 0.85 });
+    const zWallMat  = new THREE.MeshStandardMaterial({ color: zone.wallColor, roughness: 0.9 });
+    const zCapMat   = new THREE.MeshStandardMaterial({ color: zone.capColor, roughness: 0.6, metalness: 0.2 });
+    const zPanelMat = new THREE.MeshStandardMaterial({ color: zone.panelColor, roughness: 0.75 });
+
+    // 구역 바닥
+    const segFloor = new THREE.Mesh(new THREE.PlaneGeometry(PATH_WIDTH, segLen), zFloorMat);
+    segFloor.rotation.x = -Math.PI / 2;
+    segFloor.position.set(0, 0.012, segMidZ);
+    segFloor.receiveShadow = true;
+    scene.add(segFloor);
+
+    // 구역 양옆 벽
+    const lWall = new THREE.Mesh(new THREE.BoxGeometry(WALL_THICK, WALL_HEIGHT, segLen), zWallMat);
+    lWall.position.set(-corridorX, WALL_HEIGHT / 2, segMidZ);
+    lWall.castShadow = true; lWall.receiveShadow = true;
+
+    const rWall = new THREE.Mesh(new THREE.BoxGeometry(WALL_THICK, WALL_HEIGHT, segLen), zWallMat);
+    rWall.position.set(corridorX, WALL_HEIGHT / 2, segMidZ);
+    rWall.castShadow = true; rWall.receiveShadow = true;
+    scene.add(lWall, rWall);
+
+    // 구역 양옆 갓돌(Cap)
+    const lCap = new THREE.Mesh(new THREE.BoxGeometry(WALL_THICK + 0.4, 0.4, segLen), zCapMat);
+    lCap.position.set(-corridorX, WALL_HEIGHT + 0.2, segMidZ);
+    const rCap = new THREE.Mesh(new THREE.BoxGeometry(WALL_THICK + 0.4, 0.4, segLen), zCapMat);
+    rCap.position.set(corridorX, WALL_HEIGHT + 0.2, segMidZ);
+    scene.add(lCap, rCap);
+
+    // 구역 벽면 패널 장식
+    const panelCount = Math.floor(segLen / 5);
+    for (let i = 0; i < panelCount; i++) {
+      const pz = zone.zMin + i * 5 + 2.5;
+      for (const side of [-1, 1]) {
+        const panel = new THREE.Mesh(new THREE.BoxGeometry(0.08, WALL_HEIGHT * 0.84, 2.8), zPanelMat);
+        panel.position.set(side * corridorX - side * (WALL_THICK / 2 + 0.04), WALL_HEIGHT * 0.5, pz);
+        scene.add(panel);
+      }
+    }
+
+    // 생물이 위치한 벽면에 생물 상징 후광 아치 장식 추가
+    const emblem = new THREE.Mesh(
+      new THREE.BoxGeometry(0.14, 5.2, 6.2),
+      new THREE.MeshStandardMaterial({
+        color: zone.capColor,
+        roughness: 0.3,
+        metalness: 0.5,
+        emissive: zone.accentColor,
+        emissiveIntensity: 0.35
+      })
+    );
+    emblem.position.set(
+      zone.side * corridorX - zone.side * (WALL_THICK / 2 + 0.06),
+      2.8,
+      zone.zCenter
+    );
+    scene.add(emblem);
+
+    biomeWallGroups.push({ zone, lWall, rWall });
+  });
+
+  // 가운데 달리는 느낌을 주는 격자
+  const grid = new THREE.GridHelper(PATH_LENGTH, PATH_LENGTH / 2, 0xffffff, 0x888888);
+  grid.scale.x = PATH_WIDTH / PATH_LENGTH;
+  grid.position.y = 0.018;
+  grid.material.opacity = 0.22;
+  grid.material.transparent = true;
+  scene.add(grid);
+
+  // ---- 안전구역 기본 벽 및 바닥 ----
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x8c7a63, roughness: 0.95 });
+  const wallTopMat = new THREE.MeshStandardMaterial({ color: 0x6f6050, roughness: 0.95 });
+
+  function makeWall(x, len, z) {
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(WALL_THICK, WALL_HEIGHT, len), wallMat);
+    wall.position.set(x, WALL_HEIGHT / 2, z);
+    wall.castShadow = true; wall.receiveShadow = true;
+    return wall;
+  }
+  function makeCap(x, len, z) {
+    const cap = new THREE.Mesh(new THREE.BoxGeometry(WALL_THICK + 0.4, 0.4, len), wallTopMat);
+    cap.position.set(x, WALL_HEIGHT + 0.2, z);
+    cap.castShadow = true;
+    return cap;
+  }
+
+  const roomX = ROOM_WIDTH / 2 + WALL_THICK / 2;
+  const roomSideLen = SAFE_LENGTH + WALL_THICK;
+  const roomMidZ = SAFE_START + SAFE_LENGTH / 2;
+  scene.add(makeWall(-roomX, roomSideLen, roomMidZ));
+  scene.add(makeWall(roomX, roomSideLen, roomMidZ));
+  scene.add(makeCap(-roomX, roomSideLen, roomMidZ));
+  scene.add(makeCap(roomX, roomSideLen, roomMidZ));
+
+  const decor = new THREE.Group();
+  scene.add(decor);
+
+  const safeZone = new THREE.Mesh(
+    new THREE.PlaneGeometry(ROOM_WIDTH, SAFE_LENGTH),
+    new THREE.MeshStandardMaterial({ color: 0xffe066, roughness: 0.8 })
+  );
+  safeZone.rotation.x = -Math.PI / 2;
+  safeZone.position.set(0, 0.015, SAFE_START + SAFE_LENGTH / 2);
+  safeZone.receiveShadow = true;
+  scene.add(safeZone);
+
+  const safeEdge = new THREE.Mesh(
+    new THREE.PlaneGeometry(ROOM_WIDTH, 0.15),
+    new THREE.MeshBasicMaterial({ color: 0xffffff })
+  );
+  safeEdge.rotation.x = -Math.PI / 2;
+  safeEdge.position.set(0, 0.02, SAFE_START);
+  scene.add(safeEdge);
+
+  const endWall = new THREE.Mesh(
+    new THREE.BoxGeometry(ROOM_WIDTH + WALL_THICK * 2, WALL_HEIGHT, WALL_THICK),
+    wallMat
+  );
+  endWall.position.set(0, WALL_HEIGHT / 2, END_Z + WALL_THICK / 2);
+  endWall.castShadow = true; endWall.receiveShadow = true;
+  scene.add(endWall);
+
+  const endCap = new THREE.Mesh(
+    new THREE.BoxGeometry(ROOM_WIDTH + WALL_THICK * 2 + 0.4, 0.4, WALL_THICK + 0.4),
+    wallTopMat
+  );
+  endCap.position.set(0, WALL_HEIGHT + 0.2, END_Z + WALL_THICK / 2);
+  scene.add(endCap);
+
+  // 북쪽 맨 끝(-600) 마감 벽
+  const northEndWall = new THREE.Mesh(
+    new THREE.BoxGeometry(PATH_WIDTH + WALL_THICK * 2, WALL_HEIGHT, WALL_THICK),
+    new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.4, metalness: 0.5 })
+  );
+  northEndWall.position.set(0, WALL_HEIGHT / 2, CORRIDOR_Z0 - WALL_THICK / 2);
+  scene.add(northEndWall);
+
+  function makeStep(x1, x2, z) {
+    const w = new THREE.Mesh(
+      new THREE.BoxGeometry(Math.abs(x2 - x1) + WALL_THICK, WALL_HEIGHT, WALL_THICK),
+      wallMat
+    );
+    w.position.set((x1 + x2) / 2, WALL_HEIGHT / 2, z);
+    w.castShadow = true; w.receiveShadow = true;
+    return w;
+  }
+  scene.add(makeStep(-corridorX, -roomX, SAFE_START));
+  scene.add(makeStep(corridorX, roomX, SAFE_START));
+
+  // 안전구역 울타리
+  const postMat = new THREE.MeshLambertMaterial({ color: 0x8a6a45 });
+  const railFenceMat = new THREE.MeshLambertMaterial({ color: 0x9c7a52 });
+  const FENCE_INSET = 0.7;
+  const fenceHalf = ROOM_WIDTH / 2 - FENCE_INSET;
+  const fenceZ0 = SAFE_START + FENCE_INSET;
+  const fenceZ1 = SAFE_END - FENCE_INSET;
+
+  function fencePost(x, z) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.9, 0.1), postMat);
+    post.position.set(x, 0.45, z);
+    post.castShadow = true;
+    return post;
+  }
+  function fenceLine(x1, z1, x2, z2) {
+    const dx = x2 - x1, dz = z2 - z1;
+    const len = Math.hypot(dx, dz);
+    const n = Math.max(2, Math.round(len / 1.8));
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      decor.add(fencePost(x1 + dx * t, z1 + dz * t));
+    }
+    for (const railY of [0.3, 0.62]) {
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, len + 0.1), railFenceMat);
+      rail.position.set((x1 + x2) / 2, railY, (z1 + z2) / 2);
+      rail.rotation.y = Math.atan2(dx, dz);
+      rail.castShadow = true;
+      decor.add(rail);
+    }
+  }
+  fenceLine(-fenceHalf, fenceZ0, -fenceHalf, fenceZ1);
+  fenceLine(fenceHalf, fenceZ0, fenceHalf, fenceZ1);
+  fenceLine(-fenceHalf, fenceZ1, fenceHalf, fenceZ1);
+
+  // ---- 8종 생물(자고 있는 상태) & 그 앞의 알 생성 ----
+  const creatures = BIOME_ZONES.map(zone => {
+    const c = createCreatureAndEgg(zone, corridorX);
+    scene.add(c.creatureGroup.parent);
+    return c;
+  });
+
+  let elapsed = 0;
+  function update(dt, playerPos) {
+    elapsed += dt;
+
+    // 그림자 카메라가 플레이어를 따라가도록 갱신
+    if (playerPos) {
+      sun.position.set(playerPos.x + 6, 14, playerPos.z - 4);
+      sun.target.position.copy(playerPos);
+      sun.target.updateMatrixWorld();
+    }
+
+    // 8종 생물 수면 호흡 & 알 애니메이션 업데이트
+    creatures.forEach((c, idx) => {
+      const t = elapsed * 2.0 + idx * 0.9;
+      const breath = Math.sin(t);
+
+      // 생물 수면 호흡 (가슴과 몸통이 천천히 오르내림)
+      if (c.body) {
+        c.body.scale.y = 1 + breath * 0.035;
+        c.body.scale.x = 1 + breath * 0.02;
+      }
+      // 알 미세 숨결/공명 요동
+      if (c.eggRoot) {
+        c.eggRoot.position.y = (c.id === 'archangel' ? 0.38 : 0.18) + Math.sin(t * 1.4) * 0.035;
+        c.eggRoot.rotation.z = Math.sin(t * 1.2) * 0.04;
+      }
+
+      if (c.id === 'chicken') {
+        c.headPivot.rotation.x = 0.52 + breath * 0.06;
+        c.eggComb.rotation.z = Math.sin(t * 1.8) * 0.12;
+      } else if (c.id === 'tiger') {
+        c.tailPivot.rotation.y = 0.65 + Math.sin(t * 1.2) * 0.1;
+        c.earL.rotation.z = Math.sin(t * 1.5) * 0.08;
+        c.earR.rotation.z = -Math.sin(t * 1.5) * 0.08;
+      } else if (c.id === 'dragon') {
+        c.wingL.inner.rotation.z = 0.42 + breath * 0.03;
+        c.wingR.inner.rotation.z = -0.42 - breath * 0.03;
+        c.eWingL.rotation.z = breath * 0.15;
+        c.eWingR.rotation.z = -breath * 0.15;
+      } else if (c.id === 'eastern') {
+        c.pearl.rotation.y += dt * 1.5;
+        c.pearl.position.y = 0.45 + breath * 0.06;
+        c.orbitPivot.rotation.y += dt * 1.8;
+      } else if (c.id === 'lion') {
+        c.manePivots.forEach(mp => {
+          mp.pivot.rotation.z = mp.baseZ + Math.sin(t * 1.6 + mp.phase) * 0.12;
+        });
+        c.eggMane.forEach(emp => {
+          emp.pivot.rotation.z = emp.baseZ + Math.sin(t * 1.6 + emp.phase) * 0.12;
+        });
+        c.stars.forEach((st, sIdx) => {
+          st.scale.setScalar(0.8 + Math.abs(Math.sin(t * 2.2 + sIdx)) * 0.45);
+        });
+      } else if (c.id === 'samjoko') {
+        c.haloPivot.rotation.z -= dt * 0.8;
+        c.eggHalo.rotation.z -= dt * 1.2;
+      } else if (c.id === 'demon') {
+        c.wingL.inner.rotation.y = 1.15 + breath * 0.03;
+        c.wingR.inner.rotation.y = -1.15 - breath * 0.03;
+        c.eWingL.rotation.z = breath * 0.14;
+        c.eWingR.rotation.z = -breath * 0.14;
+      } else if (c.id === 'archangel') {
+        c.haloPivot.rotation.y += dt * 1.2;
+        c.eggHalo.rotation.y += dt * 1.6;
+        c.seraphWings.forEach(sw => {
+          sw.pivot.rotation.z = sw.baseZ + sw.side * breath * 0.06;
+        });
+      }
+    });
+  }
+
+  return {
+    group: decor,
+    pathWidth: PATH_WIDTH,
+    pathLength: PATH_LENGTH,
+    safeZone: { minZ: SAFE_START, maxZ: SAFE_END },
+    fencePen: { halfSize: fenceHalf, z0: fenceZ0, z1: fenceZ1 },
+    endZ: END_Z,
+    startZ: CORRIDOR_Z0,
+    roomWidth: ROOM_WIDTH,
+    wallThick: WALL_THICK,
+    update
+  };
+}
+  </script>
+
+  <script>
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 320);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.shadowMap.enabled = true;
+    document.body.appendChild(renderer.domElement);
+
+    const bg = createBackground(scene);
+
+    // ---- 플레이어 캐릭터 색 & GLTF 로더 ----
+    const C = { skin: 0xf0c09a, shirt: 0xe8464b, shorts: 0x2f3f6e, shoe: 0xf5f5f5, sole: 0x333333, hair: 0x3a2614 };
+    const MODEL_URLS = [
+      "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/models/gltf/Xbot.glb",
+      "https://threejs.org/examples/models/gltf/Xbot.glb"
+    ];
+    let mixer = null, character = null;
+    const actions = {};
+    const loader = new THREE.GLTFLoader();
+
+    function stripRootMotionXZ(clip) {
+      const track = clip.tracks.find(t => /Hips\.position$/.test(t.name));
+      if (!track || !track.values || track.values.length < 3) return;
+      const v = track.values;
+      const x0 = v[0], z0 = v[2];
+      for (let i = 0; i < v.length; i += 3) {
+        v[i] = x0;
+        v[i + 2] = z0;
+      }
+    }
+
+    // 일부 환경에서 skinIndex/skinWeight 속성이 getComponent가 없는 형태로 들어올 때가 있어서,
+    // 그럴 때도 안 죽고 값을 읽을 수 있게 안전하게 감싼 함수 (얼굴이 안 뜨던 원인)
+    function getComp(attr, i, j) {
+      if (typeof attr.getComponent === "function") return attr.getComponent(i, j);
+      if (attr.isInterleavedBufferAttribute) return attr.data.array[attr.offset + i * attr.data.stride + j];
+      return attr.array[i * attr.itemSize + j];
+    }
+
+    function paintMesh(mesh) {
+      const geo = mesh.geometry;
+      const pos = geo.attributes.position, si = geo.attributes.skinIndex, sw = geo.attributes.skinWeight;
+      const bones = mesh.skeleton.bones;
+      const colors = new Float32Array(pos.count * 3);
+      const v = new THREE.Vector3(), a = new THREE.Vector3(), b = new THREE.Vector3();
+      const hipsBone = bones.find(x => /Hips$/.test(x.name));
+      const hipsY = hipsBone ? hipsBone.getWorldPosition(new THREE.Vector3()).y : 1.0;
+      function along(bone, p) {
+        bone.getWorldPosition(a);
+        if (!bone.children[0]) return 0;
+        bone.children[0].getWorldPosition(b);
+        const ab = b.clone().sub(a);
+        return p.clone().sub(a).dot(ab) / ab.lengthSq();
+      }
+      const col = c => new THREE.Color(c);
+      for (let i = 0; i < pos.count; i++) {
+        let best = 0, bw = -1;
+        for (let j = 0; j < 4; j++) { const w = getComp(sw, i, j); if (w > bw) { bw = w; best = getComp(si, i, j); } }
+        const bone = bones[best]; const n = bone ? bone.name : "";
+        v.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld);
+        let c = C.shirt;
+        if (/Head|Neck|Eye/.test(n)) c = C.skin;
+        else if (/Hand/.test(n)) c = C.skin;
+        else if (/ForeArm/.test(n)) c = C.skin;
+        else if (/Arm/.test(n)) c = along(bone, v) < 0.42 ? C.shirt : C.skin;
+        else if (/Shoulder|Spine/.test(n)) c = C.shirt;
+        else if (/UpLeg/.test(n)) c = along(bone, v) < 0.5 ? C.shorts : C.skin;
+        else if (/Hips/.test(n)) c = v.y > hipsY + 0.06 ? C.shirt : C.shorts;
+        else if (/Leg/.test(n)) c = C.skin;
+        else if (/Foot|Toe/.test(n)) c = v.y < 0.035 ? C.sole : C.shoe;
+        const cc = col(c);
+        colors[i * 3] = cc.r; colors[i * 3 + 1] = cc.g; colors[i * 3 + 2] = cc.b;
+      }
+      geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      mesh.material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, metalness: 0, skinning: true });
+      mesh.castShadow = true;
+    }
+
+    function addFace(meshes) {
+      const headBone = meshes[0].skeleton.bones.find(x => /Head$/.test(x.name));
+      if (!headBone) return;
+      const box = new THREE.Box3(); const v = new THREE.Vector3();
+      for (const mesh of meshes) {
+        const geo = mesh.geometry;
+        const pos = geo.attributes.position, si = geo.attributes.skinIndex, sw = geo.attributes.skinWeight;
+        const bones = mesh.skeleton.bones;
+        for (let i = 0; i < pos.count; i++) {
+          let best = 0, bw = -1;
+          for (let j = 0; j < 4; j++) { const w = getComp(sw, i, j); if (w > bw) { bw = w; best = getComp(si, i, j); } }
+          if (bones[best] && /Head/.test(bones[best].name)) box.expandByPoint(v.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld));
+        }
+      }
+      if (box.isEmpty()) return;
+      const c = box.getCenter(new THREE.Vector3()), h = box.getSize(new THREE.Vector3()).multiplyScalar(0.5);
+      const parts = []; const solid = col => new THREE.MeshStandardMaterial({ color: col, roughness: 0.9 });
+      const hair = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 28, 0, Math.PI * 2, 0, 1.75), solid(C.hair));
+      hair.scale.set(h.x * 1.09, h.y * 1.06, h.z * 1.09);
+      hair.position.set(c.x, c.y + h.y * 0.06, c.z - h.z * 0.03);
+      hair.rotation.x = -0.6; parts.push(hair);
+      const fringe = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 16), solid(C.hair));
+      fringe.scale.set(h.x * 0.95, h.y * 0.28, h.z * 0.5);
+      fringe.position.set(c.x, c.y + h.y * 0.62, c.z + h.z * 0.55);
+      parts.push(fringe);
+      const onFace = (fx, fy, inset) => {
+        const r = Math.max(0, 1 - fx * fx - fy * fy);
+        return new THREE.Vector3(c.x + fx * h.x, c.y + fy * h.y, c.z + h.z * Math.sqrt(r) - inset);
+      };
+      for (const side of [-1, 1]) {
+        const eye = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 16), solid(0x1a1a1a));
+        eye.scale.set(h.x * 0.1, h.y * 0.13, h.z * 0.06);
+        eye.position.copy(onFace(side * 0.36, 0.05, h.z * 0.02)); parts.push(eye);
+        const shine = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+        shine.scale.setScalar(h.x * 0.03);
+        shine.position.copy(onFace(side * 0.36 + 0.03, 0.1, -h.z * 0.035)); parts.push(shine);
+        const brow = new THREE.Mesh(new THREE.BoxGeometry(h.x * 0.24, h.y * 0.04, h.z * 0.05), solid(C.hair));
+        brow.position.copy(onFace(side * 0.36, 0.26, h.z * 0.01)); parts.push(brow);
+        const ear = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 16), solid(C.skin));
+        ear.scale.set(h.x * 0.1, h.y * 0.2, h.z * 0.16);
+        ear.position.set(c.x + side * h.x * 0.98, c.y + h.y * 0.0, c.z - h.z * 0.05); parts.push(ear);
+      }
+      const mouth = new THREE.Mesh(new THREE.TorusGeometry(h.x * 0.15, h.x * 0.025, 8, 16, Math.PI), solid(0x8a3b2a));
+      mouth.rotation.z = Math.PI; mouth.position.copy(onFace(0, -0.4, h.z * 0.01)); parts.push(mouth);
+      for (const p of parts) { p.castShadow = true; scene.add(p); p.updateMatrixWorld(); headBone.attach(p); }
+    }
+
+    const standZ = (bg.safeZone.minZ + bg.safeZone.maxZ) / 2;
+
+    function loadModel(i) {
+      loader.load(MODEL_URLS[i], (gltf) => {
+        try {
+          const model = gltf.scene;
+          model.scale.setScalar(0.5);
+          scene.add(model);
+          model.updateMatrixWorld(true);
+
+          const meshes = [];
+          model.traverse(o => { if (o.isSkinnedMesh) meshes.push(o); });
+
+          character = model;
+          mixer = new THREE.AnimationMixer(model);
+          for (const clip of gltf.animations) {
+            const name = clip.name.toLowerCase();
+            if (!["idle", "walk", "run"].includes(name)) continue;
+            stripRootMotionXZ(clip);
+            const a = mixer.clipAction(clip);
+            a.play(); a.setEffectiveWeight(0);
+            actions[name] = a;
+          }
+          try { meshes.forEach(paintMesh); }   // 얼굴(머리카락·눈 등) 추가 없이, 원래 모습에 색만 입힘
+          catch (e) { console.error("꾸미기 실패:", e); }
+        } finally {
+          document.getElementById("loading").style.display = "none";
+        }
+      }, undefined, (err) => {
+        console.error(err);
+        if (i + 1 < MODEL_URLS.length) loadModel(i + 1);
+        else document.getElementById("loading").textContent = "캐릭터를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.";
+      });
+    }
+    loadModel(0);
+
+    // ================= 조작 & 구역 순간이동 지원 =================
+    const charPos = new THREE.Vector3(0, 0, standZ);
+    let charYaw = Math.PI;
+    let speed = 0, targetSpeed = 0;
+    const CHAR_RADIUS = 0.25;
+
+    // 점프 상태
+    let velY = 0;          // 수직 속도
+    let isOnGround = true; // 땅에 닿아 있는지
+    const GRAVITY = -22;
+    const JUMP_FORCE = 7.5;
+    const GROUND_Y = 0;    // 캐릭터 y 기준(바닥)
+
+    const keys = {};
+
+    // 알 운반 상태
+    let carriedEgg = null;       // 현재 들고 있는 알 { zone, eggGroup(원래 그룹), pivot(world의 Group) }
+    let carryOffset = null;      // 캐릭터 머리 위 오프셋용 임시 그룹
+    const PICKUP_DIST = 3.2;     // 알 집을 수 있는 거리
+
+    const pickupPrompt  = document.getElementById('pickup-prompt');
+    const dropPrompt    = document.getElementById('drop-prompt');
+    const carryingHud   = document.getElementById('carrying-hud');
+
+    function pickupEgg(c) {
+      if (carriedEgg) return;
+      if (!c.eggGroup) return;
+      carriedEgg = c;
+      // 알의 현재 world 위치를 구한 뒤 scene 직속으로 재부착
+      const wp = new THREE.Vector3();
+      c.eggGroup.getWorldPosition(wp);
+      if (c.eggGroup.parent) c.eggGroup.parent.remove(c.eggGroup);
+      scene.add(c.eggGroup);
+      c.eggGroup.position.copy(wp);
+      carryingHud.style.display = 'block';
+      const zoneDef = BIOME_ZONES.find(z => z.id === c.id);
+      carryingHud.textContent = `🥚 ${zoneDef ? zoneDef.name.split(' ')[0] : ''} 알 운반 중`;
+    }
+
+    function dropEgg() {
+      if (!carriedEgg) return;
+      // 현재 캐릭터 위치 앞에 내려놓음
+      if (carriedEgg.eggGroup) {
+        carriedEgg.eggGroup.position.set(charPos.x, 0, charPos.z);
+        carriedEgg.eggGroup.rotation.y = 0;
+      }
+      carriedEgg = null;
+      carryingHud.style.display = 'none';
+    }
+
+    addEventListener("keydown", e => {
+      keys[e.key.toLowerCase()] = true;
+      if (e.key === " ") {
+        e.preventDefault();
+        if (isOnGround) { velY = JUMP_FORCE; isOnGround = false; }
+      }
+      if (e.key.toLowerCase() === "f") {
+        // 가장 가까운 알 집기
+        if (!carriedEgg) {
+          let nearest = null, nearestDist = PICKUP_DIST;
+          creatures.forEach(c => {
+            if (!c.eggGroup) return;
+            const ep = new THREE.Vector3();
+            c.eggGroup.getWorldPosition(ep);
+            const d = charPos.distanceTo(ep);
+            if (d < nearestDist) { nearestDist = d; nearest = c; }
+          });
+          if (nearest) pickupEgg(nearest);
+
+        }
+      }
+      if (e.key.toLowerCase() === "d") {
+        if (carriedEgg) dropEgg();
+      }
+    });
+    addEventListener("keyup", e => { keys[e.key.toLowerCase()] = false; });
+
+    let camYaw = Math.PI, camPitch = 0.22, dist = 4.2;
+
+    renderer.domElement.addEventListener("wheel", e => {
+      e.preventDefault();
+      if (e.ctrlKey) {
+        dist = Math.max(1.2, Math.min(12, dist + e.deltaY * 0.01));
+      } else {
+        camYaw -= e.deltaX * 0.003;
+        camPitch = Math.max(-0.9, Math.min(1.1, camPitch + e.deltaY * 0.002));
+      }
+    }, { passive: false });
+
+    // 마우스 드래그 회전 지원 추가
+    let isDragging = false, prevX = 0, prevY = 0;
+    renderer.domElement.addEventListener("mousedown", e => { isDragging = true; prevX = e.clientX; prevY = e.clientY; });
+    addEventListener("mousemove", e => {
+      if (!isDragging) return;
+      camYaw -= (e.clientX - prevX) * 0.006;
+      camPitch = Math.max(-0.9, Math.min(1.1, camPitch + (e.clientY - prevY) * 0.005));
+      prevX = e.clientX; prevY = e.clientY;
+    });
+    addEventListener("mouseup", () => { isDragging = false; });
+
+    let twoFingerActive = false, lastMidX = 0, lastMidY = 0, lastPinchDist = 0;
+    function touchMid(t0, t1) { return { x: (t0.clientX + t1.clientX) / 2, y: (t0.clientY + t1.clientY) / 2 }; }
+    function touchDist(t0, t1) { return Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY); }
+
+    renderer.domElement.addEventListener("touchstart", e => {
+      if (e.touches.length === 2) {
+        twoFingerActive = true;
+        const m = touchMid(e.touches[0], e.touches[1]);
+        lastMidX = m.x; lastMidY = m.y;
+        lastPinchDist = touchDist(e.touches[0], e.touches[1]);
+      } else {
+        twoFingerActive = false;
+      }
+      e.preventDefault();
+    }, { passive: false });
+
+    renderer.domElement.addEventListener("touchmove", e => {
+      if (twoFingerActive && e.touches.length === 2) {
+        const m = touchMid(e.touches[0], e.touches[1]);
+        camYaw -= (m.x - lastMidX) * 0.008;
+        camPitch = Math.max(-0.9, Math.min(1.1, camPitch + (m.y - lastMidY) * 0.006));
+        lastMidX = m.x; lastMidY = m.y;
+
+        const d = touchDist(e.touches[0], e.touches[1]);
+        dist = Math.max(1.2, Math.min(12, dist - (d - lastPinchDist) * 0.01));
+        lastPinchDist = d;
+      }
+      e.preventDefault();
+    }, { passive: false });
+
+    renderer.domElement.addEventListener("touchend", e => {
+      if (e.touches.length < 2) twoFingerActive = false;
+    });
+
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+    });
+
+    const WALK_SPEED = 1.6, RUN_SPEED = 6.5;
+    let last = performance.now();
+    const zoneBanner = document.getElementById("zone-banner");
+    const currentSkyColor = new THREE.Color(0x9fd8ef);
+    const targetSkyColor = new THREE.Color(0x9fd8ef);
+
+    function frame(now) {
+      const dt = Math.min((now - last) / 1000, 0.05);
+      last = now;
+
+      const fwdX = -Math.sin(camYaw), fwdZ = -Math.cos(camYaw);
+      const rightX = -fwdZ, rightZ = fwdX;
+
+      let mx = 0, mz = 0;
+      if (keys["w"]) { mx += fwdX; mz += fwdZ; }
+      if (keys["s"]) { mx -= fwdX; mz -= fwdZ; }
+      if (keys["d"]) { mx += rightX; mz += rightZ; }
+      if (keys["a"]) { mx -= rightX; mz -= rightZ; }
+
+      const sprintBoost = keys["shift"] ? 2.4 : 1.0;
+
+      const mLen = Math.hypot(mx, mz);
+      if (mLen > 0.001) {
+        mx /= mLen; mz /= mLen;
+        targetSpeed = 4.2 * sprintBoost;
+        const wantYaw = Math.atan2(mx, mz);
+        let d = ((wantYaw - charYaw + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+        charYaw += d * Math.min(1, dt * 14);
+      } else {
+        targetSpeed = 0;
+      }
+      speed += (targetSpeed - speed) * Math.min(1, dt * 20);
+
+      const absSpeed = Math.abs(speed);
+      const wIdle = Math.max(0, 1 - absSpeed);
+      const wRun  = Math.max(0, Math.min(1, absSpeed - 1));
+      const wWalk = Math.max(0, 1 - wIdle - wRun);
+      const timeScale = absSpeed > 2 ? 1 + (absSpeed - 2) * 0.35 : 1;
+      let groundSpeed = 0;
+
+      if (mixer && actions.walk && actions.run && actions.idle) {
+        const { idle, walk, run } = actions;
+        idle.setEffectiveWeight(wIdle); walk.setEffectiveWeight(wWalk); run.setEffectiveWeight(wRun);
+        const moving = wWalk + wRun;
+        if (moving > 0) {
+          const dur = (walk.getClip().duration * wWalk + run.getClip().duration * wRun) / moving;
+          const phaseStep = dt * timeScale / dur * Math.sign(speed || 1);
+          walk.time = ((walk.time + phaseStep * walk.getClip().duration) % walk.getClip().duration + walk.getClip().duration) % walk.getClip().duration;
+          run.time  = ((run.time  + phaseStep * run.getClip().duration)  % run.getClip().duration  + run.getClip().duration)  % run.getClip().duration;
+        }
+        idle.time = (idle.time + dt) % idle.getClip().duration;
+        mixer.update(0);
+        groundSpeed = Math.sign(speed) * (WALK_SPEED * wWalk + RUN_SPEED * wRun) * timeScale;
+      } else {
+        groundSpeed = speed * 2.5;
+      }
+
+      let nx = charPos.x + mx * groundSpeed * dt;
+      let nz = charPos.z + mz * groundSpeed * dt;
+
+      const widthT = Math.max(0, Math.min(1, (charPos.z - bg.safeZone.minZ) / bg.wallThick));
+      const roomSpan = bg.pathWidth + (bg.roomWidth - bg.pathWidth) * widthT;
+      const halfW = roomSpan / 2 - CHAR_RADIUS;
+      nx = Math.max(-halfW, Math.min(halfW, nx));
+      nz = Math.max(bg.startZ + CHAR_RADIUS, Math.min(bg.endZ - CHAR_RADIUS, nz));
+
+      charPos.x = nx; charPos.z = nz;
+
+      // 수직(점프/중력) 처리
+      velY += GRAVITY * dt;
+      charPos.y += velY * dt;
+      if (charPos.y <= GROUND_Y) { charPos.y = GROUND_Y; velY = 0; isOnGround = true; }
+
+      if (character) { character.position.copy(charPos); character.rotation.y = charYaw; }
+
+      // 들고 있는 알을 캐릭터 머리 위에 붙여 따라오게 함
+      if (carriedEgg && carriedEgg.eggGroup) {
+        carriedEgg.eggGroup.position.set(charPos.x, charPos.y + 1.55, charPos.z);
+        carriedEgg.eggGroup.rotation.y += dt * 1.2;
+      }
+
+      // F 프롬프트: 가까운 알이 있을 때만 표시
+      let showPickup = false;
+      if (!carriedEgg) {
+        creatures.forEach(c => {
+          if (!c.eggGroup) return;
+          const ep = new THREE.Vector3();
+          c.eggGroup.getWorldPosition(ep);
+          if (charPos.distanceTo(ep) < PICKUP_DIST) showPickup = true;
+        });
+      }
+      pickupPrompt.style.display = showPickup ? 'block' : 'none';
+      dropPrompt.style.display = carriedEgg ? 'block' : 'none';
+
+      // 현재 플레이어가 위치한 생물 바이옴 구역 확인 및 하늘/안개 색상 부드럽게 전환
+      const activeZone = BIOME_ZONES.find(z => charPos.z >= z.zMin && charPos.z < z.zMax);
+      if (activeZone) {
+        targetSkyColor.setHex(activeZone.skyColor);
+        zoneBanner.textContent = `${activeZone.name} · 생물이 잠들어 있고 앞에 알이 놓여 있습니다 (중심 Z: ${activeZone.zCenter})`;
+      } else {
+        targetSkyColor.setHex(0x9fd8ef);
+        zoneBanner.textContent = `🏡 안전구역 (출발점 Z: ${Math.round(charPos.z)}) — 북쪽(-Z)으로 달리거나 하단 버튼으로 각 생물 구역에 이동하세요`;
+      }
+      currentSkyColor.lerp(targetSkyColor, Math.min(1, dt * 3.5));
+      scene.background.copy(currentSkyColor);
+      scene.fog.color.copy(currentSkyColor);
+
+      const camTarget = new THREE.Vector3(charPos.x, charPos.y + 0.65, charPos.z);
+      let camX = camTarget.x + Math.sin(camYaw) * Math.cos(camPitch) * dist;
+      let camZ = camTarget.z + Math.cos(camYaw) * Math.cos(camPitch) * dist;
+      const camY = Math.max(0.35, camTarget.y + Math.sin(camPitch) * dist);
+
+      camX = Math.max(-halfW, Math.min(halfW, camX));
+      camZ = Math.min(camZ, bg.endZ - 0.1);
+
+      camera.position.set(camX, camY, camZ);
+      camera.lookAt(camTarget);
+
+      bg.update(dt, charPos);
+      renderer.render(scene, camera);
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>
