@@ -2200,8 +2200,11 @@ function createBackground(scene) {
         if (isOnGround) { velY = JUMP_FORCE; isOnGround = false; }
       }
       if (e.key.toLowerCase() === "f") {
-        // 가장 가까운 알 집기
-        if (!carriedEgg) {
+        if (carriedEgg) {
+          // 들고 있으면 내려놓기
+          dropEgg();
+        } else {
+          // 가장 가까운 알 집기
           let nearest = null, nearestDist = PICKUP_DIST;
           bg.creatures.forEach(c => {
             if (!c.eggGroup) return;
@@ -2211,11 +2214,7 @@ function createBackground(scene) {
             if (d < nearestDist) { nearestDist = d; nearest = c; }
           });
           if (nearest) pickupEgg(nearest);
-
         }
-      }
-      if (e.key.toLowerCase() === "f") {
-        if (carriedEgg) dropEgg();
       }
     });
     addEventListener("keyup", e => { keys[e.key.toLowerCase()] = false; });
@@ -2303,7 +2302,7 @@ function createBackground(scene) {
       if (keys["d"]) { mx += rightX; mz += rightZ; }
       if (keys["a"]) { mx -= rightX; mz -= rightZ; }
 
-      const sprintBoost = keys["shift"] ? 2.4 : 1.0;
+      const sprintBoost = 2.4; // 항상 최고 속도
 
       const mLen = Math.hypot(mx, mz);
       if (mLen > 0.001) {
