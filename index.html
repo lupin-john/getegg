@@ -107,6 +107,22 @@
       #egg-counter { top:8px; right:calc(12px + env(safe-area-inset-right)); padding:5px 12px; font-size:13px; }
       #carrying-hud { top:44px; right:calc(12px + env(safe-area-inset-right)); padding:5px 12px; font-size:13px; }
     }
+    /* 꾸미기 화면 / 상단 버튼 */
+    #hud-buttons { position:absolute; top:calc(64px + env(safe-area-inset-top)); right:calc(20px + env(safe-area-inset-right)); z-index:20; display:flex; gap:8px; }
+    .hudbtn { width:40px; height:40px; border-radius:50%; border:1px solid rgba(255,255,255,0.3); background:rgba(12,10,24,0.62); color:#fff; font-size:19px; backdrop-filter:blur(6px); box-shadow:0 4px 14px rgba(0,0,0,0.35); }
+    .hudbtn:active { transform:scale(0.92); }
+    #wardrobe { position:fixed; left:0; top:0; bottom:0; width:min(50vw, 390px); z-index:150; display:none; flex-direction:column; color:#fff; touch-action:pan-y;
+      background:linear-gradient(180deg, rgba(24,20,46,0.94), rgba(14,11,28,0.96)); border-right:1px solid rgba(255,255,255,0.18); padding-left:env(safe-area-inset-left); }
+    #wardrobe .whead { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 12px; font-weight:800; font-size:15px; border-bottom:1px solid rgba(255,255,255,0.12); }
+    #wardrobe .whead button { padding:7px 12px; border-radius:999px; border:1px solid rgba(255,255,255,0.3); background:rgba(255,255,255,0.1); color:#fff; font-weight:700; font-size:13px; }
+    #wardrobe .whead button.primary { background:linear-gradient(180deg,#fde68a,#f59e0b); color:#2b1b00; border-color:#f59e0b; }
+    #wardrobe-body { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:4px 12px 28px; }
+    .wrow { margin:12px 0; } .wlabel { font-size:12px; opacity:0.75; margin-bottom:6px; font-weight:700; } .wopts { display:flex; flex-wrap:wrap; gap:7px; }
+    .wsw { width:30px; height:30px; border-radius:50%; border:2px solid rgba(255,255,255,0.3); padding:0; }
+    .wsw.on { border-color:#fff; box-shadow:0 0 0 2px #facc15; }
+    .wchip { padding:6px 11px; border-radius:999px; border:1px solid rgba(255,255,255,0.3); background:rgba(255,255,255,0.08); color:#fff; font-size:12.5px; font-weight:600; }
+    .wchip.on { background:#facc15; color:#2b1b00; border-color:#facc15; }
+    @media (pointer: coarse) and (orientation: landscape) { #hud-buttons { top:calc(52px + env(safe-area-inset-top)); right:calc(12px + env(safe-area-inset-right)); } .hudbtn { width:34px; height:34px; font-size:16px; } }
     /* 로그인 화면 / 접속 표시 */
     #login { position:fixed; inset:0; z-index:200; display:none; align-items:center; justify-content:center; padding:12px;
       background:radial-gradient(circle at 50% 30%, rgba(45,42,82,0.96), rgba(14,11,28,0.98)); touch-action:manipulation; }
@@ -122,6 +138,11 @@
     #login button { flex:1; padding:12px 10px; border-radius:12px; border:none; font-weight:800; font-size:14px; color:#2b1b00; background:linear-gradient(180deg,#fde68a,#f59e0b); }
     #login button:disabled { opacity:0.45; }
     #login button.ghost { background:rgba(255,255,255,0.12); color:#fff; border:1px solid rgba(255,255,255,0.25); font-weight:600; }
+    #login .spin { display:none; width:34px; height:34px; margin:6px auto; border-radius:50%; border:4px solid rgba(255,255,255,0.2); border-top-color:#fde68a; animation:loginSpin 0.9s linear infinite; }
+    @keyframes loginSpin { to { transform:rotate(360deg); } }
+    #login.checking .spin { display:block; }
+    #login.checking input, #login.checking .row, #login.checking .err { display:none; }
+    #login.checking .sub { display:block; font-size:14px; }
     @media (max-height:480px) { #login .card { padding:12px 16px; gap:6px; } #login .title { font-size:16px; } #login .sub { display:none; } #login input { padding:8px 12px; font-size:15px; } #login button { padding:8px; } }
     #net-info { position:absolute; top:8px; left:calc(10px + env(safe-area-inset-left)); z-index:20; display:none; align-items:center; gap:8px; font-size:12.5px; font-weight:700; color:#fff;
       background:rgba(12,10,24,0.6); border:1px solid rgba(255,255,255,0.2); border-radius:999px; padding:4px 6px 4px 12px; backdrop-filter:blur(6px); }
@@ -152,40 +173,151 @@
       box-shadow:0 6px 20px rgba(0,0,0,0.4); pointer-events:none; z-index:15;
       display:none;
     }
+
+    /* ===== 게임 화면(HUD) 정리: 왼쪽 위(프로필·돈·미니맵) / 오른쪽 위(카운터·버튼) / 가운데(알림·탈출 게이지) ===== */
+    #hud-left { position:absolute; top:calc(8px + env(safe-area-inset-top)); left:calc(10px + env(safe-area-inset-left)); z-index:20; display:flex; flex-direction:column; gap:6px; align-items:flex-start; pointer-events:none; }
+    #hud-right { position:absolute; top:calc(8px + env(safe-area-inset-top)); right:calc(12px + env(safe-area-inset-right)); z-index:20; display:flex; flex-direction:column; gap:6px; align-items:flex-end; pointer-events:none; }
+    #hud-left > *, #hud-right > * { pointer-events:auto; }
+    #hud-left #net-info, #hud-right #egg-counter, #hud-right #carrying-hud, #money-chip { position:static; top:auto; left:auto; right:auto; margin:0; display:flex; align-items:center; gap:7px;
+      padding:5px 12px; font-size:13px; font-weight:700; color:#fff; background:rgba(12,10,24,0.62); border:1px solid rgba(255,255,255,0.22); border-radius:999px; backdrop-filter:blur(6px); box-shadow:0 4px 14px rgba(0,0,0,0.3); }
+    #hud-left #net-info { display:none; padding:4px 6px 4px 12px; font-size:12.5px; }
+    #hud-right #carrying-hud { display:none; }
+    #money-chip b { font-size:17px; color:#fde68a; min-width:36px; text-shadow:0 1px 4px rgba(0,0,0,0.5); }
+    #money-rate { font-size:11px; color:#bbf7d0; font-weight:700; }
+    #money-chip.pulse { animation:moneyPulse 0.55s ease-out; }
+    @keyframes moneyPulse { 0% { transform:scale(1); } 35% { transform:scale(1.18); box-shadow:0 0 18px rgba(250,204,21,0.8); } 100% { transform:scale(1); } }
+    #hud-buttons { position:static; top:auto; right:auto; }
+    #minimap { width:150px; height:90px; border-radius:12px; border:1px solid rgba(255,255,255,0.28); background:rgba(12,10,24,0.55); backdrop-filter:blur(6px); box-shadow:0 4px 14px rgba(0,0,0,0.35); }
+    #toasts { position:absolute; top:112px; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; gap:6px; align-items:center; pointer-events:none; z-index:25; }
+    .toast { padding:8px 16px; border-radius:14px; font-size:14px; font-weight:700; color:#fff; max-width:86vw; text-align:center; background:rgba(12,10,24,0.9);
+      border:1px solid rgba(255,255,255,0.25); box-shadow:0 8px 24px rgba(0,0,0,0.45); animation:toastIn 0.25s ease-out; transition:opacity 0.35s, transform 0.35s; }
+    .toast.good { border-color:#4ade80; } .toast.warn { border-color:#fb923c; } .toast.bad { border-color:#f87171; } .toast.money { border-color:#facc15; }
+    .toast.out { opacity:0; transform:translateY(-8px); }
+    @keyframes toastIn { from { opacity:0; transform:translateY(-10px) scale(0.96); } to { opacity:1; transform:none; } }
+    #escape-meter { position:absolute; top:74px; left:50%; transform:translateX(-50%); width:min(62vw, 440px); display:none; z-index:12; pointer-events:none; color:#fff; font-weight:800; font-size:12.5px; text-shadow:0 1px 5px rgba(0,0,0,0.8); }
+    #escape-meter .etop { text-align:center; margin-bottom:3px; }
+    #escape-meter .etrack { position:relative; height:12px; border-radius:999px; background:rgba(12,10,24,0.7); border:1px solid rgba(255,255,255,0.3); box-shadow:0 3px 10px rgba(0,0,0,0.4); }
+    #escape-fill { position:absolute; left:0; top:0; bottom:0; width:0; border-radius:999px; background:linear-gradient(90deg,#4ade80,#facc15); }
+    #escape-me, #escape-foe, #escape-meter .egoal { position:absolute; top:-9px; font-size:17px; transform:translateX(-50%); }
+    #escape-meter .egoal { right:-4px; left:auto; transform:none; }
+    #hatch-info { flex-direction:column; align-items:center; gap:5px; }
+    #hatch-info .bar { width:150px; height:6px; border-radius:999px; background:rgba(255,255,255,0.18); overflow:hidden; }
+    #hatch-info .bar i { display:block; height:100%; width:0; border-radius:999px; background:linear-gradient(90deg,#4ade80,#facc15); }
+    #btn-egg[data-mode="sell"] .prog { stroke:url(#eggRingOrange); filter:drop-shadow(0 0 4px rgba(249,115,22,0.85)); }
+    #btn-egg[data-mode="sell"] .egg-icon { fill:#fed7aa; }
+    #rank-panel { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:min(92vw, 360px); max-height:86vh; display:none; flex-direction:column; gap:8px; z-index:160; padding:14px; color:#fff;
+      background:linear-gradient(180deg, rgba(28,24,54,0.97), rgba(14,11,28,0.98)); border:1px solid rgba(255,255,255,0.22); border-radius:18px; box-shadow:0 20px 50px rgba(0,0,0,0.55); touch-action:pan-y; }
+    #rank-panel .rhead { display:flex; align-items:center; justify-content:space-between; font-weight:800; font-size:17px; }
+    #rank-panel .rtabs { display:flex; gap:8px; } #rank-panel .rtabs button { flex:1; padding:8px; border-radius:12px; border:1px solid rgba(255,255,255,0.25); background:rgba(255,255,255,0.08); color:#fff; font-weight:700; font-size:14px; }
+    #rank-panel .rtabs button.on { background:linear-gradient(180deg,#fde68a,#f59e0b); color:#2b1b00; border-color:#f59e0b; }
+    #rank-note { font-size:12px; opacity:0.8; } #rank-foot { font-size:12.5px; opacity:0.85; text-align:center; }
+    #rank-list { overflow-y:auto; display:flex; flex-direction:column; gap:5px; -webkit-overflow-scrolling:touch; }
+    .rrow { display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:12px; background:rgba(255,255,255,0.07); font-size:14px; font-weight:700; }
+    .rrow.me { background:rgba(250,204,21,0.2); border:1px solid #facc15; } .rrow .rk { width:30px; text-align:center; font-size:17px; } .rrow .rn { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .rrow .rv { color:#fde68a; }
+    @media (pointer: coarse) and (orientation: landscape) { #minimap { width:118px; height:71px; } #toasts { top:84px; } #escape-meter { top:52px; width:min(50vw, 380px); } #money-chip b { font-size:15px; } }
+    #hud { animation:hudFade 1.2s ease 15s forwards; }
+    @keyframes hudFade { to { opacity:0; } }
+
+    /* ===== 오른쪽 세로 버튼(알·펫·순위) / 목록 창 / 가방(핫바) ===== */
+    #side-buttons { position:absolute; right:calc(12px + env(safe-area-inset-right)); top:calc(132px + env(safe-area-inset-top)); display:flex; flex-direction:column; gap:10px; z-index:21; }
+    .sidebtn { position:relative; width:54px; height:54px; border-radius:9px; font-size:27px; line-height:1; display:flex; align-items:center; justify-content:center; border:3px solid; box-shadow:inset 0 -5px 0 rgba(0,0,0,0.22), 0 4px 12px rgba(0,0,0,0.4); }
+    .sidebtn.red { background:#ef4444; border-color:#7f1d1d; } .sidebtn.orange { background:#f59e0b; border-color:#92400e; } .sidebtn.yellow { background:#fbbf24; border-color:#92400e; }
+    .sidebtn:active { transform:scale(0.93); } .sidebtn.on { filter:brightness(1.25); outline:3px solid #fff; }
+    .sidebtn .dot { position:absolute; top:-7px; right:-7px; min-width:20px; height:20px; padding:0 3px; box-sizing:border-box; border-radius:10px; background:#22c55e; color:#fff; font-style:normal; font-size:12px; font-weight:800; display:none; align-items:center; justify-content:center; border:2px solid #fff; }
+    .gpanel { position:absolute; right:calc(76px + env(safe-area-inset-right)); top:calc(96px + env(safe-area-inset-top)); width:min(310px, 60vw); max-height:calc(100vh - 150px); display:none; flex-direction:column; z-index:23;
+      border-radius:12px; overflow:hidden; background:#3a3748; border:3px solid #2a2836; box-shadow:0 12px 34px rgba(0,0,0,0.55); touch-action:pan-y; }
+    .ghead { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 10px; background:linear-gradient(180deg,#e6c79a,#c9a06c); border-bottom:3px solid #8b6a43; }
+    .gtitle { color:#fff; font-size:19px; font-weight:900; text-shadow:0 2px 0 #5b4025, 0 0 3px #3b2a18; } .gsub { color:#4a2f12; font-weight:800; font-size:13px; }
+    .gyellow { padding:6px 10px; border-radius:8px; border:2px solid #111; background:#fbbf24; color:#111; font-weight:900; font-size:12.5px; } .gyellow:disabled { opacity:0.45; }
+    .glist { overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:7px; -webkit-overflow-scrolling:touch; }
+    .grow { display:flex; align-items:center; gap:8px; padding:6px; border-radius:9px; background:#4a475c; border:2px solid #25232f; }
+    .gicon { position:relative; width:42px; height:42px; flex:none; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:24px; background:radial-gradient(circle at 50% 35%, #8f8aa8, #55516a); }
+    .gicon small { position:absolute; right:-3px; bottom:-4px; font-size:14px; }
+    .gmid { flex:1; min-width:0; } .gname { font-size:13px; font-weight:800; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:2px; } .gincome { font-size:13px; font-weight:800; color:#e879f9; }
+    .pbar { position:relative; height:22px; border-radius:5px; background:#0b0b0f; border:2px solid #000; overflow:hidden; }
+    .pbar i { position:absolute; left:0; top:0; bottom:0; background:linear-gradient(180deg,#86efac,#22c55e); }
+    .pbar span { position:relative; display:block; text-align:center; color:#fff; font-size:13px; font-weight:900; line-height:18px; text-shadow:0 1px 2px #000; }
+    .gbtn { flex:none; min-width:40px; height:36px; padding:0 8px; border-radius:7px; border:2px solid #14532d; background:#86efac; color:#14532d; font-size:15px; font-weight:900; }
+    .gbtn.red { background:#ef4444; border-color:#7f1d1d; color:#fff; font-size:12.5px; } .gbtn:disabled { opacity:0.4; }
+    .gfoot { padding:6px 10px 8px; font-size:12px; text-align:center; font-weight:800; color:#fff; background:#16a34a; border-top:2px solid #14532d; }
+    .gbtn.open { min-width:58px; background:#facc15; border-color:#92400e; color:#422006; font-size:15px; animation:openPulse 0.9s ease-in-out infinite; }
+    @keyframes openPulse { 0%,100% { transform:scale(1); box-shadow:0 0 0 rgba(250,204,21,0); } 50% { transform:scale(1.07); box-shadow:0 0 12px rgba(250,204,21,0.9); } }
+    .pbar.ready i { background:linear-gradient(180deg,#fde68a,#f59e0b); } .pbar.ready span { color:#422006; text-shadow:none; }
+    .gempty { padding:18px 8px; text-align:center; color:#cbd5e1; font-size:13px; font-weight:700; white-space:pre-line; }
+    #hotbar { position:absolute; bottom:calc(10px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); display:flex; gap:6px; z-index:22; max-width:calc(100vw - 440px); overflow-x:auto; padding:3px; }
+    .slot { position:relative; flex:none; width:54px; height:54px; border-radius:9px; border:2px solid rgba(255,255,255,0.18); background:rgba(40,38,52,0.82); color:#fff; font-size:25px; display:flex; align-items:center; justify-content:center; touch-action:manipulation; }
+    .slot.empty { opacity:0.5; } .slot.on { border-color:#fde047; background:rgba(120,100,20,0.85); box-shadow:0 0 12px rgba(253,224,71,0.8); }
+    .slot .num { position:absolute; left:4px; top:1px; font-size:11px; font-weight:800; opacity:0.8; } .slot .bd { position:absolute; right:1px; bottom:0; font-size:15px; }
+    body.touch-mode .slot .num { display:none; }
+    #hatch-info { bottom:78px !important; } #pickup-prompt { bottom:124px !important; } #drop-prompt { bottom:166px !important; }
+    #btn-egg[data-mode="place"] .prog { stroke:url(#eggRingGreen); filter:drop-shadow(0 0 4px rgba(74,222,128,0.85)); } #btn-egg[data-mode="place"] .egg-icon { fill:#bbf7d0; }
+    @media (pointer: coarse) and (orientation: landscape) {
+      #side-buttons { top:calc(88px + env(safe-area-inset-top)); gap:7px; } .sidebtn { width:44px; height:44px; font-size:22px; }
+      .gpanel { top:calc(52px + env(safe-area-inset-top)); right:calc(66px + env(safe-area-inset-right)); max-height:calc(100vh - 70px); width:min(300px, 56vw); }
+      .slot { width:46px; height:46px; font-size:21px; } #hotbar { max-width:calc(100vw - 400px); } #hatch-info { bottom:66px !important; }
+    }
   </style>
 </head>
 <body>
-  <div id="hud">로블록스처럼 W/A/S/D 이동(Shift: 천천히 걷기) · 트랙패드 두 손가락 쓸기/마우스 드래그: 화면 회전 · 핀치/휠: 확대·축소</div>
-  <div id="zone-banner">🏡 안전구역 (출발점) — 북쪽(-Z) 통로를 따라 8종 생물과 알이 좌우 번갈아 아주 멀리 배치되어 있습니다</div>
+  <div id="hud">W/A/S/D 이동 · Shift 천천히 · 스페이스 점프 · F 알·펫 · 마우스 드래그 회전 · 휠 확대</div>
+  <div id="zone-banner">🏡 안전구역</div>
   <div id="loading">캐릭터 불러오는 중...</div>
   <div id="rotate-overlay"><div class="phone"></div><div class="t1">화면을 가로로 돌려주세요</div><div class="t2">가로 화면에서 조작하기 훨씬 편해요</div><button id="btn-fullscreen">가로 전체화면으로 시작</button></div>
   <div id="pickup-prompt">🥚 F — 알 들기</div>
   <div id="drop-prompt">📦 F — 내려놓기</div>
   <div id="danger-vignette"></div>
-  <div id="net-info"></div>
+  <div id="hud-left">
+    <div id="net-info"></div>
+    <div id="money-chip"><span>💰</span><b id="money-val">0</b><span id="money-rate"></span></div>
+    <canvas id="minimap" width="220" height="132"></canvas>
+  </div>
+  <div id="hud-right">
+    <div id="egg-counter">🥚 내 알 0개</div>
+    <div id="carrying-hud">🥚</div>
+    <div id="hud-buttons"><button id="btn-wardrobe" class="hudbtn" title="캐릭터 꾸미기">👕</button></div>
+  </div>
+  <div id="escape-meter"><div class="etop"><span id="escape-text"></span></div><div class="etrack"><div id="escape-fill"></div><span id="escape-me">🏃</span><span id="escape-foe">👹</span><span class="egoal">🏠</span></div></div>
+  <div id="toasts"></div>
+  <div id="side-buttons">
+    <button id="btn-eggs" class="sidebtn red" title="성장하는 달걀">🥚<i class="dot" id="eggs-dot"></i></button>
+    <button id="btn-pets" class="sidebtn orange" title="펫">🐾</button>
+    <button id="btn-rank" class="sidebtn yellow" title="순위표" style="display:none">🏆</button>
+  </div>
+  <div id="eggs-panel" class="gpanel"><div class="ghead"><span class="gtitle">성장하는 달걀</span><button id="eggs-all" class="gyellow">모두 열기</button></div><div id="eggs-list" class="glist"></div></div>
+  <div id="pets-panel" class="gpanel"><div class="ghead"><span class="gtitle" id="pets-title">펫</span><span id="pets-total" class="gsub"></span></div><div id="pets-list" class="glist"></div><div class="gfoot">크기가 클수록 돈을 많이 벌어요 · 판매는 두 번 눌러요</div></div>
+  <div id="hotbar"></div>
+  <div id="rank-panel">
+    <div class="rhead"><span>🏆 순위표</span><button id="rank-close" class="hudbtn">✕</button></div>
+    <div class="rtabs"><button id="rank-tab-money" class="on">💰 돈</button><button id="rank-tab-speed">⚡ 속도</button></div>
+    <div id="rank-note"></div><div id="rank-list"></div><div id="rank-foot"></div>
+  </div>
+  <div id="wardrobe">
+    <div class="whead"><span id="wardrobe-title">👕 캐릭터 꾸미기</span><span class="wbtns"><button id="wardrobe-random">🎲 랜덤</button><button id="wardrobe-done" class="primary">완료</button></span></div>
+    <div id="wardrobe-body"></div>
+  </div>
   <div id="login"><div class="card">
     <div class="title">🥚 달걀 훔치기</div>
     <div class="sub" id="login-sub">연결 중...</div>
+    <div class="spin"></div>
     <input id="login-nick" placeholder="닉네임 (한글·영문·숫자 2~8자)" maxlength="8" autocomplete="username" autocapitalize="off" spellcheck="false">
     <input id="login-pw" type="password" placeholder="비밀번호 (6자 이상)" autocomplete="current-password">
     <div class="err" id="login-err"></div>
     <div class="row"><button id="btn-login">로그인</button><button id="btn-signup">새 닉네임 만들기</button></div>
-    <button id="btn-guest" class="ghost">혼자 하기 (이 기기에만 저장)</button>
+    <button id="btn-retry" class="ghost" style="display:none">다시 시도</button>
   </div></div>
-  <div id="hatch-info"></div>
+  <div id="hatch-info"><span id="hatch-text"></span><div class="bar"><i id="hatch-bar"></i></div></div>
   <div id="hatch-flash"></div>
-  <div id="egg-counter">🥚 내 알 0개</div>
   <div id="joy-base" class="touch-ui"><div id="joy-knob"></div></div>
   <div id="btn-jump" class="touch-ui"><svg viewBox="0 0 24 24"><path d="M12 19V6M6.5 11.5 12 6l5.5 5.5"/></svg><span>점프</span></div>
   <div id="btn-egg" class="touch-ui" data-mode="pick">
     <svg class="ring" viewBox="0 0 100 100"><defs>
       <linearGradient id="eggRingGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fef08a"/><stop offset="1" stop-color="#f59e0b"/></linearGradient>
       <linearGradient id="eggRingRed" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fecaca"/><stop offset="1" stop-color="#ef4444"/></linearGradient>
+      <linearGradient id="eggRingOrange" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fed7aa"/><stop offset="1" stop-color="#f97316"/></linearGradient>
       <linearGradient id="eggRingGreen" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#bbf7d0"/><stop offset="1" stop-color="#22c55e"/></linearGradient></defs>
       <circle class="track" cx="50" cy="50" r="45"/><circle class="prog" id="egg-ring-prog" cx="50" cy="50" r="45"/></svg>
     <div class="face"><svg class="egg-icon" viewBox="0 0 24 24"><path d="M12 2.5c3.6 0 6.5 5.4 6.5 9.6 0 3.9-2.9 7.4-6.5 7.4s-6.5-3.500-6.500-7.400C5.500 7.900 8.400 2.500 12 2.500z"/></svg><span class="hint">꾹 눌러</span><span class="act" id="btn-egg-label">알 들기</span></div>
   </div>
-  <div id="carrying-hud">🥚</div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
@@ -4857,6 +4989,7 @@ function createBackground(scene) {
     const xa = Math.min(sd * sideX, sd * fenceHalf), xb = Math.max(sd * sideX, sd * fenceHalf);
     for (let r = 0; r < SIDE_N; r++) {
       const za = backZ0 - PLOT * (SIDE_N - r), zb = za + PLOT;
+      if (sd === -1 && r === 0) continue;                                              // 왼쪽 앞 칸: 울타리를 없애고 러닝머신 2대 자리로 씀
       segs.push({ x: sd * sideX, z0: za, z1: zb, gate: (za + zb) / 2 });             // 광장 쪽 변(문)
       segs.push({ z: za, x0: xa, x1: xb, gate: null });                               // 칸의 앞 변(칸 사이 경계 포함)
     }
@@ -4893,6 +5026,7 @@ function createBackground(scene) {
   );
   const plotBounds = { mine: Object.assign({}, mineRect, { gate: { x: PLOT / 2, z: backZ0, vertical: false } }), others: [] };   // 칸 범위+문 위치(검증·알 놓기용)
   for (const sd of [-1, 1]) for (let r = 0; r < SIDE_N; r++) {
+    if (sd === -1 && r === 0) continue;                                                // (러닝머신 자리)
     const za = backZ0 - PLOT * (SIDE_N - r), xa = Math.min(sd * sideX, sd * fenceHalf), xb = Math.max(sd * sideX, sd * fenceHalf);
     plotBounds.others.push({ x0: xa, x1: xb, z0: za, z1: za + PLOT, gate: { x: sd * sideX, z: za + PLOT / 2, vertical: true } });
   }
@@ -4908,9 +5042,13 @@ function createBackground(scene) {
   }
   for (const sd of [-1, 1]) for (let r = 0; r < SIDE_N; r++) {
     const za = backZ0 - PLOT * (SIDE_N - r), xa = Math.min(sd * sideX, sd * fenceHalf), xb = Math.max(sd * sideX, sd * fenceHalf);
-    plotBounds.all.push({ i: plotBounds.all.length, kind: sd < 0 ? 'left' : 'right', x0: xa, x1: xb, z0: za, z1: za + PLOT, gate: { x: sd * sideX, z: za + PLOT / 2, vertical: true }, inward: { x: sd, z: 0 } });
+    plotBounds.all.push({ i: plotBounds.all.length, kind: sd < 0 ? 'left' : 'right', x0: xa, x1: xb, z0: za, z1: za + PLOT, gate: { x: sd * sideX, z: za + PLOT / 2, vertical: true }, inward: { x: sd, z: 0 }, disabled: sd === -1 && r === 0 });
   }
   plotBounds.defaultIndex = 3;           // 혼자 할 때(로그인 안 함)의 칸
+  // 러닝머신 2대: 없앤 왼쪽 앞 칸 자리(울타리 없음). 칸 가운데에서 좌우로 2칸씩, 앞쪽으로 달리는 방향(-z)
+  const tmZ0 = backZ0 - PLOT * SIDE_N, tmCx = -(fenceHalf + sideX) / 2;
+  const treadmillArea = { x0: -fenceHalf, x1: -sideX, z0: tmZ0, z1: tmZ0 + PLOT };
+  const treadmillAnchors = [{ x: tmCx - 2.0, z: tmZ0 + PLOT / 2 - 0.7 }, { x: tmCx + 2.0, z: tmZ0 + PLOT / 2 - 0.7 }];
   const myGate = { x: PLOT / 2, z: backZ0, side: 'front' };
 
   // ---- 8종 생물(자고 있는 상태) & 그 앞의 알 생성 ----
@@ -4947,6 +5085,7 @@ function createBackground(scene) {
     fencePen: { halfSize: fenceHalf, z0: fenceZ0, z1: fenceZ1 },
     fenceRects,            // 칸 울타리 충돌용 벽 목록
     plotBounds,            // 칸 범위(내 칸 포함)
+    treadmillArea, treadmillAnchors,   // 러닝머신 자리
     gateWidth: GATE,
     myGate,                // 내 칸 문 위치
     endZ: END_Z,
@@ -4997,6 +5136,419 @@ function createBackground(scene) {
       if (parent) parent.add(mesh); return mesh;
     }
 
+    // ================= 하이퍼 러닝머신 2대 (업로드한 파일에서 옮김) =================
+    // 왼쪽 앞 칸 자리에 나란히 2대: ① 청록·보라(비어 있음) ② 빨강·노랑(트레이너가 달리고 있음). 걸어 올라가면 자동으로 올라타서 계속 달리고, 스페이스(모바일은 점프 버튼)로 내림
+    function createHyperTreadmill(posX, posZ, themeColor = 0x00f0ff, subColor = 0xa855f7, withBlockyRunner = false) {
+      const root = new THREE.Group();
+      root.position.set(posX, 0, posZ);
+      // 북쪽(-Z, 복도 방향)을 바라보도록 배치
+      scene.add(root);
+
+      const matMetal = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.3, metalness: 0.85 });
+      const matChrome = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.2, metalness: 0.92 });
+      const matBelt = new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.75, metalness: 0.2 });
+      const matNeon1 = new THREE.MeshStandardMaterial({
+        color: themeColor, emissive: themeColor, emissiveIntensity: 1.8, roughness: 0.15, metalness: 0.3
+      });
+      const matNeon2 = new THREE.MeshStandardMaterial({
+        color: subColor, emissive: subColor, emissiveIntensity: 1.6, roughness: 0.2, metalness: 0.3
+      });
+      const matFire = new THREE.MeshStandardMaterial({
+        color: 0xfacc15, emissive: 0xff4500, emissiveIntensity: 2.2, transparent: true, opacity: 0.9
+      });
+      const matHolo = new THREE.MeshStandardMaterial({
+        color: themeColor, emissive: themeColor, emissiveIntensity: 2.0, transparent: true, opacity: 0.65, side: THREE.DoubleSide
+      });
+
+      const box = (w, h, d, m, x = 0, y = 0, z = 0) => {
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+        mesh.position.set(x, y, z);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        return mesh;
+      };
+
+      // 1. 하부 베이스 프레임 & 네온 언더글로우 패드
+      const underGlow = new THREE.Mesh(
+        new THREE.PlaneGeometry(3.2, 5.2),
+        new THREE.MeshBasicMaterial({ color: themeColor, transparent: true, opacity: 0.28, side: THREE.DoubleSide })
+      );
+      underGlow.rotation.x = -Math.PI / 2;
+      underGlow.position.y = 0.015;
+      root.add(underGlow);
+
+      // 메인 데크 프레임
+      root.add(box(2.3, 0.22, 4.3, matMetal, 0, 0.12, 0));
+      // 좌우 육중한 사이드 아머 레일 (발광 라인 포함)
+      root.add(box(0.28, 0.32, 4.45, matChrome, -1.08, 0.20, 0));
+      root.add(box(0.28, 0.32, 4.45, matChrome, 1.08, 0.20, 0));
+      root.add(box(0.06, 0.10, 4.48, matNeon1, -1.23, 0.22, 0));
+      root.add(box(0.06, 0.10, 4.48, matNeon1, 1.23, 0.22, 0));
+      root.add(box(0.08, 0.04, 4.3, matNeon2, -0.92, 0.37, 0));
+      root.add(box(0.08, 0.04, 4.3, matNeon2, 0.92, 0.37, 0));
+
+      // 앞·뒤 대구경 마그네틱 롤러 드럼
+      const rollerGeo = new THREE.CylinderGeometry(0.16, 0.16, 1.78, 20);
+      rollerGeo.rotateZ(Math.PI / 2);
+      const frontRoller = new THREE.Mesh(rollerGeo, matChrome);
+      frontRoller.position.set(0, 0.18, -2.08);
+      const backRoller = new THREE.Mesh(rollerGeo, matChrome);
+      backRoller.position.set(0, 0.18, 2.08);
+      root.add(frontRoller, backRoller);
+
+      // 2. 러닝 컨베이어 벨트 & 고속 스크롤 화살표(Chevron) 슬랫
+      const beltSurface = box(1.76, 0.04, 4.05, matBelt, 0, 0.23, 0);
+      root.add(beltSurface);
+
+      const beltSlats = [];
+      const slatCount = 14;
+      for (let i = 0; i < slatCount; i++) {
+        const slatGroup = new THREE.Group();
+        const zPos = -1.95 + (i / slatCount) * 3.9;
+        slatGroup.position.set(0, 0.255, zPos);
+
+        // 가로 트레드 바
+        const bar = box(1.68, 0.015, 0.07, matChrome, 0, 0, 0);
+        slatGroup.add(bar);
+
+        // V자 네온 셰브론(화살표) 문양
+        const chevL = box(0.55, 0.02, 0.05, i % 2 === 0 ? matNeon1 : matNeon2, -0.24, 0.005, 0);
+        chevL.rotation.y = 0.35;
+        const chevR = box(0.55, 0.02, 0.05, i % 2 === 0 ? matNeon1 : matNeon2, 0.24, 0.005, 0);
+        chevR.rotation.y = -0.35;
+        slatGroup.add(chevL, chevR);
+
+        root.add(slatGroup);
+        beltSlats.push(slatGroup);
+      }
+
+      // 3. 전방 사이버 아치 게이트 & 홀로그램 계기판 콘솔
+      const leftPillar = box(0.22, 2.3, 0.28, matMetal, -1.06, 1.25, -1.75);
+      leftPillar.rotation.x = 0.18;
+      const rightPillar = box(0.22, 2.3, 0.28, matMetal, 1.06, 1.25, -1.75);
+      rightPillar.rotation.x = 0.18;
+      root.add(leftPillar, rightPillar);
+
+      // 기둥 네온 스트립
+      const lpStrip = box(0.06, 2.15, 0.31, matNeon1, -1.06, 1.25, -1.75);
+      lpStrip.rotation.x = 0.18;
+      const rpStrip = box(0.06, 2.15, 0.31, matNeon1, 1.06, 1.25, -1.75);
+      rpStrip.rotation.x = 0.18;
+      root.add(lpStrip, rpStrip);
+
+      // 손잡이 핸들바 (좌/우)
+      root.add(box(0.12, 0.12, 1.15, matChrome, -1.02, 1.18, -1.25));
+      root.add(box(0.12, 0.12, 1.15, matChrome, 1.02, 1.18, -1.25));
+      root.add(box(0.14, 0.14, 0.35, matNeon2, -1.02, 1.18, -0.75));
+      root.add(box(0.14, 0.14, 0.35, matNeon2, 1.02, 1.18, -0.75));
+
+      // 상단 크로스 아치 & 회전 에너지 코어
+      root.add(box(2.45, 0.22, 0.32, matMetal, 0, 2.38, -1.55));
+      root.add(box(2.25, 0.08, 0.35, matNeon1, 0, 2.38, -1.55));
+
+      const coreRotor = new THREE.Group();
+      coreRotor.position.set(0, 2.38, -1.35);
+      root.add(coreRotor);
+      const coreRing1 = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.035, 10, 24), matNeon1);
+      const coreRing2 = new THREE.Mesh(new THREE.TorusGeometry(0.20, 0.03, 10, 20), matNeon2);
+      coreRotor.add(coreRing1, coreRing2);
+
+      // 전방 홀로그램 대시보드 (계기판 + 회전 스피드 게이지 바)
+      const consoleBase = box(1.55, 0.48, 0.22, matMetal, 0, 1.48, -1.65);
+      consoleBase.rotation.x = -0.42;
+      root.add(consoleBase);
+
+      const holoScreen = box(1.42, 0.42, 0.03, matHolo, 0, 1.62, -1.56);
+      holoScreen.rotation.x = -0.35;
+      root.add(holoScreen);
+
+      // 홀로그램 EQ/스피드 바
+      const holoBars = [];
+      for (let b = 0; b < 9; b++) {
+        const barMesh = box(0.09, 0.22, 0.04, b % 2 === 0 ? matNeon1 : matNeon2, -0.48 + b * 0.12, 1.62, -1.52);
+        barMesh.rotation.x = -0.35;
+        root.add(barMesh);
+        holoBars.push(barMesh);
+      }
+
+      // 4. 후방 듀얼 제트 애프터버너 터빈 (Dual Rear Booster Thrusters)
+      const thrusterPivots = [];
+      [-0.68, 0.68].forEach(tx => {
+        const housing = box(0.46, 0.38, 0.52, matChrome, tx, 0.28, 2.15);
+        root.add(housing);
+        const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 0.28, 16), matMetal);
+        nozzle.rotation.x = Math.PI / 2;
+        nozzle.position.set(tx, 0.28, 2.45);
+        root.add(nozzle);
+
+        // 제트 화염 코어 피벗
+        const flamePivot = new THREE.Group();
+        flamePivot.position.set(tx, 0.28, 2.58);
+        root.add(flamePivot);
+
+        const outerFlame = new THREE.Mesh(new THREE.ConeGeometry(0.19, 1.15, 12), matNeon1);
+        outerFlame.rotation.x = Math.PI / 2;
+        outerFlame.position.z = 0.55;
+        const innerFlame = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.85, 10), matFire);
+        innerFlame.rotation.x = Math.PI / 2;
+        innerFlame.position.z = 0.42;
+        flamePivot.add(outerFlame, innerFlame);
+        thrusterPivots.push({ flamePivot, outerFlame, innerFlame });
+      });
+
+      // 5. 특수효과(VFX) 파티클 시스템:
+      // (A) 바닥에서 솟구치는 소닉 쇼크웨이브 링 (Shockwave Rings)
+      const shockRings = [];
+      for (let r = 0; r < 3; r++) {
+        const ringGeo = new THREE.TorusGeometry(1.15, 0.035, 10, 32);
+        ringGeo.rotateX(Math.PI / 2);
+        const ringMat = new THREE.MeshBasicMaterial({
+          color: r % 2 === 0 ? themeColor : subColor,
+          transparent: true,
+          opacity: 0.75
+        });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.position.set(0, 0.3 + r * 0.65, 0);
+        root.add(ring);
+        shockRings.push({ mesh: ring, phase: r / 3 });
+      }
+
+      // (B) 발밑 마찰 스파크 & 고속 스피드 라인 파티클 (Sparks & Speed Lines)
+      const sparks = [];
+      for (let s = 0; s < 28; s++) {
+        const isLine = s < 12;
+        const spMesh = box(
+          isLine ? 0.035 : 0.07,
+          isLine ? 0.035 : 0.07,
+          isLine ? 0.65 : 0.14,
+          s % 3 === 0 ? matFire : (s % 2 === 0 ? matNeon1 : matNeon2),
+          (Math.random() - 0.5) * 1.5,
+          0.35 + Math.random() * 1.4,
+          (Math.random() - 0.5) * 3.6
+        );
+        root.add(spMesh);
+        sparks.push({
+          mesh: spMesh,
+          isLine,
+          vx: (Math.random() - 0.5) * 0.8,
+          vy: isLine ? 0 : (0.6 + Math.random() * 1.5),
+          vz: isLine ? (6.5 + Math.random() * 5.0) : (3.5 + Math.random() * 4.0),
+          life: Math.random()
+        });
+      }
+
+      // (C) 옵션: 옆 러닝머신에서 맹렬히 달리는 블록형 인간 트레이너 (마인크래프트 스타일 리깅)
+      let blockyRunner = null;
+      if (withBlockyRunner) {
+        const runnerRoot = new THREE.Group();
+        runnerRoot.position.set(0, 0.26, 0.1);
+        runnerRoot.rotation.y = Math.PI; // -Z 정면 콘솔을 바라보며 질주
+        root.add(runnerRoot);
+
+        const skinM = new THREE.MeshStandardMaterial({ color: 0xfbbf94, roughness: 0.6 });
+        const hairM = new THREE.MeshStandardMaterial({ color: 0x1e1b4b, roughness: 0.5 });
+        const shirtM = new THREE.MeshStandardMaterial({ color: 0x0ea5e9, emissive: 0x0284c7, emissiveIntensity: 0.35 });
+        const pantsM = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.7 });
+        const shoeM = new THREE.MeshStandardMaterial({ color: 0xf43f5e, emissive: 0xe11d48, emissiveIntensity: 0.6 });
+
+        const pelvis = new THREE.Group();
+        pelvis.position.y = 0.72;
+        runnerRoot.add(pelvis);
+
+        const torso = box(0.42, 0.52, 0.24, shirtM, 0, 0.28, 0);
+        pelvis.add(torso);
+        // 등 뒤 부스터 오라 팩
+        torso.add(box(0.26, 0.34, 0.12, matNeon2, 0, 0.02, -0.16));
+
+        const head = new THREE.Group();
+        head.position.set(0, 0.58, 0);
+        pelvis.add(head);
+        head.add(box(0.38, 0.38, 0.38, skinM, 0, 0.19, 0));
+        head.add(box(0.40, 0.14, 0.40, hairM, 0, 0.35, 0));
+        // 사이버 고글 바이저
+        head.add(box(0.41, 0.10, 0.12, matNeon1, 0, 0.21, 0.16));
+
+        const armL = new THREE.Group(); armL.position.set(0.30, 0.48, 0); pelvis.add(armL);
+        armL.add(box(0.16, 0.48, 0.16, shirtM, 0, -0.20, 0));
+        const armR = new THREE.Group(); armR.position.set(-0.30, 0.48, 0); pelvis.add(armR);
+        armR.add(box(0.16, 0.48, 0.16, shirtM, 0, -0.20, 0));
+
+        const legL = new THREE.Group(); legL.position.set(0.12, 0, 0); pelvis.add(legL);
+        legL.add(box(0.17, 0.52, 0.17, pantsM, 0, -0.26, 0));
+        legL.add(box(0.19, 0.14, 0.26, shoeM, 0, -0.52, 0.04));
+
+        const legR = new THREE.Group(); legR.position.set(-0.12, 0, 0); pelvis.add(legR);
+        legR.add(box(0.17, 0.52, 0.17, pantsM, 0, -0.26, 0));
+        legR.add(box(0.19, 0.14, 0.26, shoeM, 0, -0.52, 0.04));
+
+        blockyRunner = { runnerRoot, pelvis, head, armL, armR, legL, legR };
+      }
+
+      // 전용 포인트 라이트
+      const tmLight = new THREE.PointLight(themeColor, 2.2, 9);
+      tmLight.position.set(0, 1.8, 0);
+      root.add(tmLight);
+
+      return {
+        root, posX, posZ, beltSlats, frontRoller, backRoller,
+        coreRotor, coreRing1, coreRing2, holoBars, thrusterPivots,
+        shockRings, sparks, blockyRunner, tmLight, underGlow
+      };
+    }
+
+    const TM_DECK_Y = 0.26, TM_HX = 1.05, TM_HZ = 1.95;          // 러닝머신 위 높이 / 올라타는 범위(가로·세로 반)
+    const treadmills = [
+      createHyperTreadmill(bg.treadmillAnchors[0].x, bg.treadmillAnchors[0].z, 0x00f0ff, 0xa855f7, false),
+      createHyperTreadmill(bg.treadmillAnchors[1].x, bg.treadmillAnchors[1].z, 0xf43f5e, 0xfacc15, true)
+    ];
+    for (const tm of treadmills) tm.deckZ = tm.posZ + 0.15;
+    let onTm = null, tmCooldown = 0, tmTime = 0;                  // 지금 올라탄 러닝머신 / 내린 직후 다시 안 올라타게 하는 시간
+    // 남이 올라타 있는지: 화면에서 부드럽게 따라오는 위치가 아니라, 서버에서 받은 실제 위치(tx,tz,ty)로 바로 판단
+    const tmOccupiedByRemote = (tm) => { for (const R of remotes.values()) if (R.ty > 0.15 && Math.abs(R.tx - tm.posX) < TM_HX + 0.2 && Math.abs(R.tz - tm.deckZ) < TM_HZ + 0.2) return true; return false; };
+    function mountTreadmill(tm) {
+      onTm = tm; charPos.set(tm.posX, TM_DECK_Y, tm.deckZ); charYaw = Math.PI; velY = 0; isOnGround = true; knockT = 0;
+      camYaw = 0;                                                  // 달리는 방향(-z)의 뒤쪽에서 보이게
+      joyReset();
+      toast('🏃 러닝머신! 계속 달려요 · 스페이스(모바일은 점프 버튼)로 내려요', 'good', 4000);
+    }
+    function dismountTreadmill() {                                 // 내리기: 옆으로 훌쩍 뛰어내림
+      if (!onTm) return; const tm = onTm; onTm = null; tmCooldown = 1.0;
+      charPos.set(tm.posX + 2.3, 0.3, tm.deckZ); velY = 4.0; isOnGround = false;
+    }
+    function updateTreadmillMount(dt) {                            // 걸어서 올라가면 자동으로 올라탐. 올라탄 동안은 제자리에서 계속 달림
+      if (tmCooldown > 0) tmCooldown -= dt;
+      if (onTm) { charPos.set(onTm.posX, TM_DECK_Y, onTm.deckZ); charYaw = Math.PI; velY = 0; isOnGround = true; return; }
+      if (tmCooldown > 0 || wardrobe.open || knockT > 0 || carriedEgg || charPos.y > 0.7) return;
+      for (const tm of treadmills) if (Math.abs(charPos.x - tm.posX) < TM_HX && Math.abs(charPos.z - tm.deckZ) < TM_HZ && !tmOccupiedByRemote(tm)) { mountTreadmill(tm); return; }
+    }
+    function updateTreadmills(dt) {                                // 벨트·롤러·코어·계기판·화염·충격파·스파크 애니메이션
+      tmTime += dt;
+      treadmills.forEach((tm, idx) => {
+        const occupied = onTm === tm || tmOccupiedByRemote(tm);
+        if (tm.blockyRunner) tm.blockyRunner.runnerRoot.visible = !occupied;               // 누가 올라타면 트레이너는 자리를 비켜줌
+        const isActive = occupied || !!(tm.blockyRunner && !occupied), boostFactor = isActive ? 1.35 : 0.35, beltSpeed = 5.5 * boostFactor;
+        tm.beltSlats.forEach(slat => { slat.position.z += beltSpeed * dt; if (slat.position.z > 1.95) slat.position.z -= 3.9; });
+        tm.frontRoller.rotation.x += beltSpeed * dt * 3.0; tm.backRoller.rotation.x += beltSpeed * dt * 3.0;
+        tm.coreRing1.rotation.z += dt * 3.2 * boostFactor; tm.coreRing2.rotation.x += dt * 4.5 * boostFactor; tm.coreRing2.rotation.y += dt * 2.8 * boostFactor;
+        tm.holoBars.forEach((bar, bIdx) => { bar.scale.y = (0.4 + 0.9 * Math.abs(Math.sin(tmTime * 8 * boostFactor + bIdx * 0.7))) * (isActive ? 1.35 : 0.45); });
+        tm.thrusterPivots.forEach((th, tIdx) => { const flicker = 0.85 + 0.35 * Math.sin(tmTime * 28 + tIdx * 2.1), fs = (isActive ? 1.15 : 0.3) * flicker;
+          th.flamePivot.scale.set(Math.min(1.4, 0.7 + fs * 0.35), Math.min(1.4, 0.7 + fs * 0.35), fs); });
+        tm.shockRings.forEach(sr => { sr.phase = (sr.phase + dt * (isActive ? 0.95 : 0.25)) % 1; sr.mesh.position.y = 0.28 + sr.phase * 2.1; const sc = 0.75 + sr.phase * 0.45;
+          sr.mesh.scale.set(sc, sc, 1); sr.mesh.material.opacity = isActive ? (1 - sr.phase) * 0.65 : 0.12 * (1 - sr.phase); });
+        tm.sparks.forEach(sp => { sp.life += dt * (isActive ? 1.6 : 0.4);
+          if (sp.life >= 1) { sp.life = 0; sp.mesh.position.set((Math.random() - 0.5) * 1.4, sp.isLine ? (0.5 + Math.random() * 1.5) : 0.28, sp.isLine ? -1.8 : (-0.3 + (Math.random() - 0.5) * 0.8)); }
+          else { sp.mesh.position.x += sp.vx * dt; sp.mesh.position.y += sp.vy * dt * (sp.isLine ? 0 : (1 - sp.life)); sp.mesh.position.z += sp.vz * dt * boostFactor; }
+          sp.mesh.visible = isActive || sp.isLine; });
+        if (tm.blockyRunner && !occupied) { const r = tm.blockyRunner, ph = tmTime * 13;                                    // 트레이너 질주 동작
+          r.pelvis.position.y = 0.72 + Math.abs(Math.sin(ph * 2)) * 0.09; r.pelvis.rotation.x = 0.24; r.armL.rotation.x = Math.sin(ph) * 1.25; r.armR.rotation.x = -Math.sin(ph) * 1.25;
+          r.legL.rotation.x = -Math.sin(ph) * 1.35; r.legR.rotation.x = Math.sin(ph) * 1.35; r.head.rotation.y = Math.sin(ph * 0.5) * 0.12; }
+        tm.tmLight.intensity = isActive ? 2.6 : 1.2;
+      });
+    }
+
+    // ================= 캐릭터 꾸미기: 모습(look) 데이터 =================
+    // 각 항목은 '몇 번째 선택지'인지 숫자로 저장(0번 = 예전 기본 캐릭터). 색은 팔레트, 모양은 이름 목록
+    const LOOK = {
+      skin:      [0xfbbf98, 0xffe0c2, 0xf1c27d, 0xe0ac69, 0xc68642, 0x8d5524, 0x5c3a21, 0xffd1dc],
+      hairStyle: ['짧은머리', '긴머리', '포니테일', '양갈래', '모히칸', '아프로', '대머리'],
+      hairColor: [0x3b2314, 0x111111, 0x6b4423, 0xd4a017, 0xf5d76e, 0xc0392b, 0xff7a00, 0x3498db, 0x8e44ad, 0xff69b4, 0x2ecc71, 0xe5e7eb],
+      eyes:      [0x1e293b, 0x3b82f6, 0x16a34a, 0x92400e, 0x9333ea, 0xdc2626],
+      top:       ['티셔츠', '후드티', '민소매', '줄무늬'],
+      topColor:  [0x0ea5e9, 0xef4444, 0xf97316, 0xeab308, 0x22c55e, 0x14b8a6, 0x6366f1, 0xa855f7, 0xec4899, 0x111827, 0xf8fafc, 0x84cc16],
+      accent:    [0x0284c7, 0xb91c1c, 0xc2410c, 0xa16207, 0x15803d, 0x0f766e, 0x4338ca, 0x7e22ce, 0xbe185d, 0x374151, 0x94a3b8, 0x4d7c0f],
+      bottom:    ['긴바지', '반바지', '치마'],
+      pants:     [0x1e3a8a, 0x111827, 0x374151, 0x7f1d1d, 0x14532d, 0x78350f, 0x4c1d95, 0xf1f5f9, 0xca8a04, 0x0e7490],
+      shoes:     [0x334155, 0x111827, 0xdc2626, 0xf8fafc, 0x2563eb, 0xeab308, 0x16a34a, 0x9333ea],
+      hat:       ['없음', '야구모자', '비니', '왕관', '마법사 모자', '파티 모자', '헬멧', '토끼 귀'],
+      hatColor:  [0xdc2626, 0x2563eb, 0x16a34a, 0xeab308, 0x111827, 0xf8fafc, 0xa855f7, 0xf97316, 0xfacc15, 0xec4899],
+      glasses:   ['없음', '둥근 안경', '선글라스', '고글'],
+      back:      ['없음', '배낭', '망토', '날개']
+    };
+    const LOOK_KEYS = [['skin', '피부', 'color'], ['hairStyle', '머리 모양', 'name'], ['hairColor', '머리 색', 'color'], ['eyes', '눈 색', 'color'],
+      ['top', '상의 모양', 'name'], ['topColor', '상의 색', 'color'], ['accent', '포인트 색', 'color'], ['bottom', '하의 모양', 'name'], ['pants', '하의 색', 'color'],
+      ['shoes', '신발 색', 'color'], ['hat', '모자', 'name'], ['hatColor', '모자·등 장식 색', 'color'], ['glasses', '안경', 'name'], ['back', '등 장식', 'name']];
+    const defaultLook = () => { const l = {}; for (const [k] of LOOK_KEYS) l[k] = 0; return l; };
+    function normalizeLook(l) { const o = {}; for (const [k] of LOOK_KEYS) { const n = LOOK[k].length, v = (l && Number.isInteger(l[k])) ? l[k] : 0; o[k] = ((v % n) + n) % n; } return o; }
+    const lookToStr = (l) => LOOK_KEYS.map(([k]) => l[k]).join('.');
+    function parseLook(str) { const l = {}, parts = String(str || '').split('.'); LOOK_KEYS.forEach(([k], i) => { l[k] = parseInt(parts[i], 10); }); return normalizeLook(l); }
+    function randomLook() { const l = {}; for (const [k] of LOOK_KEYS) l[k] = Math.floor(Math.random() * LOOK[k].length); return l; }
+
+    const mEyeW = humanMat(0xffffff, 0.3), mMouth = humanMat(0x9a3412, 0.6);
+    const SHARED_MATS = new Set([mSole, mEyeW, mMouth]);
+    function disposeTree(o) { for (const ch of (o.children || [])) disposeTree(ch); if (o.geometry && o.geometry.dispose) o.geometry.dispose(); if (o.material && o.material.dispose && !SHARED_MATS.has(o.material)) o.material.dispose(); }
+    // 사람 캐릭터를 holder 안에 (다시) 만든다. R(rig 객체)의 관절 이름은 항상 같아서 동작 코드(animateHuman)는 그대로 씀. 기본 모습(전부 0번)은 예전 캐릭터와 똑같음
+    function buildHumanRig(holder, R, look) {
+      if (R.root) { holder.remove(R.root); disposeTree(R.root); }
+      const L = normalizeLook(look), pal = (k) => LOOK[k][L[k]];
+      const skin = humanMat(pal('skin'), 0.6), hair = humanMat(pal('hairColor'), 0.75), shirt = humanMat(pal('topColor'), 0.65), accent = humanMat(pal('accent'), 0.65),
+            pants = humanMat(pal('pants'), 0.7), shoe = humanMat(pal('shoes'), 0.6), eyeP = humanMat(pal('eyes'), 0.2), deco = humanMat(pal('hatColor'), 0.6);
+      R.root = hJoint('Root', 0, 0.96, 0, holder);
+      R.pelvis = hJoint('Pelvis', 0, 0, 0, R.root);
+      hBox(0.50, 0.18, 0.28, pants, 0, 0.02, 0, R.pelvis);
+      if (L.bottom === 2) hBox(0.64, 0.20, 0.42, pants, 0, -0.06, 0, R.pelvis);                  // 치마
+      R.torso = hJoint('Torso', 0, 0.10, 0, R.pelvis);
+      hBox(0.52, 0.68, 0.28, shirt, 0, 0.34, 0, R.torso);
+      hBox(0.53, 0.08, 0.29, accent, 0, 0.04, 0, R.torso);
+      hBox(0.24, 0.08, 0.29, skin, 0, 0.65, 0.01, R.torso);
+      if (L.top === 1) { hBox(0.40, 0.20, 0.20, accent, 0, 0.70, -0.17, R.torso); hBox(0.32, 0.12, 0.02, accent, 0, 0.16, 0.15, R.torso); }          // 후드티: 후드 + 주머니
+      if (L.top === 3) for (const y of [0.18, 0.36, 0.54]) hBox(0.535, 0.06, 0.295, accent, 0, y, 0, R.torso);                                       // 줄무늬
+      R.neck = hJoint('Neck', 0, 0.68, 0, R.torso);
+      hBox(0.20, 0.10, 0.20, skin, 0, 0.04, 0, R.neck);
+      R.head = hJoint('Head', 0, 0.08, 0, R.neck);
+      hBox(0.50, 0.50, 0.50, skin, 0, 0.25, 0, R.head);
+      const hs = L.hairStyle;                                                                                                                            // 머리 모양
+      if (hs === 4) { hBox(0.10, 0.26, 0.50, hair, 0, 0.58, 0, R.head); hBox(0.10, 0.20, 0.18, hair, 0, 0.42, -0.26, R.head); }                         // 모히칸
+      else if (hs === 5) hBox(0.80, 0.38, 0.80, hair, 0, 0.62, -0.02, R.head);                                                                           // 아프로
+      else if (hs !== 6) {
+        hBox(0.54, 0.16, 0.54, hair, 0, 0.46, 0, R.head); hBox(0.52, 0.08, 0.14, hair, 0, 0.36, 0.22, R.head);                                           // 윗머리 + 앞머리
+        if (hs === 1) { hBox(0.54, 0.62, 0.16, hair, 0, 0.12, -0.20, R.head); hBox(0.08, 0.50, 0.40, hair, 0.24, 0.16, -0.04, R.head); hBox(0.08, 0.50, 0.40, hair, -0.24, 0.16, -0.04, R.head); }
+        else { hBox(0.54, 0.34, 0.16, hair, 0, 0.28, -0.20, R.head); hBox(0.08, 0.24, 0.40, hair, 0.24, 0.32, -0.04, R.head); hBox(0.08, 0.24, 0.40, hair, -0.24, 0.32, -0.04, R.head); }
+        if (hs === 2) { hBox(0.14, 0.14, 0.36, hair, 0, 0.36, -0.40, R.head); hBox(0.12, 0.34, 0.12, hair, 0, 0.18, -0.52, R.head); }                       // 포니테일
+        if (hs === 3) { hBox(0.14, 0.36, 0.14, hair, 0.34, 0.14, -0.04, R.head); hBox(0.14, 0.36, 0.14, hair, -0.34, 0.14, -0.04, R.head); }              // 양갈래
+      }
+      hBox(0.11, 0.07, 0.04, mEyeW, 0.11, 0.24, 0.245, R.head); hBox(0.06, 0.07, 0.05, eyeP, 0.10, 0.24, 0.248, R.head);
+      hBox(0.11, 0.07, 0.04, mEyeW, -0.11, 0.24, 0.245, R.head); hBox(0.06, 0.07, 0.05, eyeP, -0.10, 0.24, 0.248, R.head);
+      hBox(0.12, 0.035, 0.05, hair, 0.11, 0.31, 0.25, R.head); hBox(0.12, 0.035, 0.05, hair, -0.11, 0.31, 0.25, R.head);
+      hBox(0.07, 0.07, 0.05, skin, 0, 0.19, 0.255, R.head); hBox(0.12, 0.04, 0.04, mMouth, 0, 0.11, 0.248, R.head);
+      const dark = humanMat(0x111827, 0.3);
+      if (L.glasses === 1) { for (const sx of [1, -1]) hBox(0.19, 0.19, 0.03, dark, 0.11 * sx, 0.24, 0.27, R.head); hBox(0.06, 0.03, 0.03, dark, 0, 0.26, 0.27, R.head); }          // 둥근 안경(테)
+      if (L.glasses === 2) { for (const sx of [1, -1]) hBox(0.20, 0.11, 0.04, dark, 0.11 * sx, 0.24, 0.275, R.head); hBox(0.50, 0.03, 0.03, dark, 0, 0.27, 0.27, R.head); }          // 선글라스
+      if (L.glasses === 3) { hBox(0.50, 0.15, 0.07, deco, 0, 0.255, 0.285, R.head); hBox(0.40, 0.09, 0.03, dark, 0, 0.255, 0.325, R.head); }                                    // 고글
+      const H = L.hat;                                                                                                                                  // 모자
+      if (H === 1) { hBox(0.56, 0.14, 0.56, deco, 0, 0.58, 0, R.head); hBox(0.46, 0.04, 0.28, deco, 0, 0.53, 0.38, R.head); }
+      if (H === 2) { hBox(0.58, 0.22, 0.58, deco, 0, 0.60, 0, R.head); hBox(0.14, 0.14, 0.14, deco, 0, 0.78, 0, R.head); }
+      if (H === 3) { const gold = humanMat(0xfacc15, 0.35); hBox(0.58, 0.10, 0.58, gold, 0, 0.58, 0, R.head); for (const [x, z] of [[0.24, 0.24], [-0.24, 0.24], [0.24, -0.24], [-0.24, -0.24]]) hBox(0.10, 0.18, 0.10, gold, x, 0.70, z, R.head); }
+      if (H === 4) { hBox(0.82, 0.04, 0.82, deco, 0, 0.54, 0, R.head); hBox(0.50, 0.22, 0.50, deco, 0, 0.66, 0, R.head); hBox(0.34, 0.22, 0.34, deco, 0, 0.86, 0, R.head); hBox(0.18, 0.22, 0.18, deco, 0, 1.06, 0, R.head); }
+      if (H === 5) { hBox(0.40, 0.16, 0.40, deco, 0, 0.60, 0, R.head); hBox(0.28, 0.16, 0.28, deco, 0, 0.76, 0, R.head); hBox(0.16, 0.16, 0.16, deco, 0, 0.92, 0, R.head); }
+      if (H === 6) { hBox(0.60, 0.30, 0.60, deco, 0, 0.58, 0, R.head); hBox(0.50, 0.10, 0.06, dark, 0, 0.44, 0.30, R.head); }
+      if (H === 7) { for (const sx of [1, -1]) { hBox(0.12, 0.44, 0.08, deco, 0.14 * sx, 0.78, 0, R.head); hBox(0.06, 0.30, 0.04, humanMat(0xfbcfe8, 0.6), 0.14 * sx, 0.78, 0.03, R.head); } }
+      const arm = (isLeft) => {
+        const dir = isLeft ? 1 : -1, shoulder = hJoint(isLeft ? 'Arm_L_Shoulder' : 'Arm_R_Shoulder', dir * 0.38, 0.62, 0, R.torso);
+        hBox(0.24, 0.24, 0.24, L.top === 2 ? skin : accent, 0, -0.08, 0, shoulder); hBox(0.20, 0.24, 0.20, skin, 0, -0.24, 0, shoulder);
+        const elbow = hJoint('Elbow', 0, -0.36, 0, shoulder); hBox(0.19, 0.32, 0.19, skin, 0, -0.16, 0, elbow);
+        const hand = hJoint('Hand', 0, -0.32, 0, elbow); hBox(0.20, 0.12, 0.20, skin, 0, -0.04, 0, hand);
+        return { shoulder, elbow, hand };
+      };
+      R.armL = arm(true); R.armR = arm(false);
+      const leg = (isLeft) => {
+        const dir = isLeft ? 1 : -1, hip = hJoint('Hip', dir * 0.14, -0.04, 0, R.pelvis);
+        if (L.bottom === 0) hBox(0.23, 0.44, 0.24, pants, 0, -0.22, 0, hip);
+        else if (L.bottom === 1) { hBox(0.23, 0.26, 0.24, pants, 0, -0.13, 0, hip); hBox(0.22, 0.18, 0.23, skin, 0, -0.35, 0, hip); }       // 반바지
+        else hBox(0.22, 0.44, 0.23, skin, 0, -0.22, 0, hip);                                                                                 // 치마: 맨다리
+        const knee = hJoint('Knee', 0, -0.44, 0, hip); hBox(0.21, 0.38, 0.22, L.bottom === 0 ? pants : skin, 0, -0.19, 0, knee);
+        const ankle = hJoint('Ankle', 0, -0.38, 0, knee); hBox(0.23, 0.12, 0.30, shoe, 0, -0.05, 0.03, ankle); hBox(0.24, 0.04, 0.31, mSole, 0, -0.10, 0.03, ankle);
+        return { hip, knee, ankle };
+      };
+      R.legL = leg(true); R.legR = leg(false);
+      const B = L.back;                                                                                                                                  // 등 장식
+      if (B === 1) { hBox(0.40, 0.50, 0.18, deco, 0, 0.34, -0.23, R.torso); hBox(0.30, 0.18, 0.04, accent, 0, 0.22, -0.34, R.torso); }
+      if (B === 2) hBox(0.50, 0.82, 0.05, deco, 0, 0.28, -0.17, R.torso);
+      if (B === 3) for (const sx of [1, -1]) { const w = hBox(0.46, 0.30, 0.04, humanMat(0xf8fafc, 0.5), 0.34 * sx, 0.52, -0.18, R.torso); w.rotation.z = -0.5 * sx; const w2 = hBox(0.34, 0.22, 0.04, humanMat(0xe2e8f0, 0.5), 0.42 * sx, 0.34, -0.19, R.torso); w2.rotation.z = -0.7 * sx; }
+      R.carryMount = hJoint('Carry_Mount', 0, 1.54, 0.06, R.torso);                                                                                    // 머리 위 물건 마운트(알)
+      R.carryMount.visible = false;
+      return R;
+    }
+
     const rig = {};
     // holder: 바닥 위치(x,z,y)·방향·크기 담당 / rig.root: 엉덩이 높이(점프·뛰기 바운스) 애니메이션 담당
     // 예전엔 둘이 같은 객체라 매 프레임 y가 0으로 덮어씌워져 발이 바닥에 파묻혔음
@@ -5004,63 +5556,8 @@ function createBackground(scene) {
     const humanHolder = new THREE.Group();
     humanHolder.scale.setScalar(HOLDER_SCALE);
     scene.add(humanHolder);
-    rig.root = hJoint('Root', 0, 0.96, 0, humanHolder);
-    rig.pelvis = hJoint('Pelvis', 0, 0, 0, rig.root);
-    hBox(0.50, 0.18, 0.28, mPants, 0, 0.02, 0, rig.pelvis);
-    rig.torso = hJoint('Torso', 0, 0.10, 0, rig.pelvis);
-    hBox(0.52, 0.68, 0.28, mShirt, 0, 0.34, 0, rig.torso);
-    hBox(0.53, 0.08, 0.29, mShirtD, 0, 0.04, 0, rig.torso);
-    hBox(0.24, 0.08, 0.29, mSkin, 0, 0.65, 0.01, rig.torso);
-    rig.neck = hJoint('Neck', 0, 0.68, 0, rig.torso);
-    hBox(0.20, 0.10, 0.20, mSkin, 0, 0.04, 0, rig.neck);
-    rig.head = hJoint('Head', 0, 0.08, 0, rig.neck);
-    hBox(0.50, 0.50, 0.50, mSkin, 0, 0.25, 0, rig.head);
-    hBox(0.54, 0.16, 0.54, mHair, 0, 0.46, 0, rig.head);
-    hBox(0.52, 0.08, 0.14, mHair, 0, 0.36, 0.22, rig.head);
-    hBox(0.54, 0.34, 0.16, mHair, 0, 0.28, -0.20, rig.head);
-    hBox(0.08, 0.24, 0.40, mHair, 0.24, 0.32, -0.04, rig.head);
-    hBox(0.08, 0.24, 0.40, mHair, -0.24, 0.32, -0.04, rig.head);
-    const mEyeW = humanMat(0xffffff, 0.3), mEyeP = humanMat(0x1e293b, 0.2), mMouth = humanMat(0x9a3412, 0.6);
-    hBox(0.11, 0.07, 0.04, mEyeW, 0.11, 0.24, 0.245, rig.head);
-    hBox(0.06, 0.07, 0.05, mEyeP, 0.10, 0.24, 0.248, rig.head);
-    hBox(0.11, 0.07, 0.04, mEyeW, -0.11, 0.24, 0.245, rig.head);
-    hBox(0.06, 0.07, 0.05, mEyeP, -0.10, 0.24, 0.248, rig.head);
-    hBox(0.12, 0.035, 0.05, mHair, 0.11, 0.31, 0.25, rig.head);
-    hBox(0.12, 0.035, 0.05, mHair, -0.11, 0.31, 0.25, rig.head);
-    hBox(0.07, 0.07, 0.05, mSkin, 0, 0.19, 0.255, rig.head);
-    hBox(0.12, 0.04, 0.04, mMouth, 0, 0.11, 0.248, rig.head);
-
-    function createHumanArm(prefix, isLeft) {
-      const dir = isLeft ? 1 : -1;
-      const shoulder = hJoint(`${prefix}_Shoulder`, dir * 0.38, 0.62, 0, rig.torso);
-      hBox(0.24, 0.24, 0.24, mShirtD, 0, -0.08, 0, shoulder);
-      hBox(0.20, 0.24, 0.20, mSkin, 0, -0.24, 0, shoulder);
-      const elbow = hJoint(`${prefix}_Elbow`, 0, -0.36, 0, shoulder);
-      hBox(0.19, 0.32, 0.19, mSkin, 0, -0.16, 0, elbow);
-      const hand = hJoint(`${prefix}_Hand`, 0, -0.32, 0, elbow);
-      hBox(0.20, 0.12, 0.20, mSkin, 0, -0.04, 0, hand);
-      return { shoulder, elbow, hand };
-    }
-    rig.armL = createHumanArm('Arm_L', true);
-    rig.armR = createHumanArm('Arm_R', false);
-
-    function createHumanLeg(prefix, isLeft) {
-      const dir = isLeft ? 1 : -1;
-      const hip = hJoint(`${prefix}_Hip`, dir * 0.14, -0.04, 0, rig.pelvis);
-      hBox(0.23, 0.44, 0.24, mPants, 0, -0.22, 0, hip);
-      const knee = hJoint(`${prefix}_Knee`, 0, -0.44, 0, hip);
-      hBox(0.21, 0.38, 0.22, mPants, 0, -0.19, 0, knee);
-      const ankle = hJoint(`${prefix}_Ankle`, 0, -0.38, 0, knee);
-      hBox(0.23, 0.12, 0.30, mShoe, 0, -0.05, 0.03, ankle);
-      hBox(0.24, 0.04, 0.31, mSole, 0, -0.10, 0.03, ankle);
-      return { hip, knee, ankle };
-    }
-    rig.legL = createHumanLeg('Leg_L', true);
-    rig.legR = createHumanLeg('Leg_R', false);
-
-    // 머리 위 물건 마운트 (알을 여기에 붙임)
-    rig.carryMount = hJoint('Carry_Mount', 0, 1.54, 0.06, rig.torso);
-    rig.carryMount.visible = false;
+    let myLook = defaultLook();
+    buildHumanRig(humanHolder, rig, myLook);
 
     character = humanHolder;  // 이동/회전은 holder에 적용
     document.getElementById("loading").style.display = "none";
@@ -5154,29 +5651,10 @@ function createBackground(scene) {
 
     function updateHumanAnim(dt, isMoving, slow = false) { myAnim.carrying = isCarrying; animateHuman(rig, myAnim, dt, isMoving, slow); }
 
-    // 다른 플레이어 캐릭터: 내 캐릭터와 같은 모양, 셔츠 색만 다름
-    function buildRemoteHuman(shirtHex, shirtDarkHex) {
-      const R = {}, holder = new THREE.Group(); holder.scale.setScalar(HOLDER_SCALE); scene.add(holder);
-      const shirt = humanMat(shirtHex, 0.65), shirtD = humanMat(shirtDarkHex, 0.65);
-      R.root = hJoint('Root', 0, 0.96, 0, holder); R.pelvis = hJoint('Pelvis', 0, 0, 0, R.root);
-      hBox(0.50, 0.18, 0.28, mPants, 0, 0.02, 0, R.pelvis);
-      R.torso = hJoint('Torso', 0, 0.10, 0, R.pelvis);
-      hBox(0.52, 0.68, 0.28, shirt, 0, 0.34, 0, R.torso); hBox(0.53, 0.08, 0.29, shirtD, 0, 0.04, 0, R.torso); hBox(0.24, 0.08, 0.29, mSkin, 0, 0.65, 0.01, R.torso);
-      R.neck = hJoint('Neck', 0, 0.68, 0, R.torso); hBox(0.20, 0.10, 0.20, mSkin, 0, 0.04, 0, R.neck);
-      R.head = hJoint('Head', 0, 0.08, 0, R.neck);
-      hBox(0.50, 0.50, 0.50, mSkin, 0, 0.25, 0, R.head); hBox(0.54, 0.16, 0.54, mHair, 0, 0.46, 0, R.head); hBox(0.52, 0.08, 0.14, mHair, 0, 0.36, 0.22, R.head);
-      hBox(0.54, 0.34, 0.16, mHair, 0, 0.28, -0.20, R.head); hBox(0.08, 0.24, 0.40, mHair, 0.24, 0.32, -0.04, R.head); hBox(0.08, 0.24, 0.40, mHair, -0.24, 0.32, -0.04, R.head);
-      for (const sx of [1, -1]) { hBox(0.11, 0.07, 0.04, mEyeW, 0.11 * sx, 0.24, 0.245, R.head); hBox(0.06, 0.07, 0.05, mEyeP, 0.10 * sx, 0.24, 0.248, R.head); hBox(0.12, 0.035, 0.05, mHair, 0.11 * sx, 0.31, 0.25, R.head); }
-      hBox(0.07, 0.07, 0.05, mSkin, 0, 0.19, 0.255, R.head); hBox(0.12, 0.04, 0.04, mMouth, 0, 0.11, 0.248, R.head);
-      const arm = (isLeft) => { const dir = isLeft ? 1 : -1, shoulder = hJoint('S', dir * 0.38, 0.62, 0, R.torso);
-        hBox(0.24, 0.24, 0.24, shirtD, 0, -0.08, 0, shoulder); hBox(0.20, 0.24, 0.20, mSkin, 0, -0.24, 0, shoulder);
-        const elbow = hJoint('E', 0, -0.36, 0, shoulder); hBox(0.19, 0.32, 0.19, mSkin, 0, -0.16, 0, elbow);
-        const hand = hJoint('H', 0, -0.32, 0, elbow); hBox(0.20, 0.12, 0.20, mSkin, 0, -0.04, 0, hand); return { shoulder, elbow, hand }; };
-      const leg = (isLeft) => { const dir = isLeft ? 1 : -1, hip = hJoint('Hip', dir * 0.14, -0.04, 0, R.pelvis);
-        hBox(0.23, 0.44, 0.24, mPants, 0, -0.22, 0, hip); const knee = hJoint('K', 0, -0.44, 0, hip); hBox(0.21, 0.38, 0.22, mPants, 0, -0.19, 0, knee);
-        const ankle = hJoint('A', 0, -0.38, 0, knee); hBox(0.23, 0.12, 0.30, mShoe, 0, -0.05, 0.03, ankle); hBox(0.24, 0.04, 0.31, mSole, 0, -0.10, 0.03, ankle); return { hip, knee, ankle }; };
-      R.armL = arm(true); R.armR = arm(false); R.legL = leg(true); R.legR = leg(false);
-      R.carryMount = hJoint('Carry_Mount', 0, 1.54, 0.06, R.torso); R.carryMount.visible = false;
+    // 다른 플레이어 캐릭터: 그 사람이 꾸민 모습 그대로
+    function buildRemoteHuman(look) {
+      const holder = new THREE.Group(); holder.scale.setScalar(HOLDER_SCALE); scene.add(holder);
+      const R = {}; buildHumanRig(holder, R, look);
       return { holder, rig: R, st: { t: 0, carrying: false } };
     }
 
@@ -5394,6 +5872,7 @@ function createBackground(scene) {
     function onEggStolen(c) {
       const ai = c.ai;
       if (ai.state === 'chase' || ai.state === 'rush') return;
+      toast(`⚠️ ${creatureName(c.id)}이(가) 깨어났어요! 안전선까지 달려요!`, 'warn', 3200);
       const cg = c.creatureGroup;
       const d = Math.hypot(cg.position.x - charPos.x, cg.position.z - (charPos.z - c.root.position.z));
       c.anim.setAction(ai.action);
@@ -5418,6 +5897,7 @@ function createBackground(scene) {
       let dx = charPos.x - cg.position.x - c.root.position.x, dz = charPos.z - cg.position.z - c.root.position.z;
       const d = Math.hypot(dx, dz) || 1; dx /= d; dz /= d;           // 동물에서 멀어지는 방향
       dropEggAt(charPos.x, charPos.z);
+      toast('😵 잡혔어요! 알을 떨어뜨렸어요', 'bad', 3000);
       knockVX = dx * KNOCK_SPEED; knockVZ = dz * KNOCK_SPEED; knockT = KNOCK_TIME; velY = KNOCK_UP; isOnGround = false;
       c.ai.state = 'return'; c.ai.cur = c.ai.speed * 0.5;            // 잡았으면 바로 자러 돌아감
     }
@@ -5465,22 +5945,16 @@ function createBackground(scene) {
       }
       return best || { a: 0, b: 10 - m };
     }
-    function secureEgg() {
+    function secureEgg() {                                      // 알을 들고 안전선을 넘음 → 가방에 들어감(내 칸에 직접 설치하는 건 따로)
       const { c, e } = carriedEgg;
       carriedEgg = null; isCarrying = false; rig.carryMount.visible = false; carryingHud.style.display = 'none';
-      rig.carryMount.remove(e.group); scene.add(e.group);
-      const r = e.radius * 1.05;
-      const spot = slotInMyPlot(r) || bestEffortSlot(r);                                  // 자리가 다 찼으면 가장 덜 겹치는 자리에
-      const placed = { a: spot.a, b: spot.b, r }; minePlaced.push(placed); e._placed = placed;
-      const w = myFrame.toWorld(spot.a, spot.b);
-      e.group.scale.setScalar(e.scale);
-      e.group.position.set(w.x, 0, w.z);
-      e.group.rotation.set(0, myFrame.facing + (Math.random() - 0.5) * 0.6, 0);
-      e.secured = true; e.id = newId();
-      const roll = rollHatch(e.scale);                                                    // 이 알의 부화 시간과 마지막 크기 배율이 정해짐
-      e.hatch = { s0: e.scale, grow: roll.grow, start: nowMs(), dur: roll.dur, state: 'incubating', hatchAt: null };
-      myEggs.push({ c, e }); syncCounts(); saveGame();
-      sendHome(c);                                                    // 동물은 돌아가서 다시 잠
+      rig.carryMount.remove(e.group); scene.remove(e.group);
+      const k = c.eggs.indexOf(e); if (k >= 0) c.eggs.splice(k, 1);                                 // 둥지에서 알이 사라짐
+      const roll = rollHatch(e.scale), item = { id: newId(), cid: c.id, s0: e.scale, grow: roll.grow, dur: roll.dur };    // 이 알의 부화 시간·최종 크기 배율이 정해짐
+      if (inv.length >= INV_MAX) { toast('🎒 가방이 가득 차서 알을 내 칸에 바로 놓았어요', 'warn', 3500); autoPlaceEgg(item); }
+      else { inv.push(item); syncCounts(); renderHotbar(); saveGame(); toast(`🎒 알을 가방에 넣었어요! 내 칸에서 직접 설치하세요 (부화 ${fmtDur(roll.dur)})`, 'good', 4000); }
+      sendHome(c);                                                                                    // 동물은 돌아가서 다시 잠
+      return item;
     }
 
     // ================= 부화: 내 칸의 알은 시간이 지나며 점점 커지고 → 부화 준비 → F로 '부화하기' → 흔들리다 깨지며 그 동물이 나옴 =================
@@ -5493,10 +5967,10 @@ function createBackground(scene) {
     const NET = { cfg: (typeof window !== 'undefined' && window.FIREBASE_CONFIG) || null, online: false, offset: 0, uid: null, nick: '', db: null, auth: null, saveRef: null, meRef: null };
     const nowMs = () => Date.now() + timeOffset + NET.offset;   // 서버 시각 기준(모든 사람이 같은 시간으로 알이 자람)
     const myEggs = [], pets = [], fxShards = [];              // 내 칸의 알들 / 부화해서 나온 동물들 / 알 깨지는 조각 효과
-    const hatchInfoEl = document.getElementById('hatch-info'), hatchFlashEl = document.getElementById('hatch-flash');
+    const hatchInfoEl = document.getElementById('hatch-info'), hatchTextEl = document.getElementById('hatch-text'), hatchBarEl = document.getElementById('hatch-bar'), hatchFlashEl = document.getElementById('hatch-flash');
     function syncCounts() {
-      myEggCount = myEggs.length + pets.length;
-      eggCounter.textContent = `🥚 내 알 ${myEggs.length}개` + (pets.length ? ` · 🐣 ${pets.length}마리` : '');
+      myEggCount = myEggs.length + inv.length + pets.length;
+      eggCounter.textContent = `🥚 내 알 ${myEggs.length}개` + (inv.length ? ` · 🎒 ${inv.length}` : '') + (pets.length ? ` · 🐣 ${pets.length}마리` : '');
     }
     // 알 크기(0.55~1.5)가 클수록 오래 걸림. 크기 80% + 랜덤 20%로 정해서 30초(작은 알)~24시간(큰 알) 사이를 로그 간격으로 고름
     function rollHatch(s0) {
@@ -5562,8 +6036,10 @@ function createBackground(scene) {
       const k = c.eggs.indexOf(e); if (k >= 0) c.eggs.splice(k, 1);
       const pi = minePlaced.indexOf(e._placed); if (pi >= 0) minePlaced.splice(pi, 1);
       myEggs.splice(i, 1);
+      bankMoney();                                              // 새 펫이 생기기 전까지 번 돈 확정 → 이제부터 새 펫 몫도 늘어남
       spawnPet(c.id, x, z, myFrame.facing, finalScale, true);   // 내 칸의 문(광장)을 바라보게
-      syncCounts(); saveGame();
+      syncCounts(); saveGame(); pushRank(true);
+      toast(`🎉 ${creatureName(c.id)} 부화! 크기 ×${(finalScale / e.hatch.s0).toFixed(1)} · 💰 +${fmtRate(petRate(finalScale))}/초`, 'good', 4000);
     }
     function updateHatching(dt) {
       const now = nowMs();
@@ -5581,7 +6057,7 @@ function createBackground(scene) {
         const sc = h.s0 * (1 + (h.grow - 1) * p);
         e.scale = sc; e.group.scale.setScalar(sc); e.radius = 0.64 * e.shell * sc;
         if (e._placed) e._placed.r = e.radius * 1.05;
-        if (p >= 1 && h.state === 'incubating') h.state = 'ready';
+        if (p >= 1 && h.state === 'incubating') { h.state = 'ready'; if (!_restoring) toast('🐣 알이 부화할 준비가 됐어요! 🥚 버튼에서 "열기"를 눌러요', 'good', 3500); }
         if (h.state === 'ready') e.group.rotation.z = Math.sin(now / 350) * 0.03;   // 부화 준비되면 살짝 들썩
       }
     }
@@ -5591,9 +6067,10 @@ function createBackground(scene) {
       const eggs = myEggs.map(({ c, e }) => { const L = myFrame.toLocal(e.group.position.x, e.group.position.z);
         return { id: e.id, cid: c.id, a: L.a, b: L.b, yr: e.group.rotation.y - myFrame.facing, s0: e.hatch.s0, grow: e.hatch.grow, start: e.hatch.start, dur: e.hatch.dur, hatching: e.hatch.state === 'hatching', hatchAt: e.hatch.hatchAt }; });
       const ps = pets.map(p => ({ id: p.id, cid: p.cid, a: p.a, b: p.b, yr: p.yr, scale: p.scale }));
-      return { v: 2, nick: NET.nick || '', plot: myPlotIdx, eggs, pets: ps };
+      return { v: 2, nick: NET.nick || '', plot: myPlotIdx, look: lookToStr(myLook), money: Math.round(moneyBase * 100) / 100, moneyAt: moneyT0, inv: inv.map(it => ({ id: it.id, cid: it.cid, s0: it.s0, grow: it.grow, dur: it.dur })), eggs, pets: ps };
     }
     function saveGame() {
+      bankMoney();                                              // 저장할 때마다 지금까지 번 돈을 확정
       const data = snapshotSave();
       try {
         if (NET.online && NET.saveRef) { const pr = NET.saveRef.set(Object.assign({ updated: firebase.database.ServerValue.TIMESTAMP }, data)); if (pr && pr.catch) pr.catch(netFail); }
@@ -5602,6 +6079,7 @@ function createBackground(scene) {
     }
     function netFail(err) {                                     // 서버에 저장/전송이 안 될 때(규칙 미설정·인터넷 끊김 등): 조용히 넘어가지 않고 알림
       console.warn('서버 통신 실패', err); NET.failed = true;
+      if (!NET._failToast || Date.now() - NET._failToast > 30000) { NET._failToast = Date.now(); toast('⚠️ 서버 저장 실패 (규칙/인터넷 확인)', 'bad', 4000); }
       try { netInfoEl.firstChild.textContent = '⚠ 서버 저장 실패 (Firebase 규칙/인터넷 확인) '; } catch (_) {}
     }
     function readLocalSave() { try { return JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (_) { return null; } }
@@ -5609,6 +6087,8 @@ function createBackground(scene) {
     const toArr = (x) => Array.isArray(x) ? x.filter(v => v != null) : (x && typeof x === 'object' ? Object.values(x).filter(v => v != null) : []);
     function applySave(data) {                                  // 저장된 알·펫을 내 칸에 복원(v1: 예전 형식도 읽음)
       if (!data || !(data.v === 1 || data.v === 2)) return;
+      if (data.look) { myLook = parseLook(data.look); applyMyLook(); }
+      _restoring = true; moneyBase = Number(data.money) || 0; moneyT0 = Number(data.moneyAt) || nowMs();
       let eggsIn = toArr(data.eggs), petsIn = toArr(data.pets);
       if (data.v === 1) {                                       // 예전 저장(월드 좌표, 기본 칸) → 칸 좌표로 변환
         const F0 = plotFrame(bg.plotBounds.defaultIndex);
@@ -5627,9 +6107,269 @@ function createBackground(scene) {
         if (h.state === 'incubating' && p >= 1) h.state = 'ready';
       }
       for (const sv of petsIn) { const W = myFrame.toWorld(sv.a, sv.b); spawnPet(sv.cid, W.x, W.z, myFrame.facing + (sv.yr || 0), sv.scale, false, sv.id); }
+      for (const it of toArr(data.inv)) if (it && inv.length < INV_MAX && bg.creatures.find(k => k.id === it.cid)) inv.push({ id: it.id || newId(), cid: it.cid, s0: Number(it.s0) || 1, grow: Number(it.grow) || 1, dur: Number(it.dur) || 30000 });
+      renderHotbar();
       syncCounts(); updateHatching(0);                          // 부화 중이던 알의 흔들림이 이미 끝났으면 바로 부화
+      _restoring = false;
+      const before = moneyBase; bankMoney(); const gained = moneyBase - before;                      // 꺼져 있던 동안 펫이 번 돈(최대 24시간치)
+      moneyShown = moneyBase;
+      const ready = myEggs.filter(x => x.e.hatch.state === 'ready').length;
+      if (ready) toast(`🐣 부화할 준비가 된 알이 ${ready}개 있어요!`, 'good');
+      if (gained >= 1) toast(`💰 자리를 비운 동안 +${fmtNum(gained)} 벌었어요`, 'money');
     }
     function startLocal() { NET.guest = true; applySave(readLocalSave()); }      // 혼자 하기: 이 기기에 저장
+
+    // ================= 돈 · 펫 판매 · 순위표 · 알림 메시지 =================
+    const INCOME_K = 0.2, INCOME_POW = 1.5;                     // 펫 1마리가 초당 버는 돈 = 0.2 × (크기)^1.5
+    const SELL_SECONDS = 1800;                                  // 판매가 = 그 펫이 30분 동안 버는 돈 (30분 넘게 키우면 팔지 않는 게 이득)
+    const OFFLINE_CAP_SEC = 24 * 3600;                          // 접속하지 않은 동안 번 돈은 최대 24시간치까지
+    const SELL_HOLD = 0.8;                                      // 판매는 실수 방지로 이만큼(초) 꾹 눌러야 함
+    const BASE_RUN_SPEED = 4.2 * 2.4 * 2.5;                     // 달리기 속도(25.2) = 속도 순위의 값. 나중에 러닝머신이 speedStat을 올림
+    let speedStat = BASE_RUN_SPEED;
+    const CREATURE_NAME = { chicken: '🐔 닭', tiger: '🐯 호랑이', dragon: '🐲 용', eastern: '🐉 청룡', lion: '🦁 사자', samjoko: '🐦 삼족오', demon: '😈 대악마', archangel: '😇 대천사' };
+    const creatureName = (cid) => CREATURE_NAME[cid] || '🐾 동물';
+    const PET_R = { chicken: 0.8, tiger: 1.6, dragon: 2.4, eastern: 3.0, lion: 1.8, samjoko: 2.0, demon: 2.4, archangel: 2.2 };    // 펫 크기(대략), 판매하려고 다가가는 거리 계산용
+    const petRate = (scale) => INCOME_K * Math.pow(scale, INCOME_POW);
+    const petPrice = (scale) => Math.max(10, Math.round(petRate(scale) * SELL_SECONDS));
+    let moneyBase = 0, moneyT0 = nowMs(), moneyShown = 0, _restoring = false, sellHold = 0, sellLock = false;
+    const totalRate = () => pets.reduce((a, p) => a + petRate(p.scale), 0);
+    const moneyNow = () => moneyBase + totalRate() * Math.min(OFFLINE_CAP_SEC, Math.max(0, (nowMs() - moneyT0) / 1000));
+    function bankMoney() { moneyBase = moneyNow(); moneyT0 = nowMs(); }      // 지금까지 번 돈을 확정(펫이 바뀌기 직전·저장할 때 호출)
+    function fmtNum(n) { n = Math.floor(n); return n >= 1e9 ? (n / 1e9).toFixed(2) + 'B' : (n >= 1e6 ? (n / 1e6).toFixed(2) + 'M' : n.toLocaleString('en-US')); }
+    const fmtRate = (r) => r >= 10 ? r.toFixed(0) : r.toFixed(1);
+
+    const toastsEl = document.getElementById('toasts');
+    function toast(msg, kind = 'info', ms = 2800) {             // 화면 위쪽에 잠깐 뜨는 알림
+      const el = document.createElement('div'); el.className = 'toast ' + kind; el.textContent = msg; toastsEl.appendChild(el);
+      const list = toastsEl.childNodes || toastsEl.children; while (list.length > 4 && list[0] && list[0].remove) list[0].remove();
+      const t = setTimeout(() => { el.className += ' out'; const t2 = setTimeout(() => { try { el.remove(); } catch (_) {} }, 400); if (t2 && t2.unref) t2.unref(); }, ms); if (t && t.unref) t.unref();
+    }
+    const moneyValEl = document.getElementById('money-val'), moneyRateEl = document.getElementById('money-rate'), moneyChipEl = document.getElementById('money-chip');
+    function pulseMoney() { moneyChipEl.classList.remove('pulse'); void (moneyChipEl.offsetWidth); moneyChipEl.classList.add('pulse'); }
+    let _hudAcc = 0, _saveAcc = 0;
+    function updateMoney(dt) {                                  // 돈 표시(숫자가 부드럽게 올라감) + 1분마다 자동 저장·순위 갱신
+      const target = moneyNow(); moneyShown += (target - moneyShown) * Math.min(1, dt * 8); if (Math.abs(target - moneyShown) < 0.5) moneyShown = target;
+      _hudAcc += dt; if (_hudAcc > 0.1) { _hudAcc = 0; moneyValEl.textContent = fmtNum(moneyShown); const r = totalRate(); moneyRateEl.textContent = r > 0 ? `+${fmtRate(r)}/초` : ''; }
+      _saveAcc += dt; if (_saveAcc > 60) { _saveAcc = 0; saveGame(); pushRank(true); }
+    }
+    function sellPet(p) {                                       // 펫 팔기: 크기에 따른 값을 받고 펫은 사라짐
+      const i = pets.indexOf(p); if (i < 0) return;
+      bankMoney(); const price = petPrice(p.scale); moneyBase += price;
+      burstShards(p.group.position.x, p.group.position.z, Math.min(3, p.scale));
+      scene.remove(p.group); pets.splice(i, 1); syncCounts(); saveGame(); pushRank(true);
+      pulseMoney(); toast(`💰 ${creatureName(p.cid)} 판매! +${fmtNum(price)}`, 'money');
+    }
+    function updateSellHold(dt, near) {                         // 키보드: F를 꾹 눌러 판매(모바일은 알 버튼이 같은 역할)
+      const on = !!(near && near.kind === 'sell') && !wardrobe.open;
+      if (on && keys.KeyF && !sellLock) { sellHold += dt; if (sellHold >= SELL_HOLD) { sellPet(near.pet); sellHold = 0; sellLock = true; } }
+      else if (!keys.KeyF) { sellHold = Math.max(0, sellHold - dt * 3); sellLock = false; }
+      else if (!on) sellHold = 0;
+    }
+
+    // ---- 순위표(서버의 ranks에 '돈'과 '속도'를 올리고, 모두의 값을 받아서 정렬) ----
+    const rank = { open: false, tab: 'money' }; let rankData = {}, _lastRank = 0;
+    const rankPanelEl = document.getElementById('rank-panel'), rankListEl = document.getElementById('rank-list'), rankFootEl = document.getElementById('rank-foot'), rankNoteEl = document.getElementById('rank-note');
+    function pushRank(force) {
+      if (!NET.online || !NET.db) return;
+      const now = performance.now(); if (!force && now - _lastRank < 30000) return; _lastRank = now;
+      try { const pr = NET.db.ref('ranks/' + NET.uid).set({ nick: NET.nick, money: Math.floor(moneyNow()), speed: speedStat, t: firebase.database.ServerValue.TIMESTAMP }); if (pr && pr.catch) pr.catch(() => { NET.rankErr = true; }); } catch (_) { NET.rankErr = true; }
+    }
+    function listenRanks() {
+      NET.db.ref('ranks').on('value', sn => { rankData = sn.val() || {}; NET.rankErr = false; if (rank.open) renderRank(); }, () => { NET.rankErr = true; if (rank.open) renderRank(); });
+    }
+    function rankRows() {
+      const rows = Object.entries(rankData).filter(([, v]) => v).map(([uid, v]) => ({ uid, nick: v.nick || '?', money: Number(v.money) || 0, speed: Number(v.speed) || 0 }));
+      const live = { uid: NET.uid, nick: NET.nick, money: Math.floor(moneyNow()), speed: speedStat }, me = rows.find(r => r.uid === NET.uid);
+      if (me) Object.assign(me, live); else if (NET.online) rows.push(live);                  // 내 값은 항상 최신으로
+      const key = rank.tab; rows.sort((a, b) => (b[key] - a[key]) || a.nick.localeCompare(b.nick)); return rows;
+    }
+    function renderRank() {
+      const rows = rankRows(), key = rank.tab; rankListEl.textContent = '';
+      const mk = (r, i) => { const row = document.createElement('div'); row.className = 'rrow' + (r.uid === NET.uid ? ' me' : '');
+        for (const [cls, txt] of [['rk', ['🥇', '🥈', '🥉'][i] || String(i + 1)], ['rn', r.nick], ['rv', key === 'money' ? `💰 ${fmtNum(r.money)}` : `⚡ ${r.speed.toFixed(1)}`]]) { const sp = document.createElement('span'); sp.className = cls; sp.textContent = txt; row.appendChild(sp); }
+        return row; };
+      rows.slice(0, 10).forEach((r, i) => rankListEl.appendChild(mk(r, i)));
+      const myI = rows.findIndex(r => r.uid === NET.uid); if (myI >= 10) rankListEl.appendChild(mk(rows[myI], myI));
+      rankFootEl.textContent = NET.rankErr ? '⚠ 순위표를 쓰려면 Firebase 규칙에 ranks를 추가해주세요 (FIREBASE_SETUP.md)' : (myI >= 0 ? `내 순위 ${myI + 1}위 / 총 ${rows.length}명` : '');
+      rankNoteEl.textContent = key === 'speed' ? '🏃 러닝머신이 생기면 달릴수록 속도가 올라가요! 지금은 모두 기본 속도예요.' : '';
+      document.getElementById('rank-tab-money').classList.toggle('on', key === 'money'); document.getElementById('rank-tab-speed').classList.toggle('on', key === 'speed');
+    }
+    function setRankOpen(on) { rank.open = on; rankPanelEl.style.display = on ? 'flex' : 'none'; if (on) { pushRank(true); renderRank(); } }
+    document.getElementById('btn-rank').addEventListener('click', () => setMenu('rank'));
+    document.getElementById('rank-close').addEventListener('click', () => { if (openMenu === 'rank') setMenu('rank'); else setRankOpen(false); });
+    document.getElementById('rank-tab-money').addEventListener('click', () => { rank.tab = 'money'; renderRank(); });
+    document.getElementById('rank-tab-speed').addEventListener('click', () => { rank.tab = 'speed'; renderRank(); });
+
+    // ================= 미니맵 · 탈출 게이지 =================
+    let _lastBanner = '';
+    const bannerOf = (zone) => zone ? zone.name.replace(/\s*\(.*\)\s*$/, '') : '🏡 안전구역';     // 구역 이름에서 괄호 설명을 뺀 짧은 표시
+    const PLOT_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#0ea5e9', '#6366f1', '#a855f7', '#ec4899', '#84cc16', '#94a3b8', '#d97706'];
+    const minimapEl = document.getElementById('minimap'); let miniCtx = null; try { miniCtx = minimapEl.getContext('2d'); } catch (_) {}
+    const hexCss = (n) => '#' + (n >>> 0).toString(16).padStart(6, '0');
+    let _miniAcc = 0;
+    function drawMinimap(dt) {                                  // 위: 전체 길(구역별 색·내 위치·쫓아오는 동물) / 아래: 안전구역 가까이에선 칸 지도, 멀리선 현재 구역 정보
+      _miniAcc += dt; if (_miniAcc < 0.12 || !miniCtx) return; _miniAcc = 0;
+      const g = miniCtx, W = 220, H = 132, z0 = -600, z1 = bg.endZ, bx = 8, bw = W - 16, zx = (z) => bx + (z - z0) / (z1 - z0) * bw;
+      g.clearRect(0, 0, W, H);
+      for (const z of BIOME_ZONES) { g.fillStyle = hexCss(z.accentColor || z.floorColor); g.globalAlpha = 0.85; g.fillRect(zx(z.zMin), 14, Math.max(2, zx(z.zMax) - zx(z.zMin) - 1), 14); }
+      g.fillStyle = '#38bdf8'; g.globalAlpha = 0.9; g.fillRect(zx(bg.safeZone.minZ), 14, zx(z1) - zx(bg.safeZone.minZ), 14); g.globalAlpha = 1;
+      g.font = '11px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      for (const z of BIOME_ZONES) g.fillText(z.name.split(' ')[0], (zx(z.zMin) + zx(z.zMax)) / 2, 21);
+      g.fillText('🏡', (zx(bg.safeZone.minZ) + zx(z1)) / 2 - 1, 21);
+      for (const R of remotes.values()) { g.fillStyle = PLOT_COLORS[(R.plot || 0) % 12]; g.beginPath(); g.arc(zx(R.z), 35, 3, 0, Math.PI * 2); g.fill(); }                 // 다른 사람
+      if (carriedEgg && carriedEgg.c.ai && (carriedEgg.c.ai.state === 'chase' || carriedEgg.c.ai.state === 'rush')) { g.fillStyle = '#ef4444'; g.beginPath(); g.arc(zx(carriedEgg.c.creatureGroup.position.z + carriedEgg.c.root.position.z), 35, 4, 0, Math.PI * 2); g.fill(); }
+      g.fillStyle = '#ffffff'; g.beginPath(); g.moveTo(zx(charPos.z), 31); g.lineTo(zx(charPos.z) - 5, 41); g.lineTo(zx(charPos.z) + 5, 41); g.closePath(); g.fill(); g.strokeStyle = '#111827'; g.lineWidth = 1.5; g.stroke();   // 나
+      if (charPos.z > bg.safeZone.minZ - 40) {                                                                                                                      // 안전구역 지도
+        const mw = 148, mh = 84, ox = (W - mw) / 2, oy = 46, sx = mw / 81.4, sz = mh / 46, X = (x) => ox + (x + 40.7) * sx, Z = (z) => oy + mh - (z - bg.safeZone.minZ) * sz;
+        g.fillStyle = 'rgba(74,222,128,0.18)'; g.fillRect(ox, oy, mw, mh); g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = 1; g.strokeRect(ox, oy, mw, mh);
+        const owners = {}; if (NET.online) owners[myPlotIdx] = true; for (const R of remotes.values()) if (R.plot != null) owners[R.plot] = R.plot;
+        bg.plotBounds.all.forEach((P, i) => {
+          if (P.disabled) { g.fillStyle = '#334155'; g.fillRect(X(P.x0) + 0.5, Z(P.z1) + 0.5, (P.x1 - P.x0) * sx - 1, (P.z1 - P.z0) * sz - 1); g.fillStyle = '#38bdf8'; g.font = '10px sans-serif'; g.fillText('⚡', X((P.x0 + P.x1) / 2), Z((P.z0 + P.z1) / 2)); return; }
+          g.fillStyle = i === myPlotIdx ? '#facc15' : (owners[i] !== undefined ? PLOT_COLORS[i % 12] : 'rgba(255,255,255,0.12)'); g.globalAlpha = i === myPlotIdx ? 0.9 : 0.75;
+          g.fillRect(X(P.x0) + 0.5, Z(P.z1) + 0.5, (P.x1 - P.x0) * sx - 1, (P.z1 - P.z0) * sz - 1); g.globalAlpha = 1;
+        });
+        for (const R of remotes.values()) { g.fillStyle = '#ffffff'; g.beginPath(); g.arc(X(R.x), Z(R.z), 2.6, 0, Math.PI * 2); g.fill(); g.strokeStyle = PLOT_COLORS[(R.plot || 0) % 12]; g.lineWidth = 1.5; g.stroke(); }
+        g.fillStyle = '#ffffff'; g.beginPath(); g.arc(X(charPos.x), Z(charPos.z), 3.4, 0, Math.PI * 2); g.fill(); g.strokeStyle = '#111827'; g.lineWidth = 1.5; g.stroke();
+        g.beginPath(); g.moveTo(X(charPos.x), Z(charPos.z)); g.lineTo(X(charPos.x) + Math.sin(charYaw) * 7, Z(charPos.z) - Math.cos(charYaw) * 7 * sz / sx); g.stroke();   // 보는 방향
+      } else {
+        const zone = BIOME_ZONES.find(z => charPos.z >= z.zMin && charPos.z < z.zMax);
+        g.fillStyle = '#ffffff'; g.font = '30px sans-serif'; g.fillText(zone ? zone.name.split(' ')[0] : '🏡', W / 2, 70);
+        g.font = 'bold 13px sans-serif'; g.fillText(zone ? zone.name.replace(/^\S+\s*/, '').replace(/\s*\(.*\)\s*$/, '') : '안전구역', W / 2, 98);
+        g.font = '12px sans-serif'; g.fillStyle = '#fde68a'; g.fillText(`🏠 안전구역까지 ${Math.max(0, Math.round(bg.safeZone.minZ - charPos.z))}m`, W / 2, 118);
+      }
+    }
+    const escapeEl = document.getElementById('escape-meter'), escapeTextEl = document.getElementById('escape-text'), escapeFillEl = document.getElementById('escape-fill'),
+          escapeMeEl = document.getElementById('escape-me'), escapeFoeEl = document.getElementById('escape-foe');
+    let _escapeStart = null;
+    function updateEscape() {                                   // 알을 들고 있는 동안: 안전선까지 진행바 + 쫓아오는 동물 위치
+      if (!carriedEgg) { if (_escapeStart !== null) { _escapeStart = null; escapeEl.style.display = 'none'; } return; }
+      if (_escapeStart === null) { _escapeStart = charPos.z; escapeEl.style.display = 'block'; }
+      const total = Math.max(1, SAFE_LINE_Z - _escapeStart), clamp01 = (v) => Math.max(0, Math.min(1, v)), me = clamp01((charPos.z - _escapeStart) / total);
+      const c = carriedEgg.c, chasing = c.ai && (c.ai.state === 'chase' || c.ai.state === 'rush');
+      const foeZ = c.creatureGroup.position.z + c.root.position.z, foe = clamp01((foeZ - _escapeStart) / total), dist = Math.hypot(c.creatureGroup.position.x - charPos.x, foeZ - charPos.z);
+      escapeFillEl.style.width = (me * 100).toFixed(1) + '%'; escapeMeEl.style.left = (me * 100).toFixed(1) + '%';
+      escapeFoeEl.style.display = chasing ? 'block' : 'none'; escapeFoeEl.style.left = (foe * 100).toFixed(1) + '%';
+      escapeFillEl.style.background = (chasing && dist < 12) ? 'linear-gradient(90deg,#f87171,#ef4444)' : 'linear-gradient(90deg,#4ade80,#facc15)';
+      escapeTextEl.textContent = `🏁 안전선까지 ${Math.max(0, Math.round(SAFE_LINE_Z - charPos.z))}m` + (chasing ? ` · ${creatureName(c.id)} ${Math.round(dist)}m 뒤` : '');
+    }
+
+    // ================= 가방(핫바) · 직접 설치 · 알/펫 목록 창 =================
+    const INV_MAX = 10;
+    const inv = [];                                             // 가방의 알: {id, cid, s0, grow, dur}. 부화 시간·최종 크기 배율은 '가방에 들어올 때' 정해지고, 시간은 '설치한 순간'부터 흐름
+    let invSel = -1;                                            // 지금 고른 가방 칸(-1: 없음)
+    const EGG_SHELL = { chicken: 0.76, tiger: 0.84, dragon: 0.90, eastern: 0.94, lion: 1.0, samjoko: 1.05, demon: 1.08, archangel: 1.12 };    // 알 껍데기 크기 배율(알 반지름 = 0.64 × 이 값 × 알 크기)
+    const eggRadiusOf = (item) => 0.64 * (EGG_SHELL[item.cid] || 1) * item.s0;
+    const hotbarEl = document.getElementById('hotbar');
+    function makeEggObj(item) {                                 // 가방의 알 → 장면에 놓을 알 객체
+      const c = bg.creatures.find(k => k.id === item.cid), g = new THREE.Group(), parts = c.makeEgg(g);
+      g.scale.setScalar(item.s0);
+      return { c, e: { group: g, parts, scale: item.s0, shell: parts.shell, radius: 0.64 * parts.shell * item.s0, baseY: item.cid === 'archangel' ? 0.38 : 0.18, phase: Math.random() * 6.28, home: null, secured: true, id: item.id } };
+    }
+    function placeEggObj(c, e, item, a, b, yr) {                // 내 칸에 놓음: 여기서부터 부화 시간이 흐름
+      const w = myFrame.toWorld(a, b);
+      e.group.position.set(w.x, 0, w.z); e.group.rotation.y = myFrame.facing + (yr || 0); scene.add(e.group);
+      e.hatch = { s0: item.s0, grow: item.grow, start: nowMs(), dur: item.dur, state: 'incubating', hatchAt: null };
+      const placed = { a, b, r: e.radius * 1.05 }; minePlaced.push(placed); e._placed = placed;
+      c.eggs.push(e); myEggs.push({ c, e }); return e;
+    }
+    function autoPlaceEgg(item) {                               // 자동 설치(가방이 가득 찼을 때 등): 빈 자리를 찾아 놓음
+      const i = inv.indexOf(item); if (i >= 0) { inv.splice(i, 1); if (invSel >= inv.length) invSel = -1; }
+      const { c, e } = makeEggObj(item), r = e.radius * 1.05, spot = slotInMyPlot(r) || bestEffortSlot(r);
+      placeEggObj(c, e, item, spot.a, spot.b, (Math.random() - 0.5) * 0.6); syncCounts(); renderHotbar(); saveGame(); return e;
+    }
+    function placementTarget(item) {                            // 캐릭터 바로 앞 자리(칸 좌표)와, 거기에 놓을 수 있는지
+      const r = eggRadiusOf(item) * 1.05, d = r + 1.0, m = 0.7 + r;
+      const L = myFrame.toLocal(charPos.x + Math.sin(charYaw) * d, charPos.z + Math.cos(charYaw) * d);
+      const P = bg.plotBounds.all[myPlotIdx], inZone = charPos.x > P.x0 - 2 && charPos.x < P.x1 + 2 && charPos.z > P.z0 - 2 && charPos.z < P.z1 + 2;
+      let why = '';
+      if (!inZone) why = '내 칸 안으로 들어가서 설치해요';
+      else if (L.a < -5 + m || L.a > 5 - m || L.b < m || L.b > 10 - m) why = '칸 안쪽으로 조금 더 들어가요';
+      else if (L.b - r < 3.5 && Math.abs(L.a) < bg.gateWidth / 2 + 0.5 + r) why = '문 앞 길이라 놓을 수 없어요';
+      else if (minePlaced.some(o => Math.hypot(L.a - o.a, L.b - o.b) < r + o.r + 0.2)) why = '다른 알과 겹쳐요';
+      return { a: L.a, b: L.b, r, ok: !why, why, inZone, world: myFrame.toWorld(L.a, L.b) };
+    }
+    function placeSelected() {                                  // 고른 알을 캐릭터 앞에 직접 설치
+      const item = inv[invSel]; if (!item) return false;
+      const t = placementTarget(item); if (!t.ok) { toast('⚠️ ' + t.why, 'warn', 2200); return false; }
+      const { c, e } = makeEggObj(item); placeEggObj(c, e, item, t.a, t.b, (Math.random() - 0.5) * 0.6);
+      inv.splice(invSel, 1); invSel = -1; syncCounts(); renderHotbar(); saveGame();
+      toast(`🥚 ${creatureName(item.cid)} 알을 설치했어요! 부화까지 ${fmtDur(item.dur)}`, 'good', 3000); return true;
+    }
+    function selectSlot(i) {                                    // 가방 칸 고르기/해제(같은 칸을 다시 누르면 해제)
+      if (wardrobe.open) return;
+      invSel = (i < 0 || i >= inv.length || invSel === i) ? -1 : i; renderHotbar();
+    }
+    function renderHotbar() {
+      hotbarEl.textContent = '';
+      for (let i = 0; i < Math.max(3, inv.length); i++) {
+        const it = inv[i], b = document.createElement('button'); b.className = 'slot' + (it ? '' : ' empty') + (i === invSel ? ' on' : '');
+        if (it) { b.textContent = '🥚'; const bd = document.createElement('span'); bd.className = 'bd'; bd.textContent = creatureName(it.cid).split(' ')[0]; b.appendChild(bd); }
+        const nm = document.createElement('span'); nm.className = 'num'; nm.textContent = String((i + 1) % 10); b.appendChild(nm);
+        b.addEventListener('click', () => selectSlot(i)); hotbarEl.appendChild(b);
+      }
+    }
+    let placeMarker = null;
+    function updatePlaceMarker(t) {                             // 설치할 자리 고리(초록: 가능 / 빨강: 불가)
+      if (!placeMarker) { placeMarker = new THREE.Mesh(new THREE.RingGeometry(0.88, 1, 40), new THREE.MeshBasicMaterial({ color: 0x4ade80, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false })); placeMarker.rotation.x = -Math.PI / 2; scene.add(placeMarker); }
+      placeMarker.visible = !!(t && t.inZone); if (!t || !t.inZone) return;
+      placeMarker.position.set(t.world.x, 0.06, t.world.z); placeMarker.scale.set(t.r, t.r, 1);
+      const col = placeMarker.material.color, hex = t.ok ? 0x4ade80 : 0xf87171; if (col && col.setHex) col.setHex(hex); else placeMarker.material.color = hex;
+    }
+
+    // ---- 오른쪽 세로 버튼 + 목록 창(성장하는 달걀 / 펫) ----
+    const eggsPanelEl = document.getElementById('eggs-panel'), petsPanelEl = document.getElementById('pets-panel'), eggsListEl = document.getElementById('eggs-list'), petsListEl = document.getElementById('pets-list');
+    let openMenu = null, _menuAcc = 0, sellConfirm = { pet: null, t: 0 };
+    const mkEl2 = (tag, cls, text) => { const el = document.createElement(tag); if (cls) el.className = cls; if (text !== undefined) el.textContent = text; return el; };
+    function setMenu(name) {                                    // 'eggs' | 'pets' | 'rank': 하나만 열림(같은 걸 다시 누르면 닫힘)
+      openMenu = openMenu === name ? null : name;
+      eggsPanelEl.style.display = openMenu === 'eggs' ? 'flex' : 'none'; petsPanelEl.style.display = openMenu === 'pets' ? 'flex' : 'none'; setRankOpen(openMenu === 'rank');
+      for (const [id, nm] of [['btn-eggs', 'eggs'], ['btn-pets', 'pets'], ['btn-rank', 'rank']]) document.getElementById(id).classList.toggle('on', openMenu === nm);
+      renderMenus();
+    }
+    function renderMenus() { if (openMenu === 'eggs') renderEggsPanel(); else if (openMenu === 'pets') renderPetsPanel(); updateEggsDot(); }
+    function updateEggsDot() { const n = myEggs.filter(x => x.e.hatch.state === 'ready').length, d = document.getElementById('eggs-dot'); d.textContent = String(n); d.style.display = n ? 'flex' : 'none'; }
+    function goToEgg(e) {                                       // 그 알 앞으로 이동(안전구역 안에서만, 알을 들었거나 러닝머신 위에선 불가)
+      if (carriedEgg || onTm || knockT > 0 || charPos.z < bg.safeZone.minZ - 1) { toast('⚠️ 안전구역에서만 쓸 수 있어요', 'warn', 2200); return; }
+      const L = myFrame.toLocal(e.group.position.x, e.group.position.z), stand = myFrame.toWorld(L.a, Math.max(0.7, L.b - (e.radius + 1.0)));
+      charPos.x = stand.x; charPos.z = stand.z; velY = 0; charYaw = Math.atan2(e.group.position.x - stand.x, e.group.position.z - stand.z); setMenu(openMenu);
+    }
+    function renderEggsPanel() {
+      eggsListEl.textContent = ''; const now = nowMs();
+      const rows = myEggs.map(({ c, e }) => ({ c, e, left: e.hatch.state === 'incubating' ? Math.max(0, e.hatch.start + e.hatch.dur - now) : 0 })).sort((a, b) => a.left - b.left);
+      document.getElementById('eggs-all').disabled = !myEggs.some(x => x.e.hatch.state === 'ready');
+      if (!rows.length) { eggsListEl.appendChild(mkEl2('div', 'gempty', '키우는 알이 없어요.\n가방의 알을 내 칸에 설치해보세요!')); return; }
+      for (const { c, e, left } of rows) {
+        const h = e.hatch, row = mkEl2('div', 'grow'), icon = mkEl2('div', 'gicon', '🥚'); icon.appendChild(mkEl2('small', '', creatureName(c.id).split(' ')[0])); row.appendChild(icon);
+        const mid = mkEl2('div', 'gmid'); mid.appendChild(mkEl2('div', 'gname', `${creatureName(c.id)} 알 ×${(e.scale / h.s0).toFixed(1)}`));
+        const bar = mkEl2('div', 'pbar'), fill = mkEl2('i'); fill.style.width = (Math.min(1, Math.max(0, (now - h.start) / h.dur)) * 100).toFixed(1) + '%'; bar.appendChild(fill);
+        if (h.state === 'ready') bar.className = 'pbar ready';                                    // 부화 시간이 다 되면 막대가 반짝이며 "부화하기!"
+        bar.appendChild(mkEl2('span', '', h.state === 'hatching' ? '열리는 중...' : (h.state === 'ready' ? '부화하기!' : fmtDur(left)))); mid.appendChild(bar); row.appendChild(mid);
+        const btn = mkEl2('button', h.state === 'ready' ? 'gbtn open' : 'gbtn', h.state === 'ready' ? '열기' : (h.state === 'hatching' ? '…' : '▶'));
+        if (h.state === 'hatching') btn.disabled = true;
+        btn.addEventListener('click', () => { if (h.state === 'ready') { startHatch(e); toast(`🥚 ${creatureName(c.id)} 알이 흔들려요! 곧 부화해요`, 'good', 3000); renderMenus(); } else goToEgg(e); });      // 열기 → 알이 흔들리다 깨지고 펫이 나옴
+        row.appendChild(btn); eggsListEl.appendChild(row);
+      }
+    }
+    function renderPetsPanel() {
+      petsListEl.textContent = ''; document.getElementById('pets-title').textContent = `펫 ${pets.length}마리`; document.getElementById('pets-total').textContent = pets.length ? `💰 +${fmtRate(totalRate())}/초` : '';
+      if (!pets.length) { petsListEl.appendChild(mkEl2('div', 'gempty', '펫이 없어요.\n알을 부화시켜보세요!')); return; }
+      for (const p of pets.slice().sort((a, b) => petRate(b.scale) - petRate(a.scale))) {
+        const row = mkEl2('div', 'grow'); row.appendChild(mkEl2('div', 'gicon', creatureName(p.cid).split(' ')[0]));
+        const mid = mkEl2('div', 'gmid'); mid.appendChild(mkEl2('div', 'gname', `${creatureName(p.cid).replace(/^\S+\s*/, '')} (크기 ${p.scale.toFixed(1)})`)); mid.appendChild(mkEl2('div', 'gincome', `(💰 ${fmtRate(petRate(p.scale))}/초)`)); row.appendChild(mid);
+        const sure = sellConfirm.pet === p && Date.now() - sellConfirm.t < 2500, btn = mkEl2('button', 'gbtn red', sure ? `정말? 💰${fmtNum(petPrice(p.scale))}` : '팔기');
+        btn.addEventListener('click', () => { if (sellConfirm.pet === p && Date.now() - sellConfirm.t < 2500) { sellConfirm = { pet: null, t: 0 }; sellPet(p); } else sellConfirm = { pet: p, t: Date.now() }; renderMenus(); });
+        row.appendChild(btn); petsListEl.appendChild(row);
+      }
+    }
+    function updateMenus(dt) {                                  // 열려 있으면 1초마다 시간·돈 갱신
+      _menuAcc += dt; if (_menuAcc < 1) return; _menuAcc = 0;
+      if (sellConfirm.pet && Date.now() - sellConfirm.t >= 2500) sellConfirm = { pet: null, t: 0 };
+      renderMenus();
+    }
+    document.getElementById('btn-eggs').addEventListener('click', () => setMenu('eggs'));
+    document.getElementById('btn-pets').addEventListener('click', () => setMenu('pets'));
+    document.getElementById('eggs-all').addEventListener('click', () => { let n = 0; for (const { e } of myEggs) if (e.hatch.state === 'ready') { startHatch(e); n++; } if (n) toast(`🥚 알 ${n}개를 열었어요! 곧 부화해요`, 'good', 2800); renderMenus(); });
+    renderHotbar();                                             // 처음부터 빈 가방 칸이 보이게
 
     // 가장 가까운 알 찾기: 'pick'(들 수 있는 알) / 'hatch'(부화 준비된 내 알) / 'info'(아직 키우는 중인 내 알: 남은 시간만 보여줌)
     function findNearestInteractable() {
@@ -5641,30 +6381,55 @@ function createBackground(scene) {
         const gap = Math.hypot(charPos.x - _tmpV.x, charPos.z - _tmpV.z) - e.radius;
         if (gap < bestGap) { bestGap = gap; best = { c, e, kind: e.secured ? (h.state === 'ready' ? 'hatch' : 'info') : 'pick' }; }
       }));
+      if (!best || best.kind === 'info') {                                          // 누를 수 있는 알(들기/부화)이 없으면: 내 칸 안(또는 바로 앞)에서 내 펫 → 판매 (키우는 중인 알 '안내'보다 더 가까우면 판매가 우선)
+        const P = bg.plotBounds.all[myPlotIdx];
+        if (charPos.x > P.x0 - 3 && charPos.x < P.x1 + 3 && charPos.z > P.z0 - 3 && charPos.z < P.z1 + 3) for (const pet of pets) {
+          const gap = Math.hypot(charPos.x - pet.group.position.x, charPos.z - pet.group.position.z) - (PET_R[pet.cid] || 1.5) * pet.scale;
+          if (gap < bestGap) { bestGap = gap; best = { pet, kind: 'sell' }; }
+        }
+      }
       return best;
     }
     let _lastPrompt = '';
-    function updateEggUI(dt) {                                  // 가까운 알 하이라이트(흰 테두리) + 안내 문구 + 모바일 버튼
-      const near = !carriedEgg ? findNearestInteractable() : null;
-      const nearEggGroup = near ? near.e.group : null;
+    function updateEggUI(dt) {                                  // 가까운 알 하이라이트(흰 테두리) + 안내 문구(+진행바) + 모바일 알 버튼 + 설치 자리 고리
+      if (invSel >= inv.length) invSel = -1;
+      const placing = invSel >= 0 && !carriedEgg;
+      const near = (!carriedEgg && !placing) ? findNearestInteractable() : null;
+      const nearEggGroup = near && near.e ? near.e.group : null;                   // (펫은 너무 커서 테두리 없이 안내만)
       if (nearEggGroup !== _highlightedGroup) {
         if (_boxHelper) { scene.remove(_boxHelper); _boxHelper = null; }
         _highlightedGroup = nearEggGroup;
         if (nearEggGroup) { _boxHelper = new THREE.BoxHelper(nearEggGroup, 0xffffff); _boxHelper.material.linewidth = 2; scene.add(_boxHelper); }
       }
       if (_boxHelper) _boxHelper.update();
-      let prompt = '', info = '';
-      if (near) {
-        const h = near.e.hatch, mult = h ? near.e.scale / h.s0 : 1;
-        if (near.kind === 'pick') prompt = '🥚 F — 알 들기';
-        else if (near.kind === 'hatch') { prompt = '🥚 F — 부화하기'; info = `🥚 부화 준비 완료 · 크기 ×${mult.toFixed(1)}`; }
-        else info = `🥚 부화까지 ${fmtDur(h.start + h.dur - nowMs())} · 크기 ×${mult.toFixed(1)}`;
+      let prompt = '', info = '', bar = 0, btnMode = carriedEgg ? 'drop' : null;
+      if (placing) {                                                               // 가방에서 고른 알: 캐릭터 앞에 설치 자리를 보여줌
+        const item = inv[invSel], t = placementTarget(item);
+        prompt = t.ok ? '🥚 F — 여기에 설치' : '';
+        info = `🎒 ${creatureName(item.cid)} 알 · ×${item.s0.toFixed(1)} · 부화 ${fmtDur(item.dur)}` + (t.ok ? '' : ` · ⚠ ${t.why}`);
+        btnMode = t.ok ? 'place' : null; updatePlaceMarker(t);
+      } else {
+        updatePlaceMarker(null);
+        if (near) {
+          if (near.kind === 'sell') {
+            const p = near.pet;
+            prompt = '🐾 F 꾹 — 팔기'; info = `${creatureName(p.cid)} · 💰 +${fmtRate(petRate(p.scale))}/초 · 판매가 💰 ${fmtNum(petPrice(p.scale))}`; bar = sellHold / SELL_HOLD;
+          } else {
+            const h = near.e.hatch, mult = h ? near.e.scale / h.s0 : 1;
+            if (near.kind === 'pick') prompt = '🥚 F — 알 들기';
+            else if (near.kind === 'hatch') { prompt = '🥚 F — 부화하기'; info = `🥚 부화 준비 완료 · 크기 ×${mult.toFixed(1)}`; bar = 1; }
+            else { info = `🥚 부화까지 ${fmtDur(h.start + h.dur - nowMs())} · 크기 ×${mult.toFixed(1)}`; bar = Math.min(1, Math.max(0, (nowMs() - h.start) / h.dur)); }
+          }
+          if (!carriedEgg && near.kind !== 'info') btnMode = near.kind;
+        }
       }
       if (prompt && prompt !== _lastPrompt) { pickupPrompt.textContent = prompt; _lastPrompt = prompt; }
       pickupPrompt.style.display = (prompt && !IS_TOUCH_UI) ? 'block' : 'none';      // 터치 기기에서는 화면 버튼이 대신함
-      hatchInfoEl.style.display = info ? 'block' : 'none'; if (info) hatchInfoEl.textContent = info;
+      hatchInfoEl.style.display = info ? 'flex' : 'none';
+      if (info) { hatchTextEl.textContent = info; hatchBarEl.style.width = (bar * 100).toFixed(1) + '%'; }
       dropPrompt.style.display = (carriedEgg && !IS_TOUCH_UI) ? 'block' : 'none';
-      updateEggButton(dt, carriedEgg ? 'drop' : (near && near.kind !== 'info' ? near.kind : null));
+      updateSellHold(dt, near);
+      updateEggButton(dt, btnMode);
     }
     if (!NET.cfg) startLocal();   // 온라인 설정이 없으면 예전처럼 혼자 하기(설정이 있으면 아래 boot()가 로그인 화면을 띄움)
 
@@ -5816,6 +6581,7 @@ function createBackground(scene) {
     for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) joyBase.addEventListener(ev, e => { if (e.pointerId === joy.id) joyReset(); });
 
     function readMoveInput(fwdX, fwdZ, rightX, rightZ) {     // 키보드(WASD) + 모바일 조이스틱 → 이동 방향
+      if (wardrobe.open) return { mx: 0, mz: 0 };            // 꾸미기 화면에서는 안 움직임
       let mx = 0, mz = 0;
       if (keys.KeyW) { mx += fwdX; mz += fwdZ; }
       if (keys.KeyS) { mx -= fwdX; mz -= fwdZ; }
@@ -5825,7 +6591,7 @@ function createBackground(scene) {
       return { mx, mz };
     }
     function isSlowInput() { return !!(keys.ShiftLeft || keys.ShiftRight) || (joy.active && joy.mag > 0 && joy.mag < JOY_SLOW); }   // Shift 또는 조이스틱을 살짝 밀면 천천히
-    function tryJump() { if (isOnGround) { velY = JUMP_FORCE; isOnGround = false; } }
+    function tryJump() { if (wardrobe.open) return; if (onTm) { dismountTreadmill(); return; } if (isOnGround) { velY = JUMP_FORCE; isOnGround = false; } }
     document.getElementById('btn-jump').addEventListener('pointerdown', e => { enableTouchUI(); tryJump(); e.preventDefault(); });
 
     // 알 버튼: 알 앞에서는 '꾹 눌러 알 들기', 알을 들고 있을 땐 '꾹 눌러 내려놓기' (일정 시간 누르고 있으면 실행)
@@ -5834,21 +6600,23 @@ function createBackground(scene) {
     let eggHeld = false, eggHold = 0, eggLock = false;
     eggBtn.addEventListener('pointerdown', e => { enableTouchUI(); eggHeld = true; try { eggBtn.setPointerCapture(e.pointerId); } catch (_) {} e.preventDefault(); });
     for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) eggBtn.addEventListener(ev, () => { eggHeld = false; });
-    function eggInteract() {                                   // F키와 알 버튼이 같이 쓰는 동작: 들고 있으면 내려놓기 / 알 앞이면 들기 / 내 알이 부화 준비됐으면 부화하기
+    function eggInteract(fromKey) {                            // F키와 알 버튼이 같이 쓰는 동작: 가방의 알을 골랐으면 설치 / 들고 있으면 내려놓기 / 알 앞이면 들기 / 부화 준비됐으면 부화하기 / 펫 앞이면 판매(키보드는 꾹 눌러야 해서 여기선 제외)
+      if (!carriedEgg && invSel >= 0) { placeSelected(); return; }
       if (carriedEgg) dropEgg();
-      else { const t = findNearestInteractable(); if (t && t.kind === 'pick') pickupEgg(t); else if (t && t.kind === 'hatch') startHatch(t.e); }
+      else { const t = findNearestInteractable(); if (!t) return; if (t.kind === 'pick') pickupEgg(t); else if (t.kind === 'hatch') startHatch(t.e); else if (t.kind === 'sell' && !fromKey) sellPet(t.pet); }
     }
     function updateEggButton(dt, mode) {                       // mode: 'pick' | 'drop' | 'hatch' | null
       if (!IS_TOUCH_UI) return;
       if (!mode) { eggBtn.style.display = 'none'; eggHold = 0; eggLock = false; return; }
       eggBtn.style.display = 'flex'; eggBtn.dataset.mode = mode;
-      eggBtnLabel.textContent = mode === 'pick' ? '알 들기' : (mode === 'hatch' ? '부화하기' : '내려놓기');
+      eggBtnLabel.textContent = mode === 'pick' ? '알 들기' : (mode === 'hatch' ? '부화하기' : (mode === 'sell' ? '팔기' : (mode === 'place' ? '설치' : '내려놓기')));
+      const need = mode === 'place' ? 0.25 : EGG_HOLD_TIME;      // 설치는 반복해서 하니까 짧게 눌러도 됨
       eggBtn.classList.toggle('held', eggHeld);
       if (eggHeld && !eggLock) {
         eggHold += dt;
-        if (eggHold >= EGG_HOLD_TIME) { eggInteract(); eggHold = 0; eggLock = true; }   // 실행 뒤에는 손을 떼기 전까지 다시 안 눌림(들자마자 놓는 것 방지)
+        if (eggHold >= need) { eggInteract(); eggHold = 0; eggLock = true; }   // 실행 뒤에는 손을 떼기 전까지 다시 안 눌림(들자마자 놓는 것 방지)
       } else if (!eggHeld) { eggHold = Math.max(0, eggHold - dt * 3); eggLock = false; }
-      eggRing.style.strokeDashoffset = 283 * (1 - Math.min(1, eggHold / EGG_HOLD_TIME));     // 누르는 동안 둘레가 차오름
+      eggRing.style.strokeDashoffset = 283 * (1 - Math.min(1, eggHold / need));     // 누르는 동안 둘레가 차오름
     }
     addEventListener('blur', () => { joyReset(); eggHeld = false; });
     // 손가락 뗌 이중 확인: pointerup을 놓쳐도 (1) 창 전체에서 pointerup/cancel (2) 그 손가락이 시작된 요소를 기준으로 touchend/cancel (3) 매 프레임 '화면에 손가락이 하나도 없는지' 확인
@@ -5877,11 +6645,48 @@ function createBackground(scene) {
     }
     document.getElementById('btn-fullscreen').addEventListener('click', goLandscape);
 
+    // ================= 캐릭터 꾸미기 화면 =================
+    const wardrobe = { open: false, prev: null, create: false };
+    const wardrobeEl = document.getElementById('wardrobe'), wardrobeBody = document.getElementById('wardrobe-body'), wardrobeBtns = [];
+    function markWardrobe() { for (const b of wardrobeBtns) b.classList.toggle('on', myLook[b.dataset.key] === Number(b.dataset.i)); }
+    function applyMyLook() {                                    // 내 캐릭터를 새 모습으로 다시 만듦(알을 들고 있으면 새 머리 위로 옮김)
+      const eg = carriedEgg ? carriedEgg.e.group : null; if (eg && eg.parent) eg.parent.remove(eg);
+      buildHumanRig(humanHolder, rig, myLook);
+      if (eg) { rig.carryMount.add(eg); rig.carryMount.visible = true; }
+    }
+    function setLookOpt(key, i) { myLook[key] = i; applyMyLook(); markWardrobe(); }
+    (function buildWardrobeUI() {
+      for (const [key, label, kind] of LOOK_KEYS) {
+        const row = document.createElement('div'); row.className = 'wrow';
+        const t = document.createElement('div'); t.className = 'wlabel'; t.textContent = label; row.appendChild(t);
+        const opts = document.createElement('div'); opts.className = 'wopts'; row.appendChild(opts);
+        LOOK[key].forEach((v, i) => {
+          const b = document.createElement('button'); b.className = kind === 'color' ? 'wsw' : 'wchip'; b.dataset.key = key; b.dataset.i = String(i);
+          if (kind === 'color') b.style.background = '#' + v.toString(16).padStart(6, '0'); else b.textContent = v;
+          b.addEventListener('click', () => setLookOpt(key, i)); opts.appendChild(b); wardrobeBtns.push(b);
+        });
+        wardrobeBody.appendChild(row);
+      }
+    })();
+    function openWardrobe(create) {
+      if (wardrobe.open) return; wardrobe.open = true; wardrobe.create = !!create;
+      wardrobe.prev = { camYaw, camPitch, dist }; camYaw = charYaw; camPitch = 0.12; dist = 2.6;          // 캐릭터 앞에서 가까이 + 천천히 돌아서 앞뒤를 다 보여줌
+      document.getElementById('wardrobe-title').textContent = create ? '🧍 캐릭터 만들기' : '👕 캐릭터 꾸미기';
+      document.getElementById('wardrobe-done').textContent = create ? '게임 시작' : '완료';
+      wardrobeEl.style.display = 'flex'; markWardrobe(); joyReset();
+    }
+    function closeWardrobe() {
+      if (!wardrobe.open) return; wardrobe.open = false;
+      if (wardrobe.prev) { camYaw = wardrobe.prev.camYaw; camPitch = wardrobe.prev.camPitch; dist = wardrobe.prev.dist; }
+      wardrobeEl.style.display = 'none'; saveGame();                                                       // 저장되고, 다른 사람에게도 바로 보임(다음 위치 전송 때 함께)
+    }
+    document.getElementById('btn-wardrobe').addEventListener('click', () => { if (wardrobe.open) closeWardrobe(); else openWardrobe(false); });
+    document.getElementById('wardrobe-done').addEventListener('click', closeWardrobe);
+    document.getElementById('wardrobe-random').addEventListener('click', () => { myLook = randomLook(); applyMyLook(); markWardrobe(); });
+
     // ================= 온라인: 같은 월드에서 여러 명이 함께 (Firebase) =================
     // 알·펫은 계정(닉네임)에 저장되고, 접속한 사람들은 서로의 캐릭터·칸·알·펫이 보임. 둥지와 동물은 사람마다 따로라서 남의 알은 건드릴 수 없음.
     const curMove = { mv: 0 };                                  // 이번 프레임의 내 이동 상태(0 정지 / 1 달리기 / 2 천천히)
-    const SHIRTS = [[0xef4444, 0xb91c1c], [0xf97316, 0xc2410c], [0xeab308, 0xa16207], [0x22c55e, 0x15803d], [0x14b8a6, 0x0f766e], [0x0ea5e9, 0x0369a1],
-                    [0x6366f1, 0x4338ca], [0xa855f7, 0x7e22ce], [0xec4899, 0xbe185d], [0x65a30d, 0x3f6212], [0x94a3b8, 0x475569], [0xd97706, 0x92400e]];
     const remotes = new Map();                                  // uid → 다른 플레이어
     const plotSigns = [];                                       // 칸 번호별 닉네임 표지판
     let myPlotMarker = null, _petBudget = 1;
@@ -5907,6 +6712,7 @@ function createBackground(scene) {
     function refreshSigns() {                                   // 칸 앞 표지판: 그 칸 주인의 닉네임
       const owners = {}; if (NET.online) owners[myPlotIdx] = NET.nick; for (const R of remotes.values()) if (R.plot != null) owners[R.plot] = R.nick;
       bg.plotBounds.all.forEach((P, i) => {
+        if (P.disabled) return;
         const nick = owners[i]; if (plotSigns[i] && plotSigns[i].nick === nick) return;
         if (plotSigns[i]) { scene.remove(plotSigns[i].spr); plotSigns[i] = null; }
         if (nick) { const w = plotFrame(i).toWorld(0, -1.0), spr = makeLabel(nick, i === myPlotIdx ? '#fde68a' : '#ffffff'); spr.position.set(w.x, 2.1, w.z); spr.scale.set(3.2, 0.8, 1); scene.add(spr); plotSigns[i] = { nick, spr }; }
@@ -5916,9 +6722,9 @@ function createBackground(scene) {
 
     // ---- 다른 플레이어 ----
     function makeRemote(uid, v) {
-      const col = SHIRTS[(v.plot != null ? v.plot : 0) % SHIRTS.length], H = buildRemoteHuman(col[0], col[1]);
+      const H = buildRemoteHuman(parseLook(v.look));
       const label = makeLabel(v.nick || '?'); label.position.set(0, 2.2, 0); label.scale.set(3.2, 0.8, 1); H.holder.add(label);
-      const R = { uid, holder: H.holder, rig: H.rig, st: H.st, label, nick: v.nick, plot: v.plot, x: v.x, z: v.z, y: v.y || 0, yaw: v.yaw || 0, tx: v.x, tz: v.z, ty: v.y || 0, tyaw: v.yaw || 0,
+      const R = { uid, holder: H.holder, rig: H.rig, st: H.st, label, lookStr: v.look || '', nick: v.nick, plot: v.plot, x: v.x, z: v.z, y: v.y || 0, yaw: v.yaw || 0, tx: v.x, tz: v.z, ty: v.y || 0, tyaw: v.yaw || 0,
         mv: 0, cc: 0, cs: 0, eggObj: null, saveRef: null, saveCb: null, save: null, saveDirty: false, builtPlot: null, eggs: new Map(), pets: new Map(), savedOnce: false };
       H.holder.position.set(R.x, R.y, R.z); H.holder.rotation.y = R.yaw; remotes.set(uid, R);
       R.saveRef = NET.db.ref('saves/' + uid); R.saveCb = (snap) => { R.save = snap.val(); R.saveDirty = true; }; R.saveRef.on('value', R.saveCb);
@@ -5933,11 +6739,17 @@ function createBackground(scene) {
       const g = new THREE.Group(); c.makeEgg(g); const ls = (scale || 0.8) / HOLDER_SCALE, baseY = cid === 'archangel' ? 0.38 : 0.18;
       g.scale.setScalar(ls); g.position.set(0, (1.40 - 1.54) - ls * baseY, 0.10); R.rig.carryMount.add(g); R.rig.carryMount.visible = true; R.st.carrying = true; R.eggObj = g;
     }
+    function setRemoteLook(R, str) {                            // 다른 사람이 모습을 바꾸면 그 캐릭터를 다시 만듦(들고 있는 알은 유지)
+      R.lookStr = str || ''; const egg = R.eggObj; if (egg && egg.parent) egg.parent.remove(egg);
+      buildHumanRig(R.holder, R.rig, parseLook(str));
+      if (egg) { R.rig.carryMount.add(egg); R.rig.carryMount.visible = true; }
+    }
     function onRemote(uid, v) {
       if (uid === NET.uid || !v) return;
       const existing = remotes.get(uid), R = existing || makeRemote(uid, v), plotChanged = R.plot !== v.plot, nickChanged = R.nick !== v.nick;
       R.tx = v.x; R.tz = v.z; R.ty = v.y || 0; R.tyaw = v.yaw || 0; R.mv = v.mv || 0; R.plot = v.plot;
       if (nickChanged) { R.nick = v.nick; R.holder.remove(R.label); R.label = makeLabel(v.nick || '?'); R.label.position.set(0, 2.2, 0); R.label.scale.set(3.2, 0.8, 1); R.holder.add(R.label); }
+      if ((v.look || '') !== R.lookStr) setRemoteLook(R, v.look || '');
       setRemoteCarry(R, v.cc, v.cs);
       if (!existing || plotChanged || nickChanged) { R.saveDirty = true; refreshSigns(); }     // 새로 들어왔거나 칸/닉네임이 바뀌면 표지판 갱신
     }
@@ -6004,7 +6816,7 @@ function createBackground(scene) {
     function netTick(dt) {
       if (!NET.online || !NET.meRef) return;
       const carry = carriedEgg ? carriedEgg.c.id : 0, r2 = (v) => Math.round(v * 100) / 100;
-      const st = { x: r2(charPos.x), z: r2(charPos.z), y: r2(charPos.y), yaw: r2(charYaw), mv: curMove.mv, cc: carry, cs: carry ? r2(carriedEgg.e.scale) : 0 };
+      const st = { x: r2(charPos.x), z: r2(charPos.z), y: r2(charPos.y), yaw: r2(charYaw), mv: curMove.mv, cc: carry, cs: carry ? r2(carriedEgg.e.scale) : 0, look: lookToStr(myLook) };
       const str = JSON.stringify(st), now = performance.now();
       if ((str !== _lastStr && now - _lastSent >= 100) || now - _lastSent > 5000) { const pr = NET.meRef.update(st); if (pr && pr.catch) pr.catch(netFail); _lastStr = str; _lastSent = now; }     // 바뀔 때만 초당 10번, 가만히 있으면 5초에 한 번
     }
@@ -6013,6 +6825,18 @@ function createBackground(scene) {
     const nickRe = /^[가-힣A-Za-z0-9_]{2,8}$/;
     const nickToEmail = (n) => 'n' + Array.from(new TextEncoder().encode(n.normalize('NFC').toLowerCase())).map(b => b.toString(16).padStart(2, '0')).join('') + '@egg-nick.com';   // 닉네임을 계정 이메일 형태로 바꿈(한글도 가능)
     const loginMsg = (t) => { loginErr.textContent = t || ''; };
+    const NICK_KEY = 'eggGame.nick';
+    function showChecking(text, retry) {                        // '접속 확인 중' 화면(입력칸 없이 스피너만): 자동 로그인 중에 로그인 창이 깜빡이지 않게
+      loginEl.classList.add('checking'); loginEl.style.display = 'flex'; loginSub.textContent = text; setLoginEnabled(false);
+      document.getElementById('btn-retry').style.display = retry ? 'block' : 'none';
+    }
+    function showLoginForm(msg) {                               // 닉네임·비밀번호 입력 화면
+      NET.formShown = (NET.formShown || 0) + 1;
+      loginEl.classList.remove('checking'); loginEl.style.display = 'flex'; document.getElementById('btn-retry').style.display = 'none';
+      loginSub.textContent = '닉네임으로 로그인하면 알·펫이 저장되고 친구들과 같은 월드에서 할 수 있어요'; setLoginEnabled(true);
+      if (msg !== undefined) loginMsg(msg);
+      const ni = document.getElementById('login-nick'); if (!ni.value) { try { ni.value = localStorage.getItem(NICK_KEY) || ''; } catch (_) {} }   // 지난번 닉네임 채워둠
+    }
     const AUTH_MSG = { 'auth/email-already-in-use': '이미 있는 닉네임이에요', 'auth/weak-password': '비밀번호는 6자 이상이어야 해요', 'auth/wrong-password': '닉네임이나 비밀번호가 맞지 않아요',
       'auth/user-not-found': '닉네임이나 비밀번호가 맞지 않아요', 'auth/invalid-credential': '닉네임이나 비밀번호가 맞지 않아요', 'auth/invalid-login-credentials': '닉네임이나 비밀번호가 맞지 않아요',
       'auth/too-many-requests': '시도가 너무 많아요. 잠시 뒤에 다시 해주세요', 'auth/operation-not-allowed': 'Firebase에서 이메일/비밀번호 로그인을 켜야 해요', 'auth/network-request-failed': '인터넷 연결을 확인해주세요' };
@@ -6032,17 +6856,18 @@ function createBackground(scene) {
     document.getElementById('btn-login').addEventListener('click', () => doAuth(false));
     document.getElementById('btn-signup').addEventListener('click', () => doAuth(true));
     document.getElementById('login-pw').addEventListener('keydown', e => { if (e.key === 'Enter') doAuth(false); });
-    document.getElementById('btn-guest').addEventListener('click', () => { loginEl.style.display = 'none'; if (!NET.online && !NET.guest) { startLocal(); markMyPlot(); } });
+    document.getElementById('btn-retry').addEventListener('click', () => location.reload());
 
     function loadScript(src) { return new Promise((res, rej) => { const el = document.createElement('script'); el.src = src; el.onload = res; el.onerror = () => rej(new Error('불러오기 실패: ' + src)); document.head.appendChild(el); }); }
     async function initFirebase() {
       if (typeof firebase === 'undefined') for (const f of ['app', 'auth', 'database']) await loadScript(`https://www.gstatic.com/firebasejs/10.12.2/firebase-${f}-compat.js`);
       firebase.initializeApp(NET.cfg); NET.auth = firebase.auth(); NET.db = firebase.database();
+      try { if (NET.auth.setPersistence && firebase.auth.Auth) await NET.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL); } catch (_) {}   // 자동 로그인: 브라우저를 닫았다 열어도 로그인 유지
     }
     async function claimPlot(want) {                            // 칸 하나를 내 것으로 (두 명이 같은 칸을 못 잡게 서버에서 한 명만 성공)
-      const order = [want, ...bg.plotBounds.all.map(p => p.i).filter(i => i !== want)];
+      const order = [want, ...bg.plotBounds.all.filter(p => !p.disabled).map(p => p.i).filter(i => i !== want)];
       for (const i of order) {
-        if (!Number.isInteger(i) || i < 0 || i >= bg.plotBounds.all.length) continue;
+        if (!Number.isInteger(i) || i < 0 || i >= bg.plotBounds.all.length || bg.plotBounds.all[i].disabled) continue;      // (없어진 칸=러닝머신 자리는 건너뜀)
         const ref = NET.db.ref('plotOwners/' + i);
         const res = await ref.transaction(cur => (cur === null || cur === NET.uid) ? NET.uid : undefined);
         if (res.committed && res.snapshot.val() === NET.uid) { ref.onDisconnect().remove(); return i; }
@@ -6057,18 +6882,23 @@ function createBackground(scene) {
         const snap = await db.ref('saves/' + NET.uid).once('value'); let data = snap.val(), migrated = false;
         if (!data) { const local = readLocalSave(); if (local) { data = local; migrated = true; } }          // 처음이면 이 기기에서 혼자 하던 기록을 계정으로 옮김
         const idx = await claimPlot(data && Number.isInteger(data.plot) ? data.plot : bg.plotBounds.defaultIndex);
-        if (idx === null) { loginEl.style.display = 'flex'; loginMsg('자리가 꽉 찼어요 (최대 12명). 잠시 뒤에 다시 해주세요'); setLoginEnabled(true); NET.starting = false; return; }
+        if (idx === null) { NET.starting = false; try { await NET.auth.signOut(); } catch (_) {} showLoginForm(`자리가 꽉 찼어요 (최대 ${bg.plotBounds.all.filter(p => !p.disabled).length}명). 잠시 뒤에 다시 해주세요`); return; }
         NET.saveRef = db.ref('saves/' + NET.uid); NET.online = true; netInfoEl.style.display = 'flex';
         if (!netInfoEl.firstChild) { netInfoEl.appendChild(document.createTextNode('')); const b = document.createElement('button'); b.textContent = '로그아웃'; b.addEventListener('click', logout); netInfoEl.appendChild(b); }
         setMyPlot(idx); applySave(data);
+        const hasLook = !!(data && data.look);
         if (migrated) { saveGame(); try { localStorage.removeItem(SAVE_KEY); } catch (_) {} }
         NET.meRef = db.ref('players/' + NET.uid); NET.meRef.onDisconnect().remove();
-        await NET.meRef.set({ nick: NET.nick, plot: idx, x: charPos.x, z: charPos.z, y: charPos.y, yaw: charYaw, mv: 0, cc: 0, cs: 0 });
+        await NET.meRef.set({ nick: NET.nick, plot: idx, x: charPos.x, z: charPos.z, y: charPos.y, yaw: charYaw, mv: 0, cc: 0, cs: 0, look: lookToStr(myLook) });
         const pref = db.ref('players');
         pref.on('child_added', sn => onRemote(sn.key, sn.val())); pref.on('child_changed', sn => onRemote(sn.key, sn.val())); pref.on('child_removed', sn => onRemoteGone(sn.key));
         refreshSigns(); NET.starting = false;
+        listenRanks(); document.getElementById('btn-rank').style.display = ''; pushRank(true);          // 순위표 켜기
+        try { localStorage.setItem(NICK_KEY, NET.nick); } catch (_) {}
+        loginEl.style.display = 'none'; loginEl.classList.remove('checking');          // 접속 완료 → 게임 화면
+        if (!hasLook) openWardrobe(true);                                              // 처음이면 캐릭터 만들기 화면
       } catch (e) {
-        NET.starting = false; loginEl.style.display = 'flex'; loginMsg('접속 중 오류: ' + ((e && (e.code || e.message)) || e)); setLoginEnabled(true);
+        NET.starting = false; showLoginForm('접속 중 오류: ' + ((e && (e.code || e.message)) || e));
       }
     }
     async function logout() {
@@ -6076,12 +6906,12 @@ function createBackground(scene) {
       location.reload();
     }
     async function boot() {
-      if (!NET.cfg) { markMyPlot(); return; }                    // 설정이 없으면 혼자 하기(이미 시작됨)
-      loginEl.style.display = 'flex'; loginSub.textContent = '연결 중...'; setLoginEnabled(false);
-      try { await initFirebase(); } catch (e) { loginSub.textContent = '서버에 연결하지 못했어요'; loginMsg('인터넷을 확인하거나 아래 "혼자 하기"를 눌러주세요'); return; }
+      if (!NET.cfg) { markMyPlot(); return; }                    // 설정이 없으면 로그인 없이 시작(이미 시작됨)
+      showChecking('접속 확인 중...');
+      try { await initFirebase(); } catch (e) { showChecking('서버에 연결하지 못했어요. 인터넷을 확인해주세요', true); return; }
       NET.auth.onAuthStateChanged(user => {
-        if (user) { loginEl.style.display = 'none'; startOnline(user); }
-        else { loginEl.style.display = 'flex'; loginSub.textContent = '닉네임으로 로그인하면 알·펫이 저장되고 친구들과 같은 월드에서 할 수 있어요'; setLoginEnabled(true); }
+        if (user) { showChecking('접속 중...'); startOnline(user); }          // 이미 로그인돼 있으면 로그인 창 없이 바로 접속(자동 로그인)
+        else if (!NET.starting) showLoginForm();
       });
     }
     boot();
@@ -6094,7 +6924,9 @@ function createBackground(scene) {
         e.preventDefault();
         tryJump();
       }
-      if (code === "KeyF" && !e.repeat) eggInteract();     // 들고 있으면 내려놓기, 아니면 가장 가까운 알 집기
+      if (code === "KeyF" && !e.repeat && !wardrobe.open) eggInteract(true);
+      const dm = /^Digit(\d)$/.exec(code); if (dm && !e.repeat && !wardrobe.open) selectSlot(dm[1] === '0' ? 9 : Number(dm[1]) - 1);      // 1~9, 0 = 가방 칸
+      if (code === "Escape" && !e.repeat) { if (openMenu) setMenu(openMenu); else if (invSel >= 0) selectSlot(invSel); }     // 들고 있으면 내려놓기, 아니면 가장 가까운 알 집기
     });
     addEventListener("keyup", e => { keys[codeOf(e)] = false; });
     // 창을 벗어나거나(Alt+Tab 등) 탭이 가려지면 눌린 키를 전부 해제 → 키가 눌린 채로 남아 혼자 걸어가는 것 방지
@@ -6196,7 +7028,7 @@ function createBackground(scene) {
 
       inputWatchdog();                         // 손가락이 이미 떨어졌는데 조이스틱/버튼이 눌린 채로 남아 있으면 해제
       let { mx, mz } = readMoveInput(fwdX, fwdZ, rightX, rightZ);
-      if (knockT > 0) { mx = 0; mz = 0; }      // 잡혀서 날아가는 동안은 조작 불가
+      if (knockT > 0 || onTm) { mx = 0; mz = 0; }      // 잡혀서 날아가는 동안 / 러닝머신 위에서는 이동 조작 불가(제자리에서 계속 달림)
 
       const slowNow = isSlowInput();
       const sprintBoost = slowNow ? 0.5 : 2.4;         // 기본은 항상 최고 속도(2.4), 천천히 걷기일 땐 0.5
@@ -6221,9 +7053,9 @@ function createBackground(scene) {
       let groundSpeed = 0;
 
       // 블록형 사람 캐릭터 애니메이션 업데이트
-      const isMoving = Math.abs(mx) > 0.01 || Math.abs(mz) > 0.01;
-      curMove.mv = !isMoving ? 0 : (slowNow ? 2 : 1);         // 다른 사람에게 보낼 내 이동 상태
-      updateHumanAnim(dt, isMoving, slowNow);
+      const isMoving = !!onTm || Math.abs(mx) > 0.01 || Math.abs(mz) > 0.01;      // 러닝머신 위에서는 계속 달리는 동작
+      curMove.mv = !isMoving ? 0 : ((slowNow && !onTm) ? 2 : 1);         // 다른 사람에게 보낼 내 이동 상태
+      updateHumanAnim(dt, isMoving, slowNow && !onTm);
       groundSpeed = isMoving ? Math.abs(targetSpeed) * 2.5 : 0;
 
       let nx = charPos.x + mx * groundSpeed * dt;
@@ -6243,12 +7075,17 @@ function createBackground(scene) {
       charPos.y += velY * dt;
       if (charPos.y <= GROUND_Y) { charPos.y = GROUND_Y; velY = 0; isOnGround = true; }
 
+      updateTreadmillMount(dt); updateTreadmills(dt);   // 러닝머신: 올라타기/고정 + 벨트·불꽃 효과
       updateEggGame(dt);       // 안전선 확인 + 깨어난 동물들 움직임
       updateDanger(dt);        // 쫓기는 동안 화면 가장자리가 은은하게 붉어짐
+      updateMoney(dt);         // 돈 표시 + 1분마다 자동 저장·순위 갱신
+      updateMenus(dt);         // 열려 있는 알/펫 목록 갱신
+      updateEscape(); drawMinimap(dt);   // 탈출 진행바 + 미니맵
       updateHatching(dt);      // 내 칸의 알이 커지고, 부화 준비/부화 진행
       updatePets(dt); updateFx(dt);   // 부화한 동물 동작 + 알 깨지는 조각
       try { netTick(dt); updateRemotes(dt); } catch (err) { console.warn('온라인 처리 오류', err); }   // 다른 플레이어 보내기/받기 (오류가 나도 게임은 계속)
 
+      if (wardrobe.open) charYaw += dt * 0.7;                  // 꾸미기 화면: 캐릭터가 천천히 돌아서 앞·뒤를 다 보여줌
       if (character) {
         character.position.set(charPos.x, charPos.y, charPos.z);
         character.rotation.y = charYaw;
@@ -6260,13 +7097,9 @@ function createBackground(scene) {
 
       // 현재 플레이어가 위치한 생물 바이옴 구역 확인 및 하늘/안개 색상 부드럽게 전환
       const activeZone = BIOME_ZONES.find(z => charPos.z >= z.zMin && charPos.z < z.zMax);
-      if (activeZone) {
-        targetSkyColor.setHex(activeZone.skyColor);
-        zoneBanner.textContent = `${activeZone.name} · 생물이 잠들어 있고 앞에 알이 놓여 있습니다 (중심 Z: ${activeZone.zCenter})`;
-      } else {
-        targetSkyColor.setHex(0x9fd8ef);
-        zoneBanner.textContent = `🏡 안전구역 (출발점 Z: ${Math.round(charPos.z)}) — 북쪽(-Z)으로 달리거나 하단 버튼으로 각 생물 구역에 이동하세요`;
-      }
+      const bannerText = onTm ? '⚡ 러닝머신 달리는 중 · 스페이스로 내리기' : bannerOf(activeZone);   // 예: '🐔 Lv.1 닭의 보금자리'
+      if (activeZone) targetSkyColor.setHex(activeZone.skyColor); else targetSkyColor.setHex(0x9fd8ef);
+      if (bannerText !== _lastBanner) { zoneBanner.textContent = bannerText; _lastBanner = bannerText; }
       currentSkyColor.lerp(targetSkyColor, Math.min(1, dt * 3.5));
       scene.background.copy(currentSkyColor);
       scene.fog.color.copy(currentSkyColor);
