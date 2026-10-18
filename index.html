@@ -256,6 +256,27 @@
       .gpanel { top:calc(52px + env(safe-area-inset-top)); right:calc(66px + env(safe-area-inset-right)); max-height:calc(100vh - 70px); width:min(300px, 56vw); }
       .slot { width:46px; height:46px; font-size:21px; } #hotbar { max-width:calc(100vw - 400px); } #hatch-info { bottom:66px !important; }
     }
+
+    /* ===== 러닝머신 창 / 속도 칩 / 떠오르는 숫자 ===== */
+    #speed-chip { position:static; display:flex; align-items:center; gap:7px; margin:0; padding:5px 12px; font-size:13px; font-weight:700; color:#fff; background:rgba(12,10,24,0.62); border:1px solid rgba(255,255,255,0.22); border-radius:999px; backdrop-filter:blur(6px); box-shadow:0 4px 14px rgba(0,0,0,0.3); }
+    #speed-chip b { font-size:16px; color:#f0abfc; min-width:30px; text-shadow:0 1px 4px rgba(0,0,0,0.5); } #speed-rate { font-size:11px; color:#bbf7d0; font-weight:700; }
+    .sidebtn.purple { background:#a855f7; border-color:#581c87; }
+    .tminfo { white-space:pre-line; padding:8px 10px; color:#fff; font-size:13px; font-weight:800; line-height:1.55; background:#2f2d3b; border-bottom:2px solid #25232f; }
+    .tminfo b { color:#fde68a; } .tminfo .pk { color:#f0abfc; }
+    .trow { display:flex; align-items:center; gap:8px; padding:6px 9px; border-radius:8px; background:#4a475c; border:2px solid #25232f; color:#fff; font-size:12.5px; font-weight:800; }
+    .trow .lv { width:42px; font-size:13.5px; } .trow .g { flex:1; color:#f0abfc; } .trow .c { color:#fde68a; } .trow.cur { background:#6d4bd0; border-color:#fff; } .trow.done { opacity:0.6; }
+    .gfoot-btn { padding:8px; background:#2f2d3b; border-top:2px solid #25232f; }
+    .gbig { width:100%; padding:10px; border-radius:9px; border:2px solid #14532d; background:linear-gradient(180deg,#bbf7d0,#4ade80); color:#14532d; font-size:15px; font-weight:900; } .gbig:disabled { opacity:0.45; filter:grayscale(0.5); }
+    #floaters { position:fixed; inset:0; pointer-events:none; z-index:24; overflow:hidden; }
+    .floater { position:absolute; transform:translate(-50%,-50%); white-space:nowrap; font-size:26px; font-weight:900; color:#f0abfc; -webkit-text-stroke:1.5px #701a75; text-shadow:0 2px 0 #581c87, 0 0 10px rgba(217,70,239,0.7); animation:floatUp 1.3s ease-out forwards; }
+    @keyframes floatUp { 0% { opacity:0; margin-top:0; } 15% { opacity:1; margin-top:-10px; } 100% { opacity:0; margin-top:-95px; } }
+    /* 가로 화면 휴대폰: 오른쪽 세로 버튼(4개)이 점프 버튼과 겹치지 않게 */
+    @media (pointer: coarse) and (orientation: landscape) {
+      #side-buttons { top:calc(112px + env(safe-area-inset-top)); gap:6px; } .sidebtn { width:40px; height:40px; font-size:20px; border-width:2px; } .sidebtn .dot { top:-6px; right:-6px; }
+      #btn-jump { width:58px; height:58px; bottom:calc(20px + env(safe-area-inset-bottom)); right:calc(20px + env(safe-area-inset-right)); } #btn-jump svg { width:22px; height:22px; } #btn-jump span { font-size:10px; }
+      #btn-egg { right:calc(92px + env(safe-area-inset-right)); bottom:calc(16px + env(safe-area-inset-bottom)); }
+      .gpanel { top:calc(40px + env(safe-area-inset-top)); right:calc(60px + env(safe-area-inset-right)); }
+    }
   </style>
 </head>
 <body>
@@ -269,6 +290,7 @@
   <div id="hud-left">
     <div id="net-info"></div>
     <div id="money-chip"><span>💰</span><b id="money-val">0</b><span id="money-rate"></span></div>
+    <div id="speed-chip"><span>👟</span><b id="speed-val">0</b><span id="speed-rate"></span></div>
     <canvas id="minimap" width="220" height="132"></canvas>
   </div>
   <div id="hud-right">
@@ -281,10 +303,13 @@
   <div id="side-buttons">
     <button id="btn-eggs" class="sidebtn red" title="성장하는 달걀">🥚<i class="dot" id="eggs-dot"></i></button>
     <button id="btn-pets" class="sidebtn orange" title="펫">🐾</button>
+    <button id="btn-tm" class="sidebtn purple" title="러닝머신">🏃</button>
     <button id="btn-rank" class="sidebtn yellow" title="순위표" style="display:none">🏆</button>
   </div>
   <div id="eggs-panel" class="gpanel"><div class="ghead"><span class="gtitle">성장하는 달걀</span><button id="eggs-all" class="gyellow">모두 열기</button></div><div id="eggs-list" class="glist"></div></div>
   <div id="pets-panel" class="gpanel"><div class="ghead"><span class="gtitle" id="pets-title">펫</span><span id="pets-total" class="gsub"></span></div><div id="pets-list" class="glist"></div><div class="gfoot">크기가 클수록 돈을 많이 벌어요 · 판매는 두 번 눌러요</div></div>
+  <div id="tm-panel" class="gpanel"><div class="ghead"><span class="gtitle" id="tm-title">러닝머신 Lv.1</span></div><div id="tm-info" class="tminfo"></div><div id="tm-list" class="glist"></div><div class="gfoot gfoot-btn"><button id="tm-up" class="gbig">레벨업</button></div></div>
+  <div id="floaters"></div>
   <div id="hotbar"></div>
   <div id="rank-panel">
     <div class="rhead"><span>🏆 순위표</span><button id="rank-close" class="hudbtn">✕</button></div>
@@ -4616,7 +4641,8 @@ function createCreatureAndEgg(zone, corridorX, wallInnerX = 8.0) {
   if (eggFactory) {
     const count = 3 + (Math.random() < 0.5 ? 1 : 0);
     // 크기: 큰 것·작은 것이 섞이도록 구간별로 뽑음. 자리 잡기는 '큰 알부터' (큰 알이 제일 자리를 많이 차지하므로)
-    const sizes = [0.55 + Math.random() * 0.15, 0.80 + Math.random() * 0.15, 1.05 + Math.random() * 0.15, 1.30 + Math.random() * 0.20];
+    // 작은 알은 훨씬 작게(0.18~0.32배), 큰 알은 훨씬 크게(2.2~3.0배): 예전은 0.55~1.5배
+    const sizes = [0.18 + Math.random() * 0.14, 0.45 + Math.random() * 0.25, 1.10 + Math.random() * 0.50, 2.20 + Math.random() * 0.80];
     for (let i = sizes.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [sizes[i], sizes[j]] = [sizes[j], sizes[i]]; }
     const picked = sizes.slice(0, count).sort((u, v) => v - u);
     const cx = creatureGroup.position.x;      // 생물 중심 x (root 기준)
@@ -4989,7 +5015,6 @@ function createBackground(scene) {
     const xa = Math.min(sd * sideX, sd * fenceHalf), xb = Math.max(sd * sideX, sd * fenceHalf);
     for (let r = 0; r < SIDE_N; r++) {
       const za = backZ0 - PLOT * (SIDE_N - r), zb = za + PLOT;
-      if (sd === -1 && r === 0) continue;                                              // 왼쪽 앞 칸: 울타리를 없애고 러닝머신 2대 자리로 씀
       segs.push({ x: sd * sideX, z0: za, z1: zb, gate: (za + zb) / 2 });             // 광장 쪽 변(문)
       segs.push({ z: za, x0: xa, x1: xb, gate: null });                               // 칸의 앞 변(칸 사이 경계 포함)
     }
@@ -5026,7 +5051,6 @@ function createBackground(scene) {
   );
   const plotBounds = { mine: Object.assign({}, mineRect, { gate: { x: PLOT / 2, z: backZ0, vertical: false } }), others: [] };   // 칸 범위+문 위치(검증·알 놓기용)
   for (const sd of [-1, 1]) for (let r = 0; r < SIDE_N; r++) {
-    if (sd === -1 && r === 0) continue;                                                // (러닝머신 자리)
     const za = backZ0 - PLOT * (SIDE_N - r), xa = Math.min(sd * sideX, sd * fenceHalf), xb = Math.max(sd * sideX, sd * fenceHalf);
     plotBounds.others.push({ x0: xa, x1: xb, z0: za, z1: za + PLOT, gate: { x: sd * sideX, z: za + PLOT / 2, vertical: true } });
   }
@@ -5042,13 +5066,9 @@ function createBackground(scene) {
   }
   for (const sd of [-1, 1]) for (let r = 0; r < SIDE_N; r++) {
     const za = backZ0 - PLOT * (SIDE_N - r), xa = Math.min(sd * sideX, sd * fenceHalf), xb = Math.max(sd * sideX, sd * fenceHalf);
-    plotBounds.all.push({ i: plotBounds.all.length, kind: sd < 0 ? 'left' : 'right', x0: xa, x1: xb, z0: za, z1: za + PLOT, gate: { x: sd * sideX, z: za + PLOT / 2, vertical: true }, inward: { x: sd, z: 0 }, disabled: sd === -1 && r === 0 });
+    plotBounds.all.push({ i: plotBounds.all.length, kind: sd < 0 ? 'left' : 'right', x0: xa, x1: xb, z0: za, z1: za + PLOT, gate: { x: sd * sideX, z: za + PLOT / 2, vertical: true }, inward: { x: sd, z: 0 } });
   }
   plotBounds.defaultIndex = 3;           // 혼자 할 때(로그인 안 함)의 칸
-  // 러닝머신 2대: 없앤 왼쪽 앞 칸 자리(울타리 없음). 칸 가운데에서 좌우로 2칸씩, 앞쪽으로 달리는 방향(-z)
-  const tmZ0 = backZ0 - PLOT * SIDE_N, tmCx = -(fenceHalf + sideX) / 2;
-  const treadmillArea = { x0: -fenceHalf, x1: -sideX, z0: tmZ0, z1: tmZ0 + PLOT };
-  const treadmillAnchors = [{ x: tmCx - 2.0, z: tmZ0 + PLOT / 2 - 0.7 }, { x: tmCx + 2.0, z: tmZ0 + PLOT / 2 - 0.7 }];
   const myGate = { x: PLOT / 2, z: backZ0, side: 'front' };
 
   // ---- 8종 생물(자고 있는 상태) & 그 앞의 알 생성 ----
@@ -5085,7 +5105,6 @@ function createBackground(scene) {
     fencePen: { halfSize: fenceHalf, z0: fenceZ0, z1: fenceZ1 },
     fenceRects,            // 칸 울타리 충돌용 벽 목록
     plotBounds,            // 칸 범위(내 칸 포함)
-    treadmillArea, treadmillAnchors,   // 러닝머신 자리
     gateWidth: GATE,
     myGate,                // 내 칸 문 위치
     endZ: END_Z,
@@ -5137,7 +5156,7 @@ function createBackground(scene) {
     }
 
     // ================= 하이퍼 러닝머신 2대 (업로드한 파일에서 옮김) =================
-    // 왼쪽 앞 칸 자리에 나란히 2대: ① 청록·보라(비어 있음) ② 빨강·노랑(트레이너가 달리고 있음). 걸어 올라가면 자동으로 올라타서 계속 달리고, 스페이스(모바일은 점프 버튼)로 내림
+    // 칸마다 자기 러닝머신 1대(칸 문 옆 광장, 주인이 접속해 있을 때만 만들어 둠). 내 것만 탈 수 있고, 걸어 올라가면 자동으로 올라타서 계속 달리며, 스페이스(모바일은 점프 버튼)로 내림
     function createHyperTreadmill(posX, posZ, themeColor = 0x00f0ff, subColor = 0xa855f7, withBlockyRunner = false) {
       const root = new THREE.Group();
       root.position.set(posX, 0, posZ);
@@ -5397,36 +5416,106 @@ function createBackground(scene) {
     }
 
     const TM_DECK_Y = 0.26, TM_HX = 1.05, TM_HZ = 1.95;          // 러닝머신 위 높이 / 올라타는 범위(가로·세로 반)
-    const treadmills = [
-      createHyperTreadmill(bg.treadmillAnchors[0].x, bg.treadmillAnchors[0].z, 0x00f0ff, 0xa855f7, false),
-      createHyperTreadmill(bg.treadmillAnchors[1].x, bg.treadmillAnchors[1].z, 0xf43f5e, 0xfacc15, true)
-    ];
-    for (const tm of treadmills) tm.deckZ = tm.posZ + 0.15;
-    let onTm = null, tmCooldown = 0, tmTime = 0;                  // 지금 올라탄 러닝머신 / 내린 직후 다시 안 올라타게 하는 시간
-    // 남이 올라타 있는지: 화면에서 부드럽게 따라오는 위치가 아니라, 서버에서 받은 실제 위치(tx,tz,ty)로 바로 판단
-    const tmOccupiedByRemote = (tm) => { for (const R of remotes.values()) if (R.ty > 0.15 && Math.abs(R.tx - tm.posX) < TM_HX + 0.2 && Math.abs(R.tz - tm.deckZ) < TM_HZ + 0.2) return true; return false; };
+    // ---- 러닝머신 레벨(10단계): 타고 있으면 초당 '속도 점수'가 오르고(Lv1 100 → 5배씩), 레벨업은 돈으로. 레벨이 오르면 실제 달리기도 조금씩 빨라짐 ----
+    const TM_MAX = 10, TM_COST = [0, 2e3, 4e4, 1e6, 2.5e7, 6e8, 1.5e10, 4e11, 1e13, 2.5e14];      // TM_COST[n-1] = 그 레벨로 올리는 데 드는 돈
+    const tmGain = (lv) => 100 * Math.pow(5, lv - 1);                                              // 초당 속도 점수: 100, 500, 2.5K, 12.5K ... 195M
+    const tmRunMult = (lv) => 1 + 0.05 * ((lv === undefined ? tmLevel : lv) - 1);                  // 실제 달리기 속도 배율: 레벨마다 +5% (Lv.10 = ×1.45)
+    let tmLevel = 1, speedPoints = 0, onTm = null, tmCooldown = 0, tmTime = 0, _floatAcc = 0;
+    const TM_COLORS = [[0x00f0ff, 0xa855f7], [0xf43f5e, 0xfacc15], [0x22c55e, 0x0ea5e9], [0xf97316, 0xa855f7], [0xec4899, 0x22d3ee], [0x84cc16, 0xfacc15],
+                       [0x6366f1, 0x22d3ee], [0xef4444, 0xfde047], [0x14b8a6, 0xf472b6], [0xeab308, 0x818cf8], [0x38bdf8, 0xfb7185], [0xa855f7, 0x4ade80]];
+    const treadmillsByPlot = new Map();                            // 칸 번호 → 그 칸 주인의 러닝머신
+    // 러닝머신 자리: 칸 문 앞 광장에서, 울타리·모든 칸의 문 앞 길·다른 러닝머신과 안 겹치는 자리를 후보 중에서 자동으로 고름(누가 접속해 있든 항상 같은 자리)
+    const tmFootprint = (x, z, rot) => {                           // 러닝머신이 차지하는 땅(가로 ±1.4, 세로 -2.2~+3.7: 불꽃 포함)
+      const c = Math.cos(rot), sn = Math.sin(rot), pts = [[-1.4, -2.2], [1.4, -2.2], [1.4, 3.7], [-1.4, 3.7]].map(([lx, lz]) => ({ x: x + lx * c + lz * sn, z: z - lx * sn + lz * c }));
+      return { x0: Math.min(...pts.map(q => q.x)), x1: Math.max(...pts.map(q => q.x)), z0: Math.min(...pts.map(q => q.z)), z1: Math.max(...pts.map(q => q.z)) };
+    };
+    const tmOverlap = (a, b, m) => a.x0 < b.x1 + m && a.x1 > b.x0 - m && a.z0 < b.z1 + m && a.z1 > b.z0 - m;
+    const TM_POSES = (() => {
+      const all = bg.plotBounds.all, half = bg.roomWidth / 2 - 0.7, back = all[0].z0, front = bg.safeZone.minZ + 0.7;
+      const lanes = all.map(P => { const g = P.gate, O = { x: -P.inward.x, z: -P.inward.z }, ex = g.x + O.x * 5, ez = g.z + O.z * 5, hw = 1.7;      // 문 앞 길: 문에서 광장 쪽으로 5, 폭 3.4
+        return { x0: Math.min(g.x, ex) - (O.x === 0 ? hw : 0), x1: Math.max(g.x, ex) + (O.x === 0 ? hw : 0), z0: Math.min(g.z, ez) - (O.z === 0 ? hw : 0), z1: Math.max(g.z, ez) + (O.z === 0 ? hw : 0) }; });
+      const chosen = [], poses = [];
+      for (const i of [8, 11, 0, 5, 7, 10, 6, 9, 4, 1, 3, 2]) {                    // 자리가 빡빡한 모서리 쪽 칸부터 먼저 정함
+        const P = all[i], F = plotFrame(i), O = { x: -P.inward.x, z: -P.inward.z }, rot = Math.atan2(-O.x, -O.z); let best = null;
+        search: for (const b of [-4.6, -5.6, -6.6, -7.8, -9.0]) for (const a of [3.3, -3.3, 4.2, -4.2, 5.0, -5.0, 6.0, -6.0]) {
+          const w = F.toWorld(a, b), fp = tmFootprint(w.x, w.z, rot);
+          const okBounds = fp.x0 > -half + 0.3 && fp.x1 < half - 0.3 && fp.z0 > front + 0.3 && fp.z1 < back - 0.3;
+          const okFence = !bg.fenceRects.some(r => tmOverlap(fp, r, 0.15)) && !all.some(Q => tmOverlap(fp, Q, 0.1));          // 울타리·칸 안과 안 겹침
+          const okLane = !lanes.some(l => tmOverlap(fp, l, 0)), okOthers = !chosen.some(c => tmOverlap(fp, c, 0.4));
+          if (okBounds && okFence && okLane && okOthers) { best = { x: w.x, z: w.z, rot, out: O, fp }; break search; }
+        }
+        // (위 break는는 안쪽 반복만 끝내므로, 찾았으면 바깥 반복도 끝내야 가장 가까운 자리가 유지됨)
+        if (!best) { const w = F.toWorld(3.3, -4.6); best = { x: w.x, z: w.z, rot, out: O, fp: tmFootprint(w.x, w.z, rot) }; }      // (후보가 없으면 첫 후보)
+        chosen.push(best.fp); poses[i] = best;
+      }
+      return poses;
+    })();
+    const tmPose = (i) => TM_POSES[i];
+    function ensureTreadmill(i) {
+      let tm = treadmillsByPlot.get(i); if (tm) return tm;
+      const pose = tmPose(i), col = TM_COLORS[i % TM_COLORS.length];
+      tm = createHyperTreadmill(pose.x, pose.z, col[0], col[1], false);
+      tm.root.rotation.y = pose.rot;
+      if (tm.tmLight && tm.tmLight.parent) tm.tmLight.parent.remove(tm.tmLight); tm.tmLight = { intensity: 1 };      // 여러 대라서 조명은 빼고 가볍게
+      tm.plotIdx = i; tm.rot = pose.rot; tm.out = pose.out;
+      tm.cx = pose.x + 0.15 * Math.sin(pose.rot); tm.cz = pose.z + 0.15 * Math.cos(pose.rot);                       // 올라타는 자리(발판 가운데)
+      treadmillsByPlot.set(i, tm); return tm;
+    }
+    function removeTreadmill(i) {
+      const tm = treadmillsByPlot.get(i); if (!tm) return;
+      if (onTm === tm) onTm = null;
+      scene.remove(tm.root); try { disposeTree(tm.root); } catch (_) {} treadmillsByPlot.delete(i);
+    }
+    function syncTreadmills() {                                    // 접속해 있는 사람(나 + 다른 사람)의 칸에만 러닝머신을 둠
+      const want = new Set([myPlotIdx]); for (const R of remotes.values()) if (R.plot != null) want.add(R.plot);
+      for (const i of want) ensureTreadmill(i);
+      for (const i of [...treadmillsByPlot.keys()]) if (!want.has(i)) removeTreadmill(i);
+    }
+    const myTreadmill = () => treadmillsByPlot.get(myPlotIdx) || null;
+    const tmLocal = (tm, x, z) => { const dx = x - tm.cx, dz = z - tm.cz, c = Math.cos(tm.rot), sn = Math.sin(tm.rot); return { x: dx * c - dz * sn, z: dx * sn + dz * c }; };   // 월드 → 러닝머신 기준 좌표
+    const tmRemoteRiding = (tm) => { for (const R of remotes.values()) if (R.plot === tm.plotIdx && R.ty > 0.15) return true; return false; };      // 주인이 타고 있는 중인지(다른 사람 화면용)
     function mountTreadmill(tm) {
-      onTm = tm; charPos.set(tm.posX, TM_DECK_Y, tm.deckZ); charYaw = Math.PI; velY = 0; isOnGround = true; knockT = 0;
-      camYaw = 0;                                                  // 달리는 방향(-z)의 뒤쪽에서 보이게
+      onTm = tm; charPos.set(tm.cx, TM_DECK_Y, tm.cz); charYaw = Math.atan2(tm.out.x, tm.out.z); velY = 0; isOnGround = true; knockT = 0;
+      camYaw = tm.rot;                                             // 달리는 방향의 뒤쪽에서 보이게
       joyReset();
-      toast('🏃 러닝머신! 계속 달려요 · 스페이스(모바일은 점프 버튼)로 내려요', 'good', 4000);
+      toast(`🏃 러닝머신 Lv.${tmLevel}! 계속 달려요 · 스페이스(모바일은 점프 버튼)로 내려요`, 'good', 4000);
     }
-    function dismountTreadmill() {                                 // 내리기: 옆으로 훌쩍 뛰어내림
+    function dismountTreadmill() {                                 // 내리기: 문 쪽으로 훌쩍 뛰어내림
       if (!onTm) return; const tm = onTm; onTm = null; tmCooldown = 1.0;
-      charPos.set(tm.posX + 2.3, 0.3, tm.deckZ); velY = 4.0; isOnGround = false;
+      charPos.set(tm.cx - Math.cos(tm.rot) * 2.3, 0.3, tm.cz + Math.sin(tm.rot) * 2.3); velY = 4.0; isOnGround = false;
+      saveGame(); pushRank(true);                                  // 모은 속도 점수 저장
     }
-    function updateTreadmillMount(dt) {                            // 걸어서 올라가면 자동으로 올라탐. 올라탄 동안은 제자리에서 계속 달림
+    function updateTreadmillMount(dt) {                            // 내 러닝머신에 걸어서 올라가면 자동으로 올라탐. 올라탄 동안은 제자리에서 계속 달림
       if (tmCooldown > 0) tmCooldown -= dt;
-      if (onTm) { charPos.set(onTm.posX, TM_DECK_Y, onTm.deckZ); charYaw = Math.PI; velY = 0; isOnGround = true; return; }
-      if (tmCooldown > 0 || wardrobe.open || knockT > 0 || carriedEgg || charPos.y > 0.7) return;
-      for (const tm of treadmills) if (Math.abs(charPos.x - tm.posX) < TM_HX && Math.abs(charPos.z - tm.deckZ) < TM_HZ && !tmOccupiedByRemote(tm)) { mountTreadmill(tm); return; }
+      const tm = myTreadmill();
+      if (onTm) { if (onTm !== tm) { onTm = null; return; } charPos.set(onTm.cx, TM_DECK_Y, onTm.cz); charYaw = Math.atan2(onTm.out.x, onTm.out.z); velY = 0; isOnGround = true; return; }
+      if (!tm || tmCooldown > 0 || wardrobe.open || knockT > 0 || carriedEgg || charPos.y > 0.7) return;
+      const L = tmLocal(tm, charPos.x, charPos.z); if (Math.abs(L.x) < TM_HX && Math.abs(L.z) < TM_HZ) mountTreadmill(tm);
+    }
+    const floatersEl = document.getElementById('floaters');
+    function spawnFloater(text) {                                  // 속도 점수가 오른 만큼 캐릭터 위로 "+숫자"가 떠오름
+      const el = document.createElement('div'); el.className = 'floater'; el.textContent = '👟 ' + text;
+      let x = (typeof innerWidth === 'number' ? innerWidth : 800) / 2, y = (typeof innerHeight === 'number' ? innerHeight : 400) * 0.42;
+      try { const v = new THREE.Vector3(charPos.x, charPos.y + 1.1, charPos.z).project(camera); if (Number.isFinite(v.x) && Number.isFinite(v.y)) { x = (v.x * 0.5 + 0.5) * innerWidth; y = (-v.y * 0.5 + 0.5) * innerHeight; } } catch (_) {}
+      el.style.left = (x + (Math.random() - 0.5) * 70) + 'px'; el.style.top = (y - Math.random() * 24) + 'px'; floatersEl.appendChild(el);
+      const t = setTimeout(() => { try { el.remove(); } catch (_) {} }, 1400); if (t && t.unref) t.unref();
+    }
+    function updateSpeed(dt) {                                     // 러닝머신 위: 초당 속도 점수 +gain, 1초마다 "+숫자" 표시
+      if (!onTm) { _floatAcc = 0; return; }
+      const g = tmGain(tmLevel); speedPoints += g * dt; _floatAcc += dt;
+      if (_floatAcc >= 1) { _floatAcc -= 1; spawnFloater('+' + fmtNum(g)); }
+    }
+    function tmLevelUp() {                                         // 레벨업: 돈으로
+      if (tmLevel >= TM_MAX) return false;
+      const cost = TM_COST[tmLevel];
+      if (moneyNow() < cost) { toast(`💰 돈이 모자라요 (필요 ${fmtNum(cost)})`, 'warn', 2200); return false; }
+      bankMoney(); moneyBase -= cost; tmLevel++; saveGame(); pushRank(true); pulseMoney();
+      toast(`🏃 러닝머신 Lv.${tmLevel}! 타면 초당 +${fmtNum(tmGain(tmLevel))} · 달리기 속도 ×${tmRunMult().toFixed(2)}`, 'good', 3500); return true;
     }
     function updateTreadmills(dt) {                                // 벨트·롤러·코어·계기판·화염·충격파·스파크 애니메이션
       tmTime += dt;
-      treadmills.forEach((tm, idx) => {
-        const occupied = onTm === tm || tmOccupiedByRemote(tm);
-        if (tm.blockyRunner) tm.blockyRunner.runnerRoot.visible = !occupied;               // 누가 올라타면 트레이너는 자리를 비켜줌
-        const isActive = occupied || !!(tm.blockyRunner && !occupied), boostFactor = isActive ? 1.35 : 0.35, beltSpeed = 5.5 * boostFactor;
+      treadmillsByPlot.forEach((tm) => {
+        const isActive = onTm === tm || tmRemoteRiding(tm), boostFactor = isActive ? 1.35 : 0.35, beltSpeed = 5.5 * boostFactor;
         tm.beltSlats.forEach(slat => { slat.position.z += beltSpeed * dt; if (slat.position.z > 1.95) slat.position.z -= 3.9; });
         tm.frontRoller.rotation.x += beltSpeed * dt * 3.0; tm.backRoller.rotation.x += beltSpeed * dt * 3.0;
         tm.coreRing1.rotation.z += dt * 3.2 * boostFactor; tm.coreRing2.rotation.x += dt * 4.5 * boostFactor; tm.coreRing2.rotation.y += dt * 2.8 * boostFactor;
@@ -5439,9 +5528,6 @@ function createBackground(scene) {
           if (sp.life >= 1) { sp.life = 0; sp.mesh.position.set((Math.random() - 0.5) * 1.4, sp.isLine ? (0.5 + Math.random() * 1.5) : 0.28, sp.isLine ? -1.8 : (-0.3 + (Math.random() - 0.5) * 0.8)); }
           else { sp.mesh.position.x += sp.vx * dt; sp.mesh.position.y += sp.vy * dt * (sp.isLine ? 0 : (1 - sp.life)); sp.mesh.position.z += sp.vz * dt * boostFactor; }
           sp.mesh.visible = isActive || sp.isLine; });
-        if (tm.blockyRunner && !occupied) { const r = tm.blockyRunner, ph = tmTime * 13;                                    // 트레이너 질주 동작
-          r.pelvis.position.y = 0.72 + Math.abs(Math.sin(ph * 2)) * 0.09; r.pelvis.rotation.x = 0.24; r.armL.rotation.x = Math.sin(ph) * 1.25; r.armR.rotation.x = -Math.sin(ph) * 1.25;
-          r.legL.rotation.x = -Math.sin(ph) * 1.35; r.legR.rotation.x = Math.sin(ph) * 1.35; r.head.rotation.y = Math.sin(ph * 0.5) * 0.12; }
         tm.tmLight.intensity = isActive ? 2.6 : 1.2;
       });
     }
@@ -5974,7 +6060,7 @@ function createBackground(scene) {
     }
     // 알 크기(0.55~1.5)가 클수록 오래 걸림. 크기 80% + 랜덤 20%로 정해서 30초(작은 알)~24시간(큰 알) 사이를 로그 간격으로 고름
     function rollHatch(s0) {
-      const sizeF = Math.max(0, Math.min(1, (s0 - 0.55) / (1.5 - 0.55)));
+      const sizeF = Math.max(0, Math.min(1, Math.log(s0 / 0.18) / Math.log(3.0 / 0.18)));      // 알 크기 0.18~3.0(로그 간격)
       const u = 0.8 * sizeF + 0.2 * Math.random();
       return { dur: HATCH_MIN_SEC * Math.pow(HATCH_MAX_SEC / HATCH_MIN_SEC, u) * 1000, grow: 1 + (GROW_MAX - 1) * Math.random() };
     }
@@ -6039,7 +6125,7 @@ function createBackground(scene) {
       bankMoney();                                              // 새 펫이 생기기 전까지 번 돈 확정 → 이제부터 새 펫 몫도 늘어남
       spawnPet(c.id, x, z, myFrame.facing, finalScale, true);   // 내 칸의 문(광장)을 바라보게
       syncCounts(); saveGame(); pushRank(true);
-      toast(`🎉 ${creatureName(c.id)} 부화! 크기 ×${(finalScale / e.hatch.s0).toFixed(1)} · 💰 +${fmtRate(petRate(finalScale))}/초`, 'good', 4000);
+      toast(`🎉 ${creatureName(c.id)} 부화! 크기 ×${(finalScale / e.hatch.s0).toFixed(1)} · 💰 +${fmtRate(petRate(c.id, finalScale))}/초`, 'good', 4000);
     }
     function updateHatching(dt) {
       const now = nowMs();
@@ -6067,7 +6153,7 @@ function createBackground(scene) {
       const eggs = myEggs.map(({ c, e }) => { const L = myFrame.toLocal(e.group.position.x, e.group.position.z);
         return { id: e.id, cid: c.id, a: L.a, b: L.b, yr: e.group.rotation.y - myFrame.facing, s0: e.hatch.s0, grow: e.hatch.grow, start: e.hatch.start, dur: e.hatch.dur, hatching: e.hatch.state === 'hatching', hatchAt: e.hatch.hatchAt }; });
       const ps = pets.map(p => ({ id: p.id, cid: p.cid, a: p.a, b: p.b, yr: p.yr, scale: p.scale }));
-      return { v: 2, nick: NET.nick || '', plot: myPlotIdx, look: lookToStr(myLook), money: Math.round(moneyBase * 100) / 100, moneyAt: moneyT0, inv: inv.map(it => ({ id: it.id, cid: it.cid, s0: it.s0, grow: it.grow, dur: it.dur })), eggs, pets: ps };
+      return { v: 2, nick: NET.nick || '', plot: myPlotIdx, look: lookToStr(myLook), money: Math.round(moneyBase * 100) / 100, moneyAt: moneyT0, tmLevel, speed: Math.floor(speedPoints), inv: inv.map(it => ({ id: it.id, cid: it.cid, s0: it.s0, grow: it.grow, dur: it.dur })), eggs, pets: ps };
     }
     function saveGame() {
       bankMoney();                                              // 저장할 때마다 지금까지 번 돈을 확정
@@ -6089,6 +6175,7 @@ function createBackground(scene) {
       if (!data || !(data.v === 1 || data.v === 2)) return;
       if (data.look) { myLook = parseLook(data.look); applyMyLook(); }
       _restoring = true; moneyBase = Number(data.money) || 0; moneyT0 = Number(data.moneyAt) || nowMs();
+      tmLevel = Math.max(1, Math.min(TM_MAX, Math.floor(Number(data.tmLevel)) || 1)); speedPoints = Math.max(0, Number(data.speed) || 0);
       let eggsIn = toArr(data.eggs), petsIn = toArr(data.pets);
       if (data.v === 1) {                                       // 예전 저장(월드 좌표, 기본 칸) → 칸 좌표로 변환
         const F0 = plotFrame(bg.plotBounds.defaultIndex);
@@ -6120,23 +6207,31 @@ function createBackground(scene) {
     function startLocal() { NET.guest = true; applySave(readLocalSave()); }      // 혼자 하기: 이 기기에 저장
 
     // ================= 돈 · 펫 판매 · 순위표 · 알림 메시지 =================
-    const INCOME_K = 0.2, INCOME_POW = 1.5;                     // 펫 1마리가 초당 버는 돈 = 0.2 × (크기)^1.5
+    // 펫 수입: 동물 등급(뒤쪽 동물일수록 약 21배씩) × 크기^2.2. 크기가 클수록 같은 펫이라도 훨씬 많이 벎 (대천사 큰 펫은 초당 수 T)
     const SELL_SECONDS = 1800;                                  // 판매가 = 그 펫이 30분 동안 버는 돈 (30분 넘게 키우면 팔지 않는 게 이득)
     const OFFLINE_CAP_SEC = 24 * 3600;                          // 접속하지 않은 동안 번 돈은 최대 24시간치까지
     const SELL_HOLD = 0.8;                                      // 판매는 실수 방지로 이만큼(초) 꾹 눌러야 함
-    const BASE_RUN_SPEED = 4.2 * 2.4 * 2.5;                     // 달리기 속도(25.2) = 속도 순위의 값. 나중에 러닝머신이 speedStat을 올림
-    let speedStat = BASE_RUN_SPEED;
+    const BASE_RUN_SPEED = 4.2 * 2.4 * 2.5;                     // 기본 달리기 속도(25.2). 러닝머신 레벨마다 +5%
     const CREATURE_NAME = { chicken: '🐔 닭', tiger: '🐯 호랑이', dragon: '🐲 용', eastern: '🐉 청룡', lion: '🦁 사자', samjoko: '🐦 삼족오', demon: '😈 대악마', archangel: '😇 대천사' };
     const creatureName = (cid) => CREATURE_NAME[cid] || '🐾 동물';
     const PET_R = { chicken: 0.8, tiger: 1.6, dragon: 2.4, eastern: 3.0, lion: 1.8, samjoko: 2.0, demon: 2.4, archangel: 2.2 };    // 펫 크기(대략), 판매하려고 다가가는 거리 계산용
-    const petRate = (scale) => INCOME_K * Math.pow(scale, INCOME_POW);
-    const petPrice = (scale) => Math.max(10, Math.round(petRate(scale) * SELL_SECONDS));
+    const PET_TIER = { chicken: 3, tiger: 60, dragon: 1.3e3, eastern: 2.8e4, lion: 6e5, samjoko: 1.3e7, demon: 2.8e8, archangel: 6e9 };      // 크기 1짜리 펫이 초당 버는 돈
+    const SIZE_POW = 2.2;
+    const petRate = (cid, scale) => (PET_TIER[cid] || 1) * Math.pow(scale, SIZE_POW);
+    const petPrice = (cid, scale) => Math.max(10, Math.round(petRate(cid, scale) * SELL_SECONDS));
     let moneyBase = 0, moneyT0 = nowMs(), moneyShown = 0, _restoring = false, sellHold = 0, sellLock = false;
-    const totalRate = () => pets.reduce((a, p) => a + petRate(p.scale), 0);
+    const totalRate = () => pets.reduce((a, p) => a + petRate(p.cid, p.scale), 0);
     const moneyNow = () => moneyBase + totalRate() * Math.min(OFFLINE_CAP_SEC, Math.max(0, (nowMs() - moneyT0) / 1000));
     function bankMoney() { moneyBase = moneyNow(); moneyT0 = nowMs(); }      // 지금까지 번 돈을 확정(펫이 바뀌기 직전·저장할 때 호출)
-    function fmtNum(n) { n = Math.floor(n); return n >= 1e9 ? (n / 1e9).toFixed(2) + 'B' : (n >= 1e6 ? (n / 1e6).toFixed(2) + 'M' : n.toLocaleString('en-US')); }
-    const fmtRate = (r) => r >= 10 ? r.toFixed(0) : r.toFixed(1);
+    // 돈 단위(방치형 게임식): 1000배마다 K 천 / M 백만 / B 십억 / T 조 / Qa 천조 / Qi / Sx. 소수 첫째 자리까지 (예: 472.4T, 17.1B, 120M). Sx 위는 안 쓰는 단위라 없앰
+    const NUM_UNITS = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx'];
+    function fmtNum(n) {
+      n = Math.floor(Number(n) || 0); if (n < 1000) return String(Math.max(0, n));
+      let k = Math.min(NUM_UNITS.length - 1, Math.floor(Math.log10(n) / 3)), v = n / Math.pow(1000, k), str = v.toFixed(1);
+      if (parseFloat(str) >= 1000 && k < NUM_UNITS.length - 1) { k++; v = n / Math.pow(1000, k); str = v.toFixed(1); }     // 반올림해서 1000이 되면 다음 단위로 (999.96K → 1M)
+      return (k === NUM_UNITS.length - 1 && v >= 1000 ? Math.round(v).toString() : str.replace(/\.0$/, '')) + NUM_UNITS[k];
+    }
+    const fmtRate = (r) => r < 10 ? r.toFixed(1) : (r < 1000 ? r.toFixed(0) : fmtNum(r));       // 초당 수입: 0.2 / 12 / 1.5K ...
 
     const toastsEl = document.getElementById('toasts');
     function toast(msg, kind = 'info', ms = 2800) {             // 화면 위쪽에 잠깐 뜨는 알림
@@ -6149,12 +6244,12 @@ function createBackground(scene) {
     let _hudAcc = 0, _saveAcc = 0;
     function updateMoney(dt) {                                  // 돈 표시(숫자가 부드럽게 올라감) + 1분마다 자동 저장·순위 갱신
       const target = moneyNow(); moneyShown += (target - moneyShown) * Math.min(1, dt * 8); if (Math.abs(target - moneyShown) < 0.5) moneyShown = target;
-      _hudAcc += dt; if (_hudAcc > 0.1) { _hudAcc = 0; moneyValEl.textContent = fmtNum(moneyShown); const r = totalRate(); moneyRateEl.textContent = r > 0 ? `+${fmtRate(r)}/초` : ''; }
+      _hudAcc += dt; if (_hudAcc > 0.1) { _hudAcc = 0; document.getElementById('speed-val').textContent = fmtNum(speedPoints); document.getElementById('speed-rate').textContent = onTm ? `+${fmtNum(tmGain(tmLevel))}/초` : ''; moneyValEl.textContent = fmtNum(moneyShown); const r = totalRate(); moneyRateEl.textContent = r > 0 ? `+${fmtRate(r)}/초` : ''; }
       _saveAcc += dt; if (_saveAcc > 60) { _saveAcc = 0; saveGame(); pushRank(true); }
     }
     function sellPet(p) {                                       // 펫 팔기: 크기에 따른 값을 받고 펫은 사라짐
       const i = pets.indexOf(p); if (i < 0) return;
-      bankMoney(); const price = petPrice(p.scale); moneyBase += price;
+      bankMoney(); const price = petPrice(p.cid, p.scale); moneyBase += price;
       burstShards(p.group.position.x, p.group.position.z, Math.min(3, p.scale));
       scene.remove(p.group); pets.splice(i, 1); syncCounts(); saveGame(); pushRank(true);
       pulseMoney(); toast(`💰 ${creatureName(p.cid)} 판매! +${fmtNum(price)}`, 'money');
@@ -6172,26 +6267,26 @@ function createBackground(scene) {
     function pushRank(force) {
       if (!NET.online || !NET.db) return;
       const now = performance.now(); if (!force && now - _lastRank < 30000) return; _lastRank = now;
-      try { const pr = NET.db.ref('ranks/' + NET.uid).set({ nick: NET.nick, money: Math.floor(moneyNow()), speed: speedStat, t: firebase.database.ServerValue.TIMESTAMP }); if (pr && pr.catch) pr.catch(() => { NET.rankErr = true; }); } catch (_) { NET.rankErr = true; }
+      try { const pr = NET.db.ref('ranks/' + NET.uid).set({ nick: NET.nick, money: Math.floor(moneyNow()), speed: Math.floor(speedPoints), t: firebase.database.ServerValue.TIMESTAMP }); if (pr && pr.catch) pr.catch(() => { NET.rankErr = true; }); } catch (_) { NET.rankErr = true; }
     }
     function listenRanks() {
       NET.db.ref('ranks').on('value', sn => { rankData = sn.val() || {}; NET.rankErr = false; if (rank.open) renderRank(); }, () => { NET.rankErr = true; if (rank.open) renderRank(); });
     }
     function rankRows() {
       const rows = Object.entries(rankData).filter(([, v]) => v).map(([uid, v]) => ({ uid, nick: v.nick || '?', money: Number(v.money) || 0, speed: Number(v.speed) || 0 }));
-      const live = { uid: NET.uid, nick: NET.nick, money: Math.floor(moneyNow()), speed: speedStat }, me = rows.find(r => r.uid === NET.uid);
+      const live = { uid: NET.uid, nick: NET.nick, money: Math.floor(moneyNow()), speed: Math.floor(speedPoints) }, me = rows.find(r => r.uid === NET.uid);
       if (me) Object.assign(me, live); else if (NET.online) rows.push(live);                  // 내 값은 항상 최신으로
       const key = rank.tab; rows.sort((a, b) => (b[key] - a[key]) || a.nick.localeCompare(b.nick)); return rows;
     }
     function renderRank() {
       const rows = rankRows(), key = rank.tab; rankListEl.textContent = '';
       const mk = (r, i) => { const row = document.createElement('div'); row.className = 'rrow' + (r.uid === NET.uid ? ' me' : '');
-        for (const [cls, txt] of [['rk', ['🥇', '🥈', '🥉'][i] || String(i + 1)], ['rn', r.nick], ['rv', key === 'money' ? `💰 ${fmtNum(r.money)}` : `⚡ ${r.speed.toFixed(1)}`]]) { const sp = document.createElement('span'); sp.className = cls; sp.textContent = txt; row.appendChild(sp); }
+        for (const [cls, txt] of [['rk', ['🥇', '🥈', '🥉'][i] || String(i + 1)], ['rn', r.nick], ['rv', key === 'money' ? `💰 ${fmtNum(r.money)}` : `⚡ ${fmtNum(r.speed)}`]]) { const sp = document.createElement('span'); sp.className = cls; sp.textContent = txt; row.appendChild(sp); }
         return row; };
       rows.slice(0, 10).forEach((r, i) => rankListEl.appendChild(mk(r, i)));
       const myI = rows.findIndex(r => r.uid === NET.uid); if (myI >= 10) rankListEl.appendChild(mk(rows[myI], myI));
       rankFootEl.textContent = NET.rankErr ? '⚠ 순위표를 쓰려면 Firebase 규칙에 ranks를 추가해주세요 (FIREBASE_SETUP.md)' : (myI >= 0 ? `내 순위 ${myI + 1}위 / 총 ${rows.length}명` : '');
-      rankNoteEl.textContent = key === 'speed' ? '🏃 러닝머신이 생기면 달릴수록 속도가 올라가요! 지금은 모두 기본 속도예요.' : '';
+      rankNoteEl.textContent = key === 'speed' ? '🏃 러닝머신을 탈수록 속도 점수가 올라가요! (레벨이 높을수록 초당 많이)' : '';
       document.getElementById('rank-tab-money').classList.toggle('on', key === 'money'); document.getElementById('rank-tab-speed').classList.toggle('on', key === 'speed');
     }
     function setRankOpen(on) { rank.open = on; rankPanelEl.style.display = on ? 'flex' : 'none'; if (on) { pushRank(true); renderRank(); } }
@@ -6317,16 +6412,28 @@ function createBackground(scene) {
     }
 
     // ---- 오른쪽 세로 버튼 + 목록 창(성장하는 달걀 / 펫) ----
-    const eggsPanelEl = document.getElementById('eggs-panel'), petsPanelEl = document.getElementById('pets-panel'), eggsListEl = document.getElementById('eggs-list'), petsListEl = document.getElementById('pets-list');
+    const tmPanelEl = document.getElementById('tm-panel'), eggsPanelEl = document.getElementById('eggs-panel'), petsPanelEl = document.getElementById('pets-panel'), eggsListEl = document.getElementById('eggs-list'), petsListEl = document.getElementById('pets-list');
     let openMenu = null, _menuAcc = 0, sellConfirm = { pet: null, t: 0 };
     const mkEl2 = (tag, cls, text) => { const el = document.createElement(tag); if (cls) el.className = cls; if (text !== undefined) el.textContent = text; return el; };
     function setMenu(name) {                                    // 'eggs' | 'pets' | 'rank': 하나만 열림(같은 걸 다시 누르면 닫힘)
       openMenu = openMenu === name ? null : name;
-      eggsPanelEl.style.display = openMenu === 'eggs' ? 'flex' : 'none'; petsPanelEl.style.display = openMenu === 'pets' ? 'flex' : 'none'; setRankOpen(openMenu === 'rank');
-      for (const [id, nm] of [['btn-eggs', 'eggs'], ['btn-pets', 'pets'], ['btn-rank', 'rank']]) document.getElementById(id).classList.toggle('on', openMenu === nm);
+      eggsPanelEl.style.display = openMenu === 'eggs' ? 'flex' : 'none'; petsPanelEl.style.display = openMenu === 'pets' ? 'flex' : 'none'; tmPanelEl.style.display = openMenu === 'tm' ? 'flex' : 'none'; setRankOpen(openMenu === 'rank');
+      for (const [id, nm] of [['btn-eggs', 'eggs'], ['btn-pets', 'pets'], ['btn-tm', 'tm'], ['btn-rank', 'rank']]) document.getElementById(id).classList.toggle('on', openMenu === nm);
       renderMenus();
     }
-    function renderMenus() { if (openMenu === 'eggs') renderEggsPanel(); else if (openMenu === 'pets') renderPetsPanel(); updateEggsDot(); }
+    function renderMenus() { if (openMenu === 'eggs') renderEggsPanel(); else if (openMenu === 'pets') renderPetsPanel(); else if (openMenu === 'tm') renderTmPanel(); updateEggsDot(); }
+    function renderTmPanel() {                                  // 러닝머신 창: 내 레벨·속도 + 레벨표 + 레벨업 버튼
+      document.getElementById('tm-title').textContent = `러닝머신 Lv.${tmLevel}${tmLevel >= TM_MAX ? ' (MAX)' : ''}`;
+      const info = document.getElementById('tm-info'), runNow = BASE_RUN_SPEED * tmRunMult(), runNext = BASE_RUN_SPEED * tmRunMult(tmLevel + 1);
+      info.textContent = `👟 속도 점수 ${fmtNum(speedPoints)}\n⚡ 타면 초당 +${fmtNum(tmGain(tmLevel))}\n🏃 달리기 속도 ${runNow.toFixed(1)}` + (tmLevel < TM_MAX ? ` → ${runNext.toFixed(1)} (다음 레벨)` : ' (최고)');
+      const list = document.getElementById('tm-list'); list.textContent = '';
+      for (let lv = 1; lv <= TM_MAX; lv++) {
+        const row = mkEl2('div', 'trow' + (lv === tmLevel ? ' cur' : (lv < tmLevel ? ' done' : ''))); row.appendChild(mkEl2('span', 'lv', `Lv.${lv}`)); row.appendChild(mkEl2('span', 'g', `+${fmtNum(tmGain(lv))}/초`));
+        row.appendChild(mkEl2('span', 'c', lv === 1 ? '기본' : (lv <= tmLevel ? '✔' : `💰 ${fmtNum(TM_COST[lv - 1])}`))); list.appendChild(row);
+      }
+      const up = document.getElementById('tm-up'), cost = TM_COST[tmLevel];
+      up.textContent = tmLevel >= TM_MAX ? '최고 레벨이에요' : `레벨업 💰 ${fmtNum(cost)}`; up.disabled = tmLevel >= TM_MAX || moneyNow() < cost;
+    }
     function updateEggsDot() { const n = myEggs.filter(x => x.e.hatch.state === 'ready').length, d = document.getElementById('eggs-dot'); d.textContent = String(n); d.style.display = n ? 'flex' : 'none'; }
     function goToEgg(e) {                                       // 그 알 앞으로 이동(안전구역 안에서만, 알을 들었거나 러닝머신 위에선 불가)
       if (carriedEgg || onTm || knockT > 0 || charPos.z < bg.safeZone.minZ - 1) { toast('⚠️ 안전구역에서만 쓸 수 있어요', 'warn', 2200); return; }
@@ -6353,10 +6460,10 @@ function createBackground(scene) {
     function renderPetsPanel() {
       petsListEl.textContent = ''; document.getElementById('pets-title').textContent = `펫 ${pets.length}마리`; document.getElementById('pets-total').textContent = pets.length ? `💰 +${fmtRate(totalRate())}/초` : '';
       if (!pets.length) { petsListEl.appendChild(mkEl2('div', 'gempty', '펫이 없어요.\n알을 부화시켜보세요!')); return; }
-      for (const p of pets.slice().sort((a, b) => petRate(b.scale) - petRate(a.scale))) {
+      for (const p of pets.slice().sort((a, b) => petRate(b.cid, b.scale) - petRate(a.cid, a.scale))) {
         const row = mkEl2('div', 'grow'); row.appendChild(mkEl2('div', 'gicon', creatureName(p.cid).split(' ')[0]));
-        const mid = mkEl2('div', 'gmid'); mid.appendChild(mkEl2('div', 'gname', `${creatureName(p.cid).replace(/^\S+\s*/, '')} (크기 ${p.scale.toFixed(1)})`)); mid.appendChild(mkEl2('div', 'gincome', `(💰 ${fmtRate(petRate(p.scale))}/초)`)); row.appendChild(mid);
-        const sure = sellConfirm.pet === p && Date.now() - sellConfirm.t < 2500, btn = mkEl2('button', 'gbtn red', sure ? `정말? 💰${fmtNum(petPrice(p.scale))}` : '팔기');
+        const mid = mkEl2('div', 'gmid'); mid.appendChild(mkEl2('div', 'gname', `${creatureName(p.cid).replace(/^\S+\s*/, '')} (크기 ${p.scale.toFixed(1)})`)); mid.appendChild(mkEl2('div', 'gincome', `(💰 ${fmtRate(petRate(p.cid, p.scale))}/초)`)); row.appendChild(mid);
+        const sure = sellConfirm.pet === p && Date.now() - sellConfirm.t < 2500, btn = mkEl2('button', 'gbtn red', sure ? `정말? 💰${fmtNum(petPrice(p.cid, p.scale))}` : '팔기');
         btn.addEventListener('click', () => { if (sellConfirm.pet === p && Date.now() - sellConfirm.t < 2500) { sellConfirm = { pet: null, t: 0 }; sellPet(p); } else sellConfirm = { pet: p, t: Date.now() }; renderMenus(); });
         row.appendChild(btn); petsListEl.appendChild(row);
       }
@@ -6368,6 +6475,8 @@ function createBackground(scene) {
     }
     document.getElementById('btn-eggs').addEventListener('click', () => setMenu('eggs'));
     document.getElementById('btn-pets').addEventListener('click', () => setMenu('pets'));
+    document.getElementById('btn-tm').addEventListener('click', () => setMenu('tm'));
+    document.getElementById('tm-up').addEventListener('click', () => { tmLevelUp(); renderMenus(); });
     document.getElementById('eggs-all').addEventListener('click', () => { let n = 0; for (const { e } of myEggs) if (e.hatch.state === 'ready') { startHatch(e); n++; } if (n) toast(`🥚 알 ${n}개를 열었어요! 곧 부화해요`, 'good', 2800); renderMenus(); });
     renderHotbar();                                             // 처음부터 빈 가방 칸이 보이게
 
@@ -6413,7 +6522,7 @@ function createBackground(scene) {
         if (near) {
           if (near.kind === 'sell') {
             const p = near.pet;
-            prompt = '🐾 F 꾹 — 팔기'; info = `${creatureName(p.cid)} · 💰 +${fmtRate(petRate(p.scale))}/초 · 판매가 💰 ${fmtNum(petPrice(p.scale))}`; bar = sellHold / SELL_HOLD;
+            prompt = '🐾 F 꾹 — 팔기'; info = `${creatureName(p.cid)} · 💰 +${fmtRate(petRate(p.cid, p.scale))}/초 · 판매가 💰 ${fmtNum(petPrice(p.cid, p.scale))}`; bar = sellHold / SELL_HOLD;
           } else {
             const h = near.e.hatch, mult = h ? near.e.scale / h.s0 : 1;
             if (near.kind === 'pick') prompt = '🥚 F — 알 들기';
@@ -6709,7 +6818,8 @@ function createBackground(scene) {
       myPlotMarker.rotation.x = -Math.PI / 2; myPlotMarker.position.set((P.x0 + P.x1) / 2, 0.04, (P.z0 + P.z1) / 2); scene.add(myPlotMarker);
     }
     function setMyPlot(i) { myPlotIdx = i; myFrame = plotFrame(i); markMyPlot(); refreshSigns(); }
-    function refreshSigns() {                                   // 칸 앞 표지판: 그 칸 주인의 닉네임
+    function refreshSigns() {                                   // 칸 앞 표지판: 그 칸 주인의 닉네임 (+ 접속한 사람의 칸마다 러닝머신)
+      syncTreadmills();
       const owners = {}; if (NET.online) owners[myPlotIdx] = NET.nick; for (const R of remotes.values()) if (R.plot != null) owners[R.plot] = R.nick;
       bg.plotBounds.all.forEach((P, i) => {
         if (P.disabled) return;
@@ -6906,7 +7016,7 @@ function createBackground(scene) {
       location.reload();
     }
     async function boot() {
-      if (!NET.cfg) { markMyPlot(); return; }                    // 설정이 없으면 로그인 없이 시작(이미 시작됨)
+      if (!NET.cfg) { markMyPlot(); syncTreadmills(); return; }  // 설정이 없으면 로그인 없이 시작(이미 시작됨)
       showChecking('접속 확인 중...');
       try { await initFirebase(); } catch (e) { showChecking('서버에 연결하지 못했어요. 인터넷을 확인해주세요', true); return; }
       NET.auth.onAuthStateChanged(user => {
@@ -7031,7 +7141,7 @@ function createBackground(scene) {
       if (knockT > 0 || onTm) { mx = 0; mz = 0; }      // 잡혀서 날아가는 동안 / 러닝머신 위에서는 이동 조작 불가(제자리에서 계속 달림)
 
       const slowNow = isSlowInput();
-      const sprintBoost = slowNow ? 0.5 : 2.4;         // 기본은 항상 최고 속도(2.4), 천천히 걷기일 땐 0.5
+      const sprintBoost = slowNow ? 0.5 : 2.4 * tmRunMult();         // 기본은 항상 최고 속도(2.4), 천천히 걷기일 땐 0.5. 러닝머신 레벨이 오르면 달리기만 조금씩 빨라짐
 
       const mLen = Math.hypot(mx, mz);
       if (mLen > 0.001) {
@@ -7075,7 +7185,7 @@ function createBackground(scene) {
       charPos.y += velY * dt;
       if (charPos.y <= GROUND_Y) { charPos.y = GROUND_Y; velY = 0; isOnGround = true; }
 
-      updateTreadmillMount(dt); updateTreadmills(dt);   // 러닝머신: 올라타기/고정 + 벨트·불꽃 효과
+      updateTreadmillMount(dt); updateSpeed(dt); updateTreadmills(dt);   // 러닝머신: 올라타기/고정 + 속도 점수 + 벨트·불꽃 효과
       updateEggGame(dt);       // 안전선 확인 + 깨어난 동물들 움직임
       updateDanger(dt);        // 쫓기는 동안 화면 가장자리가 은은하게 붉어짐
       updateMoney(dt);         // 돈 표시 + 1분마다 자동 저장·순위 갱신
