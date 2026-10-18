@@ -273,10 +273,19 @@
     /* 가로 화면 휴대폰: 오른쪽 세로 버튼(4개)이 점프 버튼과 겹치지 않게 */
     @media (pointer: coarse) and (orientation: landscape) {
       #side-buttons { top:calc(112px + env(safe-area-inset-top)); gap:6px; } .sidebtn { width:40px; height:40px; font-size:20px; border-width:2px; } .sidebtn .dot { top:-6px; right:-6px; }
-      #btn-jump { width:58px; height:58px; bottom:calc(20px + env(safe-area-inset-bottom)); right:calc(20px + env(safe-area-inset-right)); } #btn-jump svg { width:22px; height:22px; } #btn-jump span { font-size:10px; }
-      #btn-egg { right:calc(92px + env(safe-area-inset-right)); bottom:calc(16px + env(safe-area-inset-bottom)); }
+      #btn-jump { width:58px; height:58px; bottom:calc(46px + env(safe-area-inset-bottom)); right:calc(20px + env(safe-area-inset-right)); } #btn-jump svg { width:22px; height:22px; } #btn-jump span { font-size:10px; }
+      #btn-egg { right:calc(92px + env(safe-area-inset-right)); bottom:calc(42px + env(safe-area-inset-bottom)); }
+      #side-buttons { top:calc(96px + env(safe-area-inset-top)); }
       .gpanel { top:calc(40px + env(safe-area-inset-top)); right:calc(60px + env(safe-area-inset-right)); }
     }
+
+    /* ===== 알 초기화(3분마다): 오른쪽 아래 남은 시간 + 가운데 큰 글씨 ===== */
+    #reset-timer { position:fixed; right:calc(12px + env(safe-area-inset-right)); bottom:calc(8px + env(safe-area-inset-bottom)); z-index:21; display:flex; align-items:center; gap:8px; padding:5px 14px 5px 10px; border-radius:999px; background:rgba(12,10,24,0.62); border:1px solid rgba(255,255,255,0.22); color:#fff; font-weight:800; pointer-events:none; backdrop-filter:blur(6px); box-shadow:0 4px 14px rgba(0,0,0,0.3); }
+    #reset-timer .ico { font-size:20px; } #reset-timer small { display:block; font-size:10px; font-weight:700; color:#c7c9e0; line-height:1.1; } #reset-timer b { font-size:16px; color:#fde68a; line-height:1.15; font-variant-numeric:tabular-nums; }
+    #reset-timer.warn b { color:#fca5a5; animation:tpulse 0.8s ease-in-out infinite; } #reset-timer.locked { background:rgba(127,29,29,0.82); border-color:#fecaca; } #reset-timer.locked b { color:#fff; }
+    @keyframes tpulse { 0%,100% { opacity:1; } 50% { opacity:0.45; } }
+    #reset-banner { position:fixed; top:22%; left:50%; transform:translateX(-50%) scale(0.9); z-index:30; white-space:nowrap; font-size:clamp(26px,6.5vw,58px); font-weight:900; color:#fff; -webkit-text-stroke:2px #000; text-shadow:0 4px 0 #000, 0 0 18px rgba(0,0,0,0.5); opacity:0; pointer-events:none; transition:opacity 0.4s, transform 0.4s; }
+    #reset-banner.show { opacity:1; transform:translateX(-50%) scale(1); }
   </style>
 </head>
 <body>
@@ -310,6 +319,8 @@
   <div id="pets-panel" class="gpanel"><div class="ghead"><span class="gtitle" id="pets-title">펫</span><span id="pets-total" class="gsub"></span></div><div id="pets-list" class="glist"></div><div class="gfoot">크기가 클수록 돈을 많이 벌어요 · 판매는 두 번 눌러요</div></div>
   <div id="tm-panel" class="gpanel"><div class="ghead"><span class="gtitle" id="tm-title">러닝머신 Lv.1</span></div><div id="tm-info" class="tminfo"></div><div id="tm-list" class="glist"></div><div class="gfoot gfoot-btn"><button id="tm-up" class="gbig">레벨업</button></div></div>
   <div id="floaters"></div>
+  <div id="reset-timer"><span class="ico" id="reset-ico">🌙</span><span class="rt"><small id="reset-label">알 초기화까지</small><b id="reset-time">3분 0초</b></span></div>
+  <div id="reset-banner">모든 알 초기화!</div>
   <div id="hotbar"></div>
   <div id="rank-panel">
     <div class="rhead"><span>🏆 순위표</span><button id="rank-close" class="hudbtn">✕</button></div>
@@ -4638,7 +4649,8 @@ function createCreatureAndEgg(zone, corridorX, wallInnerX = 8.0) {
   creatureBoxes.forEach(bx => { bx.min.x += shiftX; bx.max.x += shiftX; });
   animParts.fit = { outerX: outerNow + shiftX, shiftX };      // (검증용 기록)
 
-  if (eggFactory) {
+  function spawnNestEggs() {                   // 둥지 앞에 알 3~4개를 새로 놓음 (처음 + 3분마다 '알 초기화' 때 다시 부름)
+    if (!eggFactory) return;
     const count = 3 + (Math.random() < 0.5 ? 1 : 0);
     // 크기: 큰 것·작은 것이 섞이도록 구간별로 뽑음. 자리 잡기는 '큰 알부터' (큰 알이 제일 자리를 많이 차지하므로)
     // 작은 알은 훨씬 작게(0.18~0.32배), 큰 알은 훨씬 크게(2.2~3.0배): 예전은 0.55~1.5배
@@ -4744,6 +4756,15 @@ function createCreatureAndEgg(zone, corridorX, wallInnerX = 8.0) {
       });
     }
   }
+  spawnNestEggs();
+  animParts.respawnEggs = () => {              // 알 초기화: 둥지에 남은 알(들고 있던 알 포함)을 지우고 새로 뽑음
+    for (let i = animParts.eggs.length - 1; i >= 0; i--) {
+      const old = animParts.eggs[i]; if (old.hatch) continue;          // 플레이어가 내 칸에 설치해 부화 중인 알은 그대로 둠
+      if (old.group.parent) old.group.parent.remove(old.group);
+      animParts.eggs.splice(i, 1);
+    }
+    spawnNestEggs();
+  };
   animParts.creatureBoxes = creatureBoxes;      // (검증용)
   animParts.makeEgg = eggFactory;               // 알 1개를 만드는 함수(저장된 알 복원에 사용)
   // 배치 계산(짚단 포함)이 끝났으니, 바닥 장식은 동물 그룹에서 떼어 구역 root의 같은 자리에 둠
@@ -4783,7 +4804,7 @@ function createBackground(scene) {
 
   // ---- 끝/안전구역 치수 ----
   const SAFE_LENGTH = 46;   // 안전구역 세로(깊이, z 방향)
-  const ROOM_WIDTH = 81.4;  // 안전구역 가로(폭, x 방향) — 이 숫자만 바꾸면 바닥·옆벽·울타리·이동 범위가 전부 따라감
+  const ROOM_WIDTH = 79.4;  // 안전구역 가로(폭, x 방향) — 이 숫자만 바꾸면 바닥·옆벽·울타리·이동 범위가 전부 따라감. 울타리 바깥선(ROOM_WIDTH/2 - 0.7 = 39) = 한 칸 폭(13) × (뒷줄 칸 수 4 ÷ 2 + 1)
   const ROOM_EXTRA = (ROOM_WIDTH - PATH_WIDTH) / 2;   // 복도 양옆으로 튀어나온 폭
   const SAFE_START = PATH_LENGTH / 2 - 36;      // +564 (안전선 위치. 닭 구역이 여기서 끝나므로 고정)
   const END_Z = SAFE_START + SAFE_LENGTH;       // +610 (안전구역 끝)
@@ -4998,11 +5019,11 @@ function createBackground(scene) {
   fenceLine(fenceHalf, fenceZ0, fenceHalf, fenceZ1);
   fenceLine(-fenceHalf, fenceZ1, fenceHalf, fenceZ1);
 
-  // ---- 안전구역 칸(구획) 울타리: 한 칸 10×10 정사각형 12칸, 'ㄷ'자 한 줄로 광장을 둘러쌈 ----
-  //   왼쪽 줄 3칸 + 뒷줄 6칸 + 오른쪽 줄 3칸. 모든 칸의 문(폭 GATE)이 광장 쪽을 향해 있어서 광장에서 바로 드나들 수 있음(이중으로 겹친 줄 없음).
+  // ---- 안전구역 칸(구획) 울타리: 한 칸 13×13 정사각형 8칸, 'ㄷ'자 한 줄로 광장을 둘러쌈 ----
+  //   왼쪽 줄 2칸 + 뒷줄 4칸 + 오른쪽 줄 2칸. (예전: 10×10 12칸 → 알·펫이 커져서 칸 수를 줄이고 칸을 키움) 모든 칸의 문(폭 GATE)이 광장 쪽을 향해 있어서 광장에서 바로 드나들 수 있음(이중으로 겹친 줄 없음).
   //   양옆 줄 맨 뒤 칸과 뒷줄 사이 모서리 자리는 비워 둠(거기에 칸을 두면 이웃 칸에 막혀 문을 낼 수 없음).
   //   울타리는 낮아서(FENCE_H) 짧은 점프로 넘을 수 있음. 뒷줄에서 가운데 오른쪽 칸이 '내 칸'(금색 울타리, 시작 위치 바로 앞)
-  const PLOT = 10, GATE = 3, SIDE_N = 3, BACK_N = 6, GATE_POST_H = 0.9;
+  const PLOT = 13, GATE = 3, SIDE_N = 2, BACK_N = 4, GATE_POST_H = 0.9;
   const sideX = BACK_N * PLOT / 2;                    // 양옆 줄의 광장 쪽 x (= 뒷줄 폭의 절반)
   const backZ0 = fenceZ1 - PLOT;                      // 뒷줄의 앞쪽 z
   const goldPostMat = new THREE.MeshLambertMaterial({ color: 0xb8860b });
@@ -5058,7 +5079,7 @@ function createBackground(scene) {
     const xa = -sideX + i * PLOT; if (near(xa, mineRect.x0)) continue;
     plotBounds.others.push({ x0: xa, x1: xa + PLOT, z0: backZ0, z1: fenceZ1, gate: { x: xa + PLOT / 2, z: backZ0, vertical: false } });
   }
-  // 12개 칸 전체 목록: 0~5 뒷줄(왼→오), 6~8 왼쪽 줄(앞→뒤), 9~11 오른쪽 줄(앞→뒤). gate=문 위치, inward=문에서 칸 안쪽으로 향하는 방향
+  // 8개 칸 전체 목록: 0~3 뒷줄(왼→오), 4~5 왼쪽 줄(앞→뒤), 6~7 오른쪽 줄(앞→뒤). gate=문 위치, inward=문에서 칸 안쪽으로 향하는 방향
   plotBounds.all = [];
   for (let i = 0; i < BACK_N; i++) {
     const xa = -sideX + i * PLOT;
@@ -5068,7 +5089,7 @@ function createBackground(scene) {
     const za = backZ0 - PLOT * (SIDE_N - r), xa = Math.min(sd * sideX, sd * fenceHalf), xb = Math.max(sd * sideX, sd * fenceHalf);
     plotBounds.all.push({ i: plotBounds.all.length, kind: sd < 0 ? 'left' : 'right', x0: xa, x1: xb, z0: za, z1: za + PLOT, gate: { x: sd * sideX, z: za + PLOT / 2, vertical: true }, inward: { x: sd, z: 0 } });
   }
-  plotBounds.defaultIndex = 3;           // 혼자 할 때(로그인 안 함)의 칸
+  plotBounds.defaultIndex = BACK_N / 2;  // 혼자 할 때(로그인 안 함)의 칸: 뒷줄 가운데 오른쪽
   const myGate = { x: PLOT / 2, z: backZ0, side: 'front' };
 
   // ---- 8종 생물(자고 있는 상태) & 그 앞의 알 생성 ----
@@ -5106,6 +5127,8 @@ function createBackground(scene) {
     fenceRects,            // 칸 울타리 충돌용 벽 목록
     plotBounds,            // 칸 범위(내 칸 포함)
     gateWidth: GATE,
+    plotSize: PLOT,        // 한 칸의 한 변 길이
+    lights: { hemi, sun }, // (밤이 될 때 어둡게 하려고)
     myGate,                // 내 칸 문 위치
     endZ: END_Z,
     startZ: CORRIDOR_Z0,
@@ -5435,7 +5458,8 @@ function createBackground(scene) {
       const lanes = all.map(P => { const g = P.gate, O = { x: -P.inward.x, z: -P.inward.z }, ex = g.x + O.x * 5, ez = g.z + O.z * 5, hw = 1.7;      // 문 앞 길: 문에서 광장 쪽으로 5, 폭 3.4
         return { x0: Math.min(g.x, ex) - (O.x === 0 ? hw : 0), x1: Math.max(g.x, ex) + (O.x === 0 ? hw : 0), z0: Math.min(g.z, ez) - (O.z === 0 ? hw : 0), z1: Math.max(g.z, ez) + (O.z === 0 ? hw : 0) }; });
       const chosen = [], poses = [];
-      for (const i of [8, 11, 0, 5, 7, 10, 6, 9, 4, 1, 3, 2]) {                    // 자리가 빡빡한 모서리 쪽 칸부터 먼저 정함
+      const cornerX = -all[0].x0, cornerD = (P) => Math.min(Math.hypot(P.gate.x - cornerX, P.gate.z - back), Math.hypot(P.gate.x + cornerX, P.gate.z - back));
+      for (const i of all.map((_, k) => k).sort((u, v) => cornerD(all[u]) - cornerD(all[v]))) {      // 자리가 빡빡한 뒤쪽 모서리 근처 칸부터 먼저 정함
         const P = all[i], F = plotFrame(i), O = { x: -P.inward.x, z: -P.inward.z }, rot = Math.atan2(-O.x, -O.z); let best = null;
         search: for (const b of [-4.6, -5.6, -6.6, -7.8, -9.0]) for (const a of [3.3, -3.3, 4.2, -4.2, 5.0, -5.0, 6.0, -6.0]) {
           const w = F.toWorld(a, b), fp = tmFootprint(w.x, w.z, rot);
@@ -5478,7 +5502,6 @@ function createBackground(scene) {
       onTm = tm; charPos.set(tm.cx, TM_DECK_Y, tm.cz); charYaw = Math.atan2(tm.out.x, tm.out.z); velY = 0; isOnGround = true; knockT = 0;
       camYaw = tm.rot;                                             // 달리는 방향의 뒤쪽에서 보이게
       joyReset();
-      toast(`🏃 러닝머신 Lv.${tmLevel}! 계속 달려요 · 스페이스(모바일은 점프 버튼)로 내려요`, 'good', 4000);
     }
     function dismountTreadmill() {                                 // 내리기: 문 쪽으로 훌쩍 뛰어내림
       if (!onTm) return; const tm = onTm; onTm = null; tmCooldown = 1.0;
@@ -5645,7 +5668,7 @@ function createBackground(scene) {
     let myLook = defaultLook();
     buildHumanRig(humanHolder, rig, myLook);
 
-    character = humanHolder;  // 이동/회전은 holder에 적용
+    character = humanHolder; character.rotation.order = 'YXZ';  // 이동/회전은 holder에 적용 (YXZ: 방향을 돌린 뒤 그 방향 기준으로 앞으로 엎어짐)
     document.getElementById("loading").style.display = "none";
 
     // 애니메이션 상태
@@ -5935,9 +5958,9 @@ function createBackground(scene) {
     const FLYERS = ['dragon', 'eastern', 'samjoko', 'demon', 'archangel'];   // 원본 파일에 달리기가 아니라 날기 동작이 있는 동물
     const RUSH_GAP = 8;      // 떨어뜨린 알을 다시 주웠을 때, 동물이 순식간에 와서 서는 '내 뒤 거리'
     const RUSH_TIME = 0.8;   // 그 순식간(1초 안)
-    const KNOCK_SPEED = 28, KNOCK_TIME = 0.8, KNOCK_UP = 12;   // 잡혔을 때 날아가는 세기
+    const KNOCK_SPEED = 21, KNOCK_TIME = 1.3, KNOCK_UP = 9;   // 잡혔을 때 날아가는 세기 (날아감 → 엎어져 미끄러짐 → 일어남, 합쳐서 1.3초)
     const SAFE_LINE_Z = bg.safeZone.minZ;                       // 안전선 위치(복도와 안전구역 경계)
-    let myEggCount = 0, knockT = 0, knockVX = 0, knockVZ = 0;
+    let myEggCount = 0, knockT = 0, knockVX = 0, knockVZ = 0, knockPitch = 0, knockRoll = 0, knockSide = 1;      // knockPitch: 몸이 앞으로 엎어진 정도(라디안)
     const eggCounter = document.getElementById('egg-counter');
 
     // 각 동물의 AI 상태: asleep(자는 중) → rush(순식간에 접근) → chase(추격) → return(돌아가는 중) → settle(자리 잡는 중) → asleep
@@ -5985,19 +6008,32 @@ function createBackground(scene) {
       dropEggAt(charPos.x, charPos.z);
       toast('😵 잡혔어요! 알을 떨어뜨렸어요', 'bad', 3000);
       knockVX = dx * KNOCK_SPEED; knockVZ = dz * KNOCK_SPEED; knockT = KNOCK_TIME; velY = KNOCK_UP; isOnGround = false;
+      charYaw = Math.atan2(dx, dz); knockSide = Math.random() < 0.5 ? -1 : 1;      // 날아가는 방향을 보고(빙글 돌지 않음), 몸이 한쪽으로 살짝 기울어 엎어짐
       c.ai.state = 'return'; c.ai.cur = c.ai.speed * 0.5;            // 잡았으면 바로 자러 돌아감
     }
-    // 날려가는 동안의 이동량 (조작 불가 + 빙글 돎)
+    // 날려가는 동안의 이동량 (조작 불가). 처음엔 세게 날아가고 땅에 닿으면 마찰로 미끄러지며 멈춤
     function knockStep(dt) {
       if (knockT <= 0) return { dx: 0, dz: 0 };
-      const kf = knockT / KNOCK_TIME;
+      const kf = Math.pow(knockT / KNOCK_TIME, 1.5);
       knockT = Math.max(0, knockT - dt);
-      charYaw += 14 * dt;
       return { dx: knockVX * kf * dt, dz: knockVZ * kf * dt };
+    }
+    // 내팽개쳐지는 몸짓: 공중에선 팔다리를 허우적대며 앞으로 엎어지고, 땅에 닿으면 큰 대자로 엎어진 채 미끄러지다가 마지막 22%에 일어남
+    function knockPoseStep(dt) {
+      const knocked = knockT > 0, f = knocked ? 1 - knockT / KNOCK_TIME : 1, air = knocked && !isOnGround, getUp = knocked && f > 0.78 ? (f - 0.78) / 0.22 : 0, lim = 1 - getUp;
+      const tp = knocked ? (air ? 1.1 : 1.45) * lim : 0, tr = knocked ? knockSide * (air ? 0.4 : 0.15) * lim : 0;
+      knockPitch += (tp - knockPitch) * Math.min(1, dt * (tp > knockPitch ? 9 : 12)); knockRoll += (tr - knockRoll) * Math.min(1, dt * 8);
+      if (!knocked && knockPitch < 0.01) { knockPitch = 0; knockRoll = 0; return; }
+      const flail = air ? Math.sin(myAnim.t * 24) * 0.4 : 0, set = (o, k, v) => { o.rotation[k] = damp(o.rotation[k], v, 20, dt); };
+      set(rig.armL.shoulder, 'x', (air ? -2.4 : -1.1) * lim + flail); set(rig.armR.shoulder, 'x', (air ? -2.0 : -1.1) * lim - flail);
+      set(rig.armL.shoulder, 'z', (air ? 0.6 : 1.0) * lim); set(rig.armR.shoulder, 'z', (air ? -0.6 : -1.0) * lim);
+      set(rig.legL.hip, 'x', (air ? -0.8 : 0.2) * lim + flail * 0.6); set(rig.legR.hip, 'x', (air ? 0.5 : -0.2) * lim - flail * 0.6);
+      set(rig.legL.knee, 'x', (air ? 0.8 : 0.15) * lim); set(rig.legR.knee, 'x', (air ? 0.4 : 0.15) * lim);
+      set(rig.head, 'x', (air ? -0.5 : -0.25) * lim); set(rig.torso, 'x', 0);
     }
 
     // 안전선을 알을 들고 넘으면 그 알은 내 것: 내 칸 안에 놓이고 개수가 올라감
-    // 칸 좌표계(a,b): 문 앞 가장자리 가운데가 원점, a = 칸의 오른쪽(-5~5), b = 문에서 칸 안쪽으로(0~10).
+    // 칸 좌표계(a,b): 문 앞 가장자리 가운데가 원점, a = 칸의 오른쪽(-6.5~6.5), b = 문에서 칸 안쪽으로(0~13).
     // 칸마다 방향이 달라도 같은 좌표로 저장 → 다른 칸을 배정받아도 알·펫 배치가 그대로 유지됨
     function plotFrame(i) {
       const P = bg.plotBounds.all[i], B = P.inward, A = { x: B.z, z: -B.x };
@@ -6005,12 +6041,13 @@ function createBackground(scene) {
         toWorld: (a, b) => ({ x: P.gate.x + a * A.x + b * B.x, z: P.gate.z + a * A.z + b * B.z }),
         toLocal: (x, z) => ({ a: (x - P.gate.x) * A.x + (z - P.gate.z) * A.z, b: (x - P.gate.x) * B.x + (z - P.gate.z) * B.z }) };
     }
+    const PLOT_N = bg.plotSize;                                 // 한 칸의 한 변 길이(13)
     let myPlotIdx = bg.plotBounds.defaultIndex, myFrame = plotFrame(myPlotIdx);
     const minePlaced = [];                                      // 내 칸에 놓인 알들의 자리 {a, b, r}
     let _idN = 0; const newId = () => Date.now().toString(36) + (++_idN).toString(36) + Math.floor(Math.random() * 1296).toString(36);
     // 내 칸 안에서 빈 자리 찾기: 안쪽부터 촘촘하게, 울타리·문 앞 길·다른 알과 안 겹치게
     function slotInMyPlot(r) {
-      const m = 0.7 + r, aMin = -5 + m, aMax = 5 - m, bMin = m, bMax = 10 - m;
+      const m = 0.7 + r, aMin = -PLOT_N / 2 + m, aMax = PLOT_N / 2 - m, bMin = m, bMax = PLOT_N - m;
       for (let b = bMax; b >= bMin; b -= 0.5) {
         for (let a = aMin; a <= aMax; a += 0.5) {
           if (b - r < 3.5 && Math.abs(a) < bg.gateWidth / 2 + 0.5 + r) continue;     // 문 앞 길은 비워 둠
@@ -6024,12 +6061,12 @@ function createBackground(scene) {
       const m = 0.9 + r * 0.4;
       let best = null, bestClear = -1e9;
       for (let k = 0; k < 600; k++) {
-        const a = -5 + m + Math.random() * (10 - 2 * m), b = m + Math.random() * (10 - 2 * m);
+        const a = -PLOT_N / 2 + m + Math.random() * (PLOT_N - 2 * m), b = m + Math.random() * (PLOT_N - 2 * m);
         if (b - r < 3.5 && Math.abs(a) < bg.gateWidth / 2 + 0.5 + r) continue;
         let clear = 1e9; for (const o of minePlaced) clear = Math.min(clear, Math.hypot(a - o.a, b - o.b) - r - o.r);
         if (clear > bestClear) { bestClear = clear; best = { a, b }; }
       }
-      return best || { a: 0, b: 10 - m };
+      return best || { a: 0, b: PLOT_N - m };
     }
     function secureEgg() {                                      // 알을 들고 안전선을 넘음 → 가방에 들어감(내 칸에 직접 설치하는 건 따로)
       const { c, e } = carriedEgg;
@@ -6073,12 +6110,20 @@ function createBackground(scene) {
       if (!e.hatch || e.hatch.state !== 'ready') return;
       e.hatch.state = 'hatching'; e.hatch.hatchAt = nowMs(); saveGame();
     }
+    // 펫 크기 보정: 생물 몸(원래는 알보다 2~4배 큼)을 '알 크기'에 맞춤 → 펫이 보이는 크기 = 알 크기 × PET_FIT (수입·가격에 쓰는 scale은 알 크기 그대로)
+    const PET_FIT = {};
+    bg.creatures.forEach(c => {
+      const e = c.eggs[0], g = c.creatureGroup, ry = g.rotation.y; g.rotation.y = 0;
+      const bx = sweepMeshBoxes(g, () => {}, 1); g.rotation.y = ry;                              // 자는 모습(방향 없이)의 실제 몸 크기 (둥지 판정용 '움직임 포함' 크기보다 정확)
+      const ext = (k) => Math.max(...bx.map(b => b.max[k])) - Math.min(...bx.map(b => b.min[k]));
+      PET_FIT[c.id] = e ? (2 * e.radius / e.scale) / Math.cbrt(ext('x') * ext('y') * ext('z')) : 0.3;      // 알 지름 ÷ 몸 크기(가로·세로·높이의 기하평균)
+    });
     function createPet(cid, x, z, yaw, scale, pop) {            // 부화한 동물 1마리 만들기(내 칸·다른 사람 칸 공용). scale = 알의 마지막 크기
       const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = yaw; scene.add(g);
       const F = CREATURE_FACTORIES[cid](g);
       F.setAction('sleep'); for (let i = 0; i < 240; i++) F.update(0.05);
-      const pet = { cid, group: g, anim: F, scale, t: pop ? 0 : 99, awake: false };
-      if (pop) { F.setAction(FLYERS.includes(cid) ? 'fly' : 'run'); pet.awake = true; g.scale.setScalar(0.01); } else g.scale.setScalar(scale);
+      const vis = scale * (PET_FIT[cid] || 0.3), pet = { cid, group: g, anim: F, scale, vis, t: pop ? 0 : 99, awake: false };       // vis = 눈에 보이는 크기(알 크기만큼)
+      if (pop) { F.setAction(FLYERS.includes(cid) ? 'fly' : 'run'); pet.awake = true; g.scale.setScalar(0.01); } else g.scale.setScalar(vis);
       return pet;
     }
     function spawnPet(cid, x, z, yaw, scale, pop, id) {         // 내 펫
@@ -6090,9 +6135,9 @@ function createBackground(scene) {
       p.anim.update(dt);
       if (p.t < 90) {                                           // 나올 때 통통 튀며 커지는 연출
         p.t += dt; const k = Math.min(1, p.t / 0.7), c1 = 1.70158, c3 = c1 + 1;
-        p.group.scale.setScalar(Math.max(0.01, p.scale * (1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2))));
+        p.group.scale.setScalar(Math.max(0.01, p.vis * (1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2))));
         if (p.awake && p.t > 1.6) { p.anim.setAction('sleep'); p.awake = false; }
-        if (p.t > 1.6) { p.t = 99; p.group.scale.setScalar(p.scale); }
+        if (p.t > 1.6) { p.t = 99; p.group.scale.setScalar(p.vis); }
       }
     }
     function updatePets(dt) { for (const p of pets) updatePetObj(p, dt); }
@@ -6178,7 +6223,7 @@ function createBackground(scene) {
       tmLevel = Math.max(1, Math.min(TM_MAX, Math.floor(Number(data.tmLevel)) || 1)); speedPoints = Math.max(0, Number(data.speed) || 0);
       let eggsIn = toArr(data.eggs), petsIn = toArr(data.pets);
       if (data.v === 1) {                                       // 예전 저장(월드 좌표, 기본 칸) → 칸 좌표로 변환
-        const F0 = plotFrame(bg.plotBounds.defaultIndex);
+        const F0 = { facing: Math.PI, toLocal: (x, z) => ({ a: x - 5, b: z - 599.3 }) };      // 예전(칸이 10×10이던 때) 내 칸의 문(x=5, z=599.3) 기준으로 변환 → 칸이 바뀌어도 알 배치가 문 기준으로 그대로
         const cv = (o) => { const L = F0.toLocal(o.x, o.z); return Object.assign({}, o, { a: L.a, b: L.b, yr: (o.yaw || 0) - F0.facing }); };
         eggsIn = eggsIn.map(cv); petsIn = petsIn.map(cv);
       }
@@ -6315,7 +6360,7 @@ function createBackground(scene) {
       if (carriedEgg && carriedEgg.c.ai && (carriedEgg.c.ai.state === 'chase' || carriedEgg.c.ai.state === 'rush')) { g.fillStyle = '#ef4444'; g.beginPath(); g.arc(zx(carriedEgg.c.creatureGroup.position.z + carriedEgg.c.root.position.z), 35, 4, 0, Math.PI * 2); g.fill(); }
       g.fillStyle = '#ffffff'; g.beginPath(); g.moveTo(zx(charPos.z), 31); g.lineTo(zx(charPos.z) - 5, 41); g.lineTo(zx(charPos.z) + 5, 41); g.closePath(); g.fill(); g.strokeStyle = '#111827'; g.lineWidth = 1.5; g.stroke();   // 나
       if (charPos.z > bg.safeZone.minZ - 40) {                                                                                                                      // 안전구역 지도
-        const mw = 148, mh = 84, ox = (W - mw) / 2, oy = 46, sx = mw / 81.4, sz = mh / 46, X = (x) => ox + (x + 40.7) * sx, Z = (z) => oy + mh - (z - bg.safeZone.minZ) * sz;
+        const mw = 148, mh = 84, ox = (W - mw) / 2, oy = 46, sx = mw / bg.roomWidth, sz = mh / 46, X = (x) => ox + (x + bg.roomWidth / 2) * sx, Z = (z) => oy + mh - (z - bg.safeZone.minZ) * sz;
         g.fillStyle = 'rgba(74,222,128,0.18)'; g.fillRect(ox, oy, mw, mh); g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = 1; g.strokeRect(ox, oy, mw, mh);
         const owners = {}; if (NET.online) owners[myPlotIdx] = true; for (const R of remotes.values()) if (R.plot != null) owners[R.plot] = R.plot;
         bg.plotBounds.all.forEach((P, i) => {
@@ -6378,7 +6423,7 @@ function createBackground(scene) {
       const P = bg.plotBounds.all[myPlotIdx], inZone = charPos.x > P.x0 - 2 && charPos.x < P.x1 + 2 && charPos.z > P.z0 - 2 && charPos.z < P.z1 + 2;
       let why = '';
       if (!inZone) why = '내 칸 안으로 들어가서 설치해요';
-      else if (L.a < -5 + m || L.a > 5 - m || L.b < m || L.b > 10 - m) why = '칸 안쪽으로 조금 더 들어가요';
+      else if (L.a < -PLOT_N / 2 + m || L.a > PLOT_N / 2 - m || L.b < m || L.b > PLOT_N - m) why = '칸 안쪽으로 조금 더 들어가요';
       else if (L.b - r < 3.5 && Math.abs(L.a) < bg.gateWidth / 2 + 0.5 + r) why = '문 앞 길이라 놓을 수 없어요';
       else if (minePlaced.some(o => Math.hypot(L.a - o.a, L.b - o.b) < r + o.r + 0.2)) why = '다른 알과 겹쳐요';
       return { a: L.a, b: L.b, r, ok: !why, why, inZone, world: myFrame.toWorld(L.a, L.b) };
@@ -6493,7 +6538,7 @@ function createBackground(scene) {
       if (!best || best.kind === 'info') {                                          // 누를 수 있는 알(들기/부화)이 없으면: 내 칸 안(또는 바로 앞)에서 내 펫 → 판매 (키우는 중인 알 '안내'보다 더 가까우면 판매가 우선)
         const P = bg.plotBounds.all[myPlotIdx];
         if (charPos.x > P.x0 - 3 && charPos.x < P.x1 + 3 && charPos.z > P.z0 - 3 && charPos.z < P.z1 + 3) for (const pet of pets) {
-          const gap = Math.hypot(charPos.x - pet.group.position.x, charPos.z - pet.group.position.z) - (PET_R[pet.cid] || 1.5) * pet.scale;
+          const gap = Math.hypot(charPos.x - pet.group.position.x, charPos.z - pet.group.position.z) - (PET_R[pet.cid] || 1.5) * pet.vis;
           if (gap < bestGap) { bestGap = gap; best = { pet, kind: 'sell' }; }
         }
       }
@@ -6651,6 +6696,53 @@ function createBackground(scene) {
       for (const c of bg.creatures) if (c.ai.state !== 'asleep') keepInsideCorridor(c);
     }
 
+
+    // ================= 알 초기화: 3분마다 둥지의 알이 전부 새로 바뀜. 그 직후 10초 동안은 밤이 되고 가림막이 길을 막음 =================
+    // 서버 시각(nowMs) 기준이라 모든 사람이 같은 순간에 바뀜. 초기화 때 밖(알 있는 길)에 있던 사람은 안전구역으로 옮겨지고 들고 있던 알은 사라짐.
+    const RESET_PERIOD = 180, RESET_LOCK = 10;                  // 초
+    const resetCycleOf = () => Math.floor(nowMs() / (RESET_PERIOD * 1000));
+    const resetPhase = () => (nowMs() / 1000) % RESET_PERIOD;   // 이번 주기가 시작된 지 몇 초째인지
+    const NIGHT_SKY = new THREE.Color(0x070b1f);
+    let resetSeen = resetCycleOf(), resetNight = 0, resetBarrier = 0, resetLocked = false, resetBannerT = 0, _resetTxt = '', _resetCls = '';
+    const resetTimerEl = document.getElementById('reset-timer'), resetIcoEl = document.getElementById('reset-ico'), resetTimeEl = document.getElementById('reset-time'), resetLabelEl = document.getElementById('reset-label'), resetBannerEl = document.getElementById('reset-banner');
+    resetLabelEl.textContent = '알 초기화까지'; resetIcoEl.textContent = '🌙';
+    const barrier = new THREE.Group(); barrier.visible = false; scene.add(barrier);       // 안전선 바로 바깥의 하얀 가림막(길 폭 전체)
+    { const bw = bg.pathWidth + 3, bh = 12, wm = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xc7d7ff, emissiveIntensity: 0.55, roughness: 0.9 });
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, 1.0), wm); wall.position.set(0, bh / 2, 0); barrier.add(wall);
+      try {                                                                               // 가림막 양쪽 면의 글씨
+        const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128; const g = cv.getContext('2d');
+        g.fillStyle = '#1e293b'; g.font = 'bold 54px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('🥚 알 초기화 중', 256, 66);
+        const tex = new THREE.CanvasTexture(cv), tm = new THREE.MeshBasicMaterial({ map: tex, transparent: true });
+        for (const sd of [-1, 1]) { const pl = new THREE.Mesh(new THREE.PlaneGeometry(12, 3), tm); pl.position.set(0, 6.2, sd * 0.52); if (sd < 0) pl.rotation.y = Math.PI; barrier.add(pl); }
+      } catch (_) {}
+    }
+    barrier.position.set(0, -12, bg.safeZone.minZ - 1.3);
+    const fmtMS = (sec) => sec >= 60 ? `${Math.floor(sec / 60)}분 ${sec % 60}초` : `${sec}초`;
+    function doEggReset(effects) {                              // effects=true: 지금 막 초기화가 시작됨(가림막·밤·큰 글씨) / false: 놓쳤던 초기화를 조용히 반영
+      if (carriedEgg) { const e = carriedEgg.e; carriedEgg = null; isCarrying = false; rig.carryMount.visible = false; carryingHud.style.display = 'none'; try { rig.carryMount.remove(e.group); } catch (_) {} }
+      let moved = false;
+      if (effects && !onTm && charPos.z < SAFE_LINE_Z + 0.5) { charPos.set(0, 0, SAFE_LINE_Z + 3); charYaw = 0; velY = 0; isOnGround = true; knockT = 0; moved = true; }
+      for (const c of bg.creatures) {
+        const ai = c.ai, cg = c.creatureGroup;
+        if (ai.state !== 'asleep') { ai.state = 'asleep'; ai.cur = 0; ai.wake = 0; ai.rushLeft = 0; ai.t = 0; cg.position.set(ai.homeX, 0, ai.homeZ); cg.rotation.y = ai.homeYaw; c.anim.setAction('sleep'); }
+        c.respawnEggs();                                         // 둥지 알 새로 뽑기(내 칸에 설치한 알은 그대로)
+      }
+      if (effects) { resetBannerT = 3; toast(moved ? '🌙 알이 초기화돼요! 안전구역으로 옮겨졌어요' : '🌙 알이 초기화돼요! 10초 뒤에 나갈 수 있어요', 'warn', 4000); }
+      else toast('🥚 새 알이 나왔어요!', 'good', 2500);
+    }
+    function updateEggReset(dt) {
+      const cyc = resetCycleOf(), ph = resetPhase();
+      if (typeof __NO_RESET !== 'undefined' && __NO_RESET) { resetLocked = false; resetSeen = cyc; resetNight = 0; resetBarrier = 0; barrier.visible = false; return; }      // (시험용) 초기화·가림막 끄기
+      if (cyc !== resetSeen) { resetSeen = cyc; doEggReset(ph < RESET_LOCK); }
+      resetLocked = ph < RESET_LOCK;
+      resetNight += ((resetLocked ? 1 : 0) - resetNight) * Math.min(1, dt * 3);
+      resetBarrier += ((resetLocked ? 1 : 0) - resetBarrier) * Math.min(1, dt * 5);
+      barrier.visible = resetBarrier > 0.01; barrier.position.y = -12 + 12 * Math.min(1, resetBarrier * 1.05);
+      if (resetBannerT > 0) { resetBannerT -= dt; resetBannerEl.classList[resetBannerT > 0 ? 'add' : 'remove']('show'); }
+      const remain = Math.ceil(resetLocked ? RESET_LOCK - ph : RESET_PERIOD - ph), txt = fmtMS(Math.max(0, remain)), cls = resetLocked ? 'locked' : (remain <= 10 ? 'warn' : '');
+      if (txt !== _resetTxt) { _resetTxt = txt; resetTimeEl.textContent = txt; }
+      if (cls !== _resetCls) { _resetCls = cls; resetTimerEl.className = cls; resetLabelEl.textContent = resetLocked ? '알 초기화 중 · 열리기까지' : '알 초기화까지'; resetIcoEl.textContent = resetLocked ? '🔒' : '🌙'; }
+    }
 
     // ================= 모바일 조작: 조이스틱 · 점프 버튼 · 알 꾹 누르기 버튼 =================
     let IS_TOUCH_UI = (typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches) || (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0 && typeof window !== 'undefined' && 'ontouchstart' in window);
@@ -6988,7 +7080,7 @@ function createBackground(scene) {
       if (NET.online || NET.starting) return; NET.starting = true;
       try {
         NET.uid = user.uid; NET.nick = user.displayName || NET.pendingNick || '플레이어'; const db = NET.db;
-        db.ref('.info/serverTimeOffset').on('value', sn => { NET.offset = sn.val() || 0; });
+        db.ref('.info/serverTimeOffset').on('value', sn => { NET.offset = sn.val() || 0; resetSeen = resetCycleOf(); });      // (서버 시각으로 맞춘 직후엔 '초기화가 지나갔다'고 착각하지 않게)
         const snap = await db.ref('saves/' + NET.uid).once('value'); let data = snap.val(), migrated = false;
         if (!data) { const local = readLocalSave(); if (local) { data = local; migrated = true; } }          // 처음이면 이 기기에서 혼자 하던 기록을 계정으로 옮김
         const idx = await claimPlot(data && Number.isInteger(data.plot) ? data.plot : bg.plotBounds.defaultIndex);
@@ -7137,6 +7229,7 @@ function createBackground(scene) {
       const rightX = -fwdZ, rightZ = fwdX;
 
       inputWatchdog();                         // 손가락이 이미 떨어졌는데 조이스틱/버튼이 눌린 채로 남아 있으면 해제
+      updateEggReset(dt);                      // 3분마다 알 초기화 + 밤·가림막·남은 시간
       let { mx, mz } = readMoveInput(fwdX, fwdZ, rightX, rightZ);
       if (knockT > 0 || onTm) { mx = 0; mz = 0; }      // 잡혀서 날아가는 동안 / 러닝머신 위에서는 이동 조작 불가(제자리에서 계속 달림)
 
@@ -7166,6 +7259,7 @@ function createBackground(scene) {
       const isMoving = !!onTm || Math.abs(mx) > 0.01 || Math.abs(mz) > 0.01;      // 러닝머신 위에서는 계속 달리는 동작
       curMove.mv = !isMoving ? 0 : ((slowNow && !onTm) ? 2 : 1);         // 다른 사람에게 보낼 내 이동 상태
       updateHumanAnim(dt, isMoving, slowNow && !onTm);
+      knockPoseStep(dt);                                       // 잡혀서 날아갈 때만 팔다리·몸 자세를 덮어씀
       groundSpeed = isMoving ? Math.abs(targetSpeed) * 2.5 : 0;
 
       let nx = charPos.x + mx * groundSpeed * dt;
@@ -7177,6 +7271,7 @@ function createBackground(scene) {
       const halfW = roomSpan / 2 - CHAR_RADIUS;
       nx = Math.max(-halfW, Math.min(halfW, nx));
       nz = Math.max(bg.startZ + CHAR_RADIUS, Math.min(bg.endZ - CHAR_RADIUS, nz));
+      if (resetLocked && charPos.z >= SAFE_LINE_Z - 0.01) nz = Math.max(nz, SAFE_LINE_Z + CHAR_RADIUS);      // 알 초기화 중: 가림막 때문에 안전구역 밖으로 못 나감
 
       { const mv = moveWithFences(charPos.x, charPos.z, nx, nz, charPos.y); charPos.x = mv.x; charPos.z = mv.z; }   // 칸 울타리는 문 틈으로 통과하거나 점프로 넘음
 
@@ -7197,8 +7292,8 @@ function createBackground(scene) {
 
       if (wardrobe.open) charYaw += dt * 0.7;                  // 꾸미기 화면: 캐릭터가 천천히 돌아서 앞·뒤를 다 보여줌
       if (character) {
-        character.position.set(charPos.x, charPos.y, charPos.z);
-        character.rotation.y = charYaw;
+        character.position.set(charPos.x, charPos.y + 0.2 * HOLDER_SCALE * Math.sin(Math.min(1.5, knockPitch)), charPos.z);      // 엎어졌을 때 몸이 땅에 박히지 않게 살짝 띄움
+        character.rotation.y = charYaw; character.rotation.x = knockPitch; character.rotation.z = knockRoll;
       }
 
       // 알은 rig.carryMount에 붙어 있어서 캐릭터 애니메이션이 알아서 처리
@@ -7207,14 +7302,16 @@ function createBackground(scene) {
 
       // 현재 플레이어가 위치한 생물 바이옴 구역 확인 및 하늘/안개 색상 부드럽게 전환
       const activeZone = BIOME_ZONES.find(z => charPos.z >= z.zMin && charPos.z < z.zMax);
-      const bannerText = onTm ? '⚡ 러닝머신 달리는 중 · 스페이스로 내리기' : bannerOf(activeZone);   // 예: '🐔 Lv.1 닭의 보금자리'
+      const bannerText = bannerOf(activeZone);   // 예: '🐔 Lv.1 닭의 보금자리'
       if (activeZone) targetSkyColor.setHex(activeZone.skyColor); else targetSkyColor.setHex(0x9fd8ef);
       if (bannerText !== _lastBanner) { zoneBanner.textContent = bannerText; _lastBanner = bannerText; }
       currentSkyColor.lerp(targetSkyColor, Math.min(1, dt * 3.5));
       scene.background.copy(currentSkyColor);
-      scene.fog.color.copy(currentSkyColor);
+      if (resetNight > 0.002) scene.background.lerp(NIGHT_SKY, resetNight * 0.92);                 // 알 초기화 중에는 밤하늘로
+      scene.fog.color.copy(scene.background);
+      if (bg.lights) { bg.lights.hemi.intensity = 1.0 - 0.7 * resetNight; bg.lights.sun.intensity = 1.0 - 0.85 * resetNight; }
 
-      const camTarget = new THREE.Vector3(charPos.x, charPos.y + 0.9 * HOLDER_SCALE, charPos.z);   // 캐릭터 가슴 높이(크기에 비례)
+      const camTarget = new THREE.Vector3(charPos.x, charPos.y + (0.9 - 0.45 * Math.min(1, knockPitch / 1.45)) * HOLDER_SCALE, charPos.z);   // 캐릭터 가슴 높이(크기에 비례)
       let camX = camTarget.x + Math.sin(camYaw) * Math.cos(camPitch) * dist;
       let camZ = camTarget.z + Math.cos(camYaw) * Math.cos(camPitch) * dist;
       const camY = Math.max(0.35, camTarget.y + Math.sin(camPitch) * dist);
