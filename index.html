@@ -306,6 +306,28 @@
     .slot.tool { background:rgba(64,48,28,0.88); } .slot.tool.on { background:rgba(120,100,20,0.88); }
     .slot.tool .bd { font-size:9px; font-weight:800; right:2px; bottom:1px; opacity:0.95; }
     #stun-hud { position:fixed; top:26%; left:50%; transform:translateX(-50%); z-index:30; display:none; pointer-events:none; font-size:clamp(34px,8vw,72px); font-weight:900; color:#fff; -webkit-text-stroke:2px #7f1d1d; text-shadow:0 4px 0 #7f1d1d, 0 0 18px rgba(0,0,0,0.5); }
+
+    /* ===== 러닝머신 창 탭 / 트레일 ===== */
+    .gtabs { display:flex; gap:6px; padding:6px 8px; background:#2f2d3b; border-bottom:2px solid #25232f; }
+    .gtabs button { flex:1; padding:6px 4px; border-radius:8px; border:2px solid #25232f; background:#4a475c; color:#fff; font-size:13px; font-weight:800; }
+    .gtabs button.on { background:#a855f7; border-color:#fff; }
+    .gbig.gsub { margin-top:6px; background:linear-gradient(180deg,#fde68a,#f59e0b); border-color:#78350f; color:#422006; }
+    .trow .sw { flex:none; width:44px; height:12px; border-radius:6px; border:1px solid rgba(255,255,255,0.5); }
+
+    /* ===== 조용한 화면: 쓸데없는 글씨 숨김 (내 알 카운터 · 조작 안내문) ===== */
+    #egg-counter, #hud { display:none !important; }
+
+    /* ===== 알·펫 등급 표시 (다크 보라 / 이터널 은빛 / 디바인 금빛) ===== */
+    .slot.g1 { border-color:#6d28d9; box-shadow:0 0 8px rgba(109,40,217,0.85); } .slot.g2 { border-color:#bae6fd; box-shadow:0 0 8px rgba(186,230,253,0.85); }
+    .slot.g3 { border-color:#fde047; box-shadow:0 0 12px rgba(253,224,71,0.95); animation:gradeGlow 1.6s ease-in-out infinite; }
+    @keyframes gradeGlow { 0%,100% { box-shadow:0 0 8px rgba(253,224,71,0.7); } 50% { box-shadow:0 0 18px rgba(253,224,71,1); } }
+    .gname.g1 { color:#c4b5fd; } .gname.g2 { color:#bae6fd; } .gname.g3 { color:#fde047; }
+
+    /* ===== 알 초기화 중: 등급 알이 떴을 때 화면 가운데 알림 ===== */
+    #grade-alert { position:fixed; top:38%; left:50%; transform:translateX(-50%); z-index:29; display:none; flex-direction:column; align-items:center; gap:6px; pointer-events:none; max-width:92vw; }
+    .ga-line { font-size:clamp(15px,3.4vw,28px); font-weight:900; color:#fff; text-align:center; padding:4px 16px; border-radius:999px; background:rgba(12,10,24,0.62); -webkit-text-stroke:1px #000; text-shadow:0 2px 0 #000, 0 0 14px rgba(0,0,0,0.5); }
+    .ga-line.g1 { color:#e9d5ff; border:2px solid #6d28d9; } .ga-line.g2 { color:#e0f2fe; border:2px solid #bae6fd; }
+    .ga-line.g3 { color:#fde68a; border:2px solid #fde047; animation:gaGlow 1.2s ease-in-out infinite; } @keyframes gaGlow { 0%,100% { box-shadow:0 0 10px rgba(253,224,71,0.6); } 50% { box-shadow:0 0 26px rgba(253,224,71,1); } }
   </style>
 </head>
 <body>
@@ -339,10 +361,11 @@
   </div>
   <div id="eggs-panel" class="gpanel"><div class="ghead"><span class="gtitle">성장하는 달걀</span><button id="eggs-all" class="gyellow">모두 열기</button></div><div id="eggs-list" class="glist"></div></div>
   <div id="pets-panel" class="gpanel"><div class="ghead"><span class="gtitle" id="pets-title">펫</span><span id="pets-total" class="gsub"></span></div><div id="pets-list" class="glist"></div><div class="gfoot">크기가 클수록 돈을 많이 벌어요 · 판매는 두 번 눌러요</div></div>
-  <div id="tm-panel" class="gpanel"><div class="ghead"><span class="gtitle" id="tm-title">러닝머신 Lv.1</span></div><div id="tm-info" class="tminfo"></div><div id="tm-list" class="glist"></div><div class="gfoot gfoot-btn"><button id="tm-up" class="gbig">레벨업</button></div></div>
+  <div id="tm-panel" class="gpanel"><div class="ghead"><span class="gtitle" id="tm-title">러닝머신 Lv.1</span></div><div class="gtabs"><button id="tm-tab-run" class="on">🏃 러닝머신</button><button id="tm-tab-trail">✨ 트레일</button></div><div id="tm-info" class="tminfo"></div><div id="tm-list" class="glist"></div><div class="gfoot gfoot-btn"><button id="tm-up" class="gbig">레벨업</button><button id="tm-equip" class="gbig gsub" style="display:none">트레일 끼기</button></div></div>
   <div id="floaters"></div>
-  <div id="reset-timer"><span class="ico" id="reset-ico">🌙</span><span class="rt"><small id="reset-label">알 초기화까지</small><b id="reset-time">3분 0초</b></span></div>
+  <div id="reset-timer"><span class="ico" id="reset-ico">🌙</span><span class="rt"><small id="reset-label"></small><b id="reset-time">3분 0초</b></span></div>
   <div id="reset-banner">모든 알 초기화!</div>
+  <div id="grade-alert"></div>
   <div id="stun-hud"></div>
   <div id="hotbar"></div>
   <div id="rank-panel">
@@ -375,7 +398,7 @@
       <linearGradient id="eggRingOrange" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fed7aa"/><stop offset="1" stop-color="#f97316"/></linearGradient>
       <linearGradient id="eggRingGreen" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#bbf7d0"/><stop offset="1" stop-color="#22c55e"/></linearGradient></defs>
       <circle class="track" cx="50" cy="50" r="45"/><circle class="prog" id="egg-ring-prog" cx="50" cy="50" r="45"/></svg>
-    <div class="face"><svg class="egg-icon" viewBox="0 0 24 24"><path d="M12 2.5c3.6 0 6.5 5.4 6.5 9.6 0 3.9-2.9 7.4-6.5 7.4s-6.5-3.500-6.500-7.400C5.500 7.900 8.400 2.500 12 2.500z"/></svg><span class="hint">꾹 눌러</span><span class="act" id="btn-egg-label">알 들기</span></div>
+    <div class="face"><svg class="egg-icon" viewBox="0 0 24 24"><path d="M12 2.5c3.6 0 6.5 5.4 6.5 9.6 0 3.9-2.9 7.4-6.5 7.4s-6.5-3.500-6.500-7.400C5.500 7.900 8.400 2.500 12 2.500z"/></svg><span class="act" id="btn-egg-label">알 들기</span></div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -4192,8 +4215,169 @@ function collectMeshBoxes(obj) {
   if (par) par.matrixWorld.copy(savedParentWorld);
   return boxes;
 }
-// 알 크기 기준 배율(보통 크기 알의 배율): 뒤쪽 동물일수록 알이 큼. 알 지름이 닭 약 1m → 대천사 약 3.4m가 되도록 맞춘 값
-const EGG_TIER = { chicken: 1.03, tiger: 1.21, dragon: 1.39, eastern: 1.66, lion: 1.80, samjoko: 2.01, demon: 2.17, archangel: 2.37 };
+// ================= 알·펫 등급: 일반 < 다크 < 이터널 < 디바인 =================
+// 등급은 알 크기와 상관없이 알마다 따로 정해지고(둥지에서 알이 나올 때, 용부터), 부화한 펫에게 그대로 이어짐. 등급이 높을수록 돈을 더 많이 줌.
+const GRADE_NAME = ['일반', '다크', '이터널', '디바인'];
+const GRADE_MULT = [1, 2, 5, 10];                                    // 펫 수입 배율 (다크 ×2 · 이터널 ×5 · 디바인 ×10)
+const GRADE_ODDS = [0.05, 0.012, 0.0025];                            // 알 하나가 다크 5% · 이터널 1.2% · 디바인 0.25% (나머지는 일반)
+const GRADE_ICON = ['', '🌑', '💠', '✨'];
+const GRADE_ZONES = ['dragon', 'eastern', 'lion', 'samjoko', 'demon', 'archangel'];      // 용부터 등급 알이 나옴 (닭·호랑이는 항상 일반)
+const clampGrade = (g) => Math.max(0, Math.min(3, Math.floor(Number(g)) || 0));
+const _urlParam = (k) => { try { const v = new URLSearchParams(location.search).get(k); const n = v == null ? NaN : Number(v); return Number.isInteger(n) && n >= 0 && n <= 3 ? n : null; } catch (_) { return null; } };
+const FORCE_GRADE = _urlParam('grade'), FORCE_SIZE = _urlParam('size');      // 주소 끝에 ?grade=3 (모든 알을 그 등급으로) / ?size=3 (모든 알을 그 크기 단계로: 0 작은 · 1 보통 · 2 큰 · 3 아주 큰) → 구경용
+function rollGrade() {
+  if (FORCE_GRADE !== null) return FORCE_GRADE;
+  const r = Math.random(); return r < GRADE_ODDS[2] ? 3 : (r < GRADE_ODDS[2] + GRADE_ODDS[1] ? 2 : (r < GRADE_ODDS[2] + GRADE_ODDS[1] + GRADE_ODDS[0] ? 1 : 0));
+}
+// 알 크기(그 동물의 '보통 크기'를 1로 본 배수): 작은 알 40% / 보통 58.95% / 큰 알 1% / 아주 큰 알 0.05%
+const EGG_SIZE_ODDS = [0.40, 0.9895, 0.9995];                        // 누적: 이 값 아래면 작은/보통/큰, 나머지는 아주 큰
+function rollEggRel() {
+  const r = Math.random(), k = FORCE_SIZE !== null ? FORCE_SIZE : (r < EGG_SIZE_ODDS[0] ? 0 : (r < EGG_SIZE_ODDS[1] ? 1 : (r < EGG_SIZE_ODDS[2] ? 2 : 3)));
+  return k === 0 ? 0.5 + Math.random() * 0.2 : (k === 1 ? 0.85 + Math.random() * 0.3 : (k === 2 ? 1.4 + Math.random() * 0.3 : 2.0 + Math.random() * 0.3));
+}
+let GRADE_SCENE = null;                                              // (createBackground가 정해 줌)
+const GRADE_FX = [], _gTex = {}, _gv = new THREE.Vector3();          // _gv: 월드 위치를 받을 벡터(진짜 THREE의 getWorldPosition은 Vector3가 필요)
+const GRADE_RA_MIN = { egg: 0.9, pet: 1.1 };                          // 알·펫이 작아도 효과는 이 크기(m) 이상으로 — 눈에 확 띄게
+function gradeTexture(kind) {                                        // 빛 모양 그림(캔버스로 한 번만): 빛 덩어리 / 고리 / 네 갈래 별 / 사방으로 뻗는 빛줄기 2종 / 점선 마법진 2종 / 세로로 사라지는 빛기둥
+  if (_gTex[kind] !== undefined) return _gTex[kind];
+  let tex = null;
+  try {
+    const rays = kind.startsWith('rays'), S = rays || kind.startsWith('dash') ? 256 : (kind === 'beam' ? 128 : 128), c = S / 2, cv = document.createElement('canvas'); cv.width = cv.height = S; const g = cv.getContext('2d');
+    if (kind === 'glow') { const gr = g.createRadialGradient(c, c, 0, c, c, c); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.3, 'rgba(255,255,255,0.7)'); gr.addColorStop(0.65, 'rgba(255,255,255,0.2)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, S, S); }
+    else if (kind === 'ring') { const gr = g.createRadialGradient(c, c, c * 0.55, c, c, c); gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.55, 'rgba(255,255,255,0.9)'); gr.addColorStop(0.75, 'rgba(255,255,255,0.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, S, S); }
+    else if (kind === 'star') { g.fillStyle = '#fff'; g.beginPath(); g.moveTo(c, 4); g.quadraticCurveTo(c + 4, c - 4, S - 4, c); g.quadraticCurveTo(c + 4, c + 4, c, S - 4); g.quadraticCurveTo(c - 4, c + 4, 4, c); g.quadraticCurveTo(c - 4, c - 4, c, 4); g.fill(); }
+    else if (kind === 'dash') { g.strokeStyle = '#fff'; g.lineWidth = 12; for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2; g.beginPath(); g.arc(c, c, c * 0.9, a, a + Math.PI * 2 / 24 * 0.62); g.stroke(); } g.lineWidth = 3; g.beginPath(); g.arc(c, c, c * 0.72, 0, Math.PI * 2); g.stroke(); }
+    else if (kind === 'dash2') { g.strokeStyle = '#fff'; g.fillStyle = '#fff'; g.lineWidth = 4; g.beginPath(); g.arc(c, c, c * 0.88, 0, Math.PI * 2); g.stroke(); for (let i = 0; i < 36; i++) { g.save(); g.translate(c, c); g.rotate(i / 36 * Math.PI * 2); g.fillRect(c * 0.62, -3, c * (i % 3 === 0 ? 0.2 : 0.1), 6); g.restore(); } }
+    else if (kind === 'beam') { const gr = g.createLinearGradient(0, S, 0, 0); gr.addColorStop(0, 'rgba(255,255,255,0.95)'); gr.addColorStop(0.35, 'rgba(255,255,255,0.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, S, S); }
+    else {
+      const N = kind === 'rays' ? 18 : 30; g.translate(c, c);
+      for (let i = 0; i < N; i++) {
+        g.save(); g.rotate(i / N * Math.PI * 2 + (i % 2 ? 0.05 : 0));
+        const len = c * (0.65 + 0.35 * ((i * 7) % 5) / 4), w = (kind === 'rays' ? 0.07 : 0.04) * c * (0.6 + 0.8 * ((i * 3) % 4) / 3), gr = g.createLinearGradient(0, 0, len, 0);
+        gr.addColorStop(0, 'rgba(255,255,255,0.95)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr;
+        g.beginPath(); g.moveTo(0, -w * 0.15); g.lineTo(len, -w); g.lineTo(len, w); g.lineTo(0, w * 0.15); g.closePath(); g.fill(); g.restore();
+      }
+    }
+    tex = new THREE.CanvasTexture(cv);
+  } catch (_) {}
+  _gTex[kind] = tex; return tex;
+}
+function gfxHex(h, sat, l) {                                         // 빛깔(색상 h 0~1) → 0xRRGGBB (무지개용)
+  const f = (n) => { const k = (n + h * 12) % 12, a = sat * Math.min(l, 1 - l); return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
+  return (Math.round(f(0) * 255) << 16) | (Math.round(f(8) * 255) << 8) | Math.round(f(4) * 255);
+}
+const GFX_NORMAL = (typeof THREE !== 'undefined' && THREE.NormalBlending !== undefined) ? THREE.NormalBlending : 1;
+// 등급별 효과 정의 (크기는 모두 '효과 기준 반지름 ra'의 배수). add=빛을 더함(true) / 그냥 덮음(false: 검은색·밝은 땅에서도 보이게)
+//  beams: 하늘로 솟는 빛기둥 · rings: 바닥에서 도는 마법진 · layers: 뒤에서 퍼지는 후광·빛줄기 · dots: 소용돌이치며 흘러오르는 입자 · pulse: 바깥으로 퍼지는 파동
+const GRADE_FX_DEF = [
+  null,
+  { // 다크: 검은 빛줄기 + 검은 기둥 + 보라 번개빛
+    beams: [{ h: 9, top: 0.35, op: 0.34, color: 0x000000, add: false }, { h: 7, top: 0.18, op: 0.35, color: 0x7c3aed, add: true }],
+    rings: [{ r: 1.7, op: 0.65, color: 0x000000, add: false, spin: 0.9, tex: 'dash' }, { r: 2.6, op: 0.6, color: 0x7c3aed, add: true, spin: -0.6, tex: 'dash2' }],
+    layers: [{ map: 'rays', color: 0x000000, op: 0.6, size: 13, add: false, spin: 0.25, back: 1.2 }, { map: 'rays2', color: 0x2e1065, op: 0.55, size: 10, add: false, spin: -0.4, back: 1.2 },
+             { map: 'glow', color: 0x000000, op: 0.5, size: 6, add: false, pulse: 0.08, back: 1.2 }, { map: 'glow', color: 0x7c3aed, op: 0.5, size: 3.6, add: true, pulse: 0.15, back: 1.1 }],
+    dots: [{ n: [14, 24], map: 'glow', cols: [0x000000, 0x0b0614, 0x1e0b3a], op: 0.8, size: 0.55, add: false, rr: [0.7, 1.3], rise: 0.6, life: [1.6, 2.6] },
+           { n: [8, 14], map: 'star', cols: [0xc084fc, 0xe879f9, 0xa855f7], op: 1, size: 0.26, add: true, rr: [0.8, 1.6], rise: 0.8, life: [1.0, 1.9] }],
+    pulse: { color: 0x000000, add: false, op: 0.55, every: 1.1, grow: 6.5, count: 3 }, tint: { to: 0x120a24, k: 0.6, em: 0x5b21b6, emI: 0.55 }
+  },
+  { // 이터널: 은은하지만 확실히 보이게 — 얼음빛 기둥 + 은빛 마법진 + 흐르는 하얀 아지랑이
+    beams: [{ h: 7, top: 0.3, op: 0.24, color: 0x7dd3fc, add: false }, { h: 6, top: 0.15, op: 0.4, color: 0xffffff, add: true }],
+    rings: [{ r: 1.8, op: 0.7, color: 0xe0f2fe, add: true, spin: 0.5, tex: 'dash' }, { r: 2.7, op: 0.45, color: 0x38bdf8, add: false, spin: -0.35, tex: 'dash2' }],
+    layers: [{ map: 'glow', color: 0x7dd3fc, op: 0.4, size: 7, add: false, pulse: 0.1, back: 1.2 }, { map: 'glow', color: 0xffffff, op: 0.4, size: 4, add: true, pulse: 0.1, back: 1.1 }, { map: 'rays', color: 0xffffff, op: 0.3, size: 11, add: true, spin: 0.2, back: 1.2 }],
+    dots: [{ n: [12, 20], map: 'glow', cols: [0xffffff, 0xbae6fd, 0xe0f2fe, 0xddd6fe], op: 0.6, size: 0.5, add: true, rr: [0.7, 1.4], rise: 0.55, life: [1.6, 2.6] },
+           { n: [8, 14], map: 'star', cols: [0xffffff, 0xa5f3fc], op: 0.95, size: 0.24, add: true, rr: [0.8, 1.6], rise: 0.7, life: [1.2, 2.2] }],
+    pulse: { color: 0xbae6fd, add: true, op: 0.55, every: 1.7, grow: 5.5, count: 2 }, tint: { to: 0xe0f2fe, k: 0.5, em: 0x7dd3fc, emI: 0.4 }
+  },
+  { // 디바인: 겁나게 화려 — 하늘 끝까지 솟는 금빛·무지개 기둥, 세 겹 마법진, 눈부신 후광·두 겹 빛줄기, 무지개 소용돌이, 쉴 새 없이 퍼지는 파동
+    beams: [{ h: 17, top: 0.45, op: 0.4, color: 0xfbbf24, add: false }, { h: 15, top: 0.25, op: 0.6, color: 'rainbow', add: true }],
+    rings: [{ r: 1.8, op: 0.85, color: 'rainbow', add: false, spin: 0.9, tex: 'dash' }, { r: 2.8, op: 0.75, color: 'rainbow', hue: 0.5, add: true, spin: -0.7, tex: 'dash2' }, { r: 3.8, op: 0.6, color: 0xfde68a, add: true, spin: 0.4, tex: 'dash' }],
+    layers: [{ map: 'glow', color: 0xffffff, op: 0.95, size: 6.5, add: true, pulse: 0.12, back: 1.0 }, { map: 'glow', color: 0xfbbf24, op: 0.6, size: 12, add: false, pulse: 0.1, back: 1.2 },
+             { map: 'rays', color: 0xffffff, op: 0.9, size: 26, add: true, spin: 0.35, back: 1.3 }, { map: 'rays2', color: 0xfde68a, op: 0.85, size: 19, add: true, spin: -0.55, back: 1.3 },
+             { map: 'ring', color: 'rainbow', op: 0.85, size: 9, add: true, spin: 0.6, back: 1.1, hue: 0 }],
+    dots: [{ n: [28, 44], map: 'glow', cols: 'rainbow', op: 0.85, size: 0.6, add: true, rr: [0.7, 1.8], rise: 0.65, life: [1.4, 2.6] },
+           { n: [20, 30], map: 'star', cols: 'rainbow', op: 1, size: 0.32, add: true, rr: [0.8, 2.0], rise: 0.9, life: [1.0, 2.0] }],
+    pulse: { color: 'rainbow', add: true, op: 0.75, every: 0.8, grow: 8, count: 4 }, tint: { to: 0xfde68a, k: 0.45, em: 0xffd54f, emI: 0.6, rainbowEm: true }
+  }
+];
+function tintGradeModel(obj, grade) {                                // 알·펫 몸 색을 등급 색으로 물들이고(+은은하게 빛나게) 바뀐 재질 목록을 돌려줌 (재질은 개체마다 따로라 다른 개체에 안 번짐)
+  const T = GRADE_FX_DEF[grade] && GRADE_FX_DEF[grade].tint, list = []; if (!T || !obj || !obj.traverse) return list;
+  const target = new THREE.Color(T.to);
+  obj.traverse(o => {
+    if (!o.material || o.isSprite) return;
+    for (const m of (Array.isArray(o.material) ? o.material : [o.material])) {
+      if (!m || !m.color || m.transparent || list.some(x => x.m === m)) continue;
+      if (m.color.lerp) m.color.lerp(target, T.k);
+      if (m.emissive && m.emissive.setHex) { m.emissive.setHex(T.em); m.emissiveIntensity = Math.max(m.emissiveIntensity || 0, T.emI); }
+      list.push({ m, rainbow: !!T.rainbowEm && !!(m.emissive && m.emissive.setHex) });
+    }
+  });
+  return list;
+}
+function gradeSprite(map, add, order) {
+  const m = new THREE.SpriteMaterial({ map: gradeTexture(map), transparent: true, depthWrite: false, blending: add ? THREE.AdditiveBlending : GFX_NORMAL }); m.opacity = 0;
+  const sp = new THREE.Sprite(m); sp.renderOrder = order; return sp;
+}
+function gradeMesh(geo, map, add, order) {
+  const m = new THREE.MeshBasicMaterial({ map: gradeTexture(map), transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: add ? THREE.AdditiveBlending : GFX_NORMAL }); m.opacity = 0;
+  const mesh = new THREE.Mesh(geo, m); mesh.renderOrder = order; return mesh;
+}
+function attachGradeFx(owner, grade, kind) {                          // owner = { obj: 따라갈 그룹, rad: () => 월드 반지름 }  kind = 'egg' | 'pet'
+  grade = clampGrade(grade); if (!grade || !GRADE_SCENE) return null;
+  const D = GRADE_FX_DEF[grade], fx = { owner, grade, kind, def: D, t: Math.random() * 10, node: new THREE.Group(), beams: [], rings: [], layers: [], dots: [], pulses: [], pulseT: 0, far: false, tint: null };
+  GRADE_SCENE.add(fx.node);
+  fx.tint = tintGradeModel(owner.obj, grade);
+  D.beams.forEach((B, i) => { const mesh = gradeMesh(new THREE.CylinderGeometry(B.top, 1, 1, 20, 1, true), 'beam', B.add, 3 + i); fx.node.add(mesh); fx.beams.push({ B, mesh, ph: Math.random() * 6.28 }); });
+  D.rings.forEach((R, i) => { const mesh = gradeMesh(new THREE.PlaneGeometry(1, 1), R.tex, R.add, 3 + i); mesh.rotation.x = -Math.PI / 2; fx.node.add(mesh); fx.rings.push({ R, mesh }); });
+  D.layers.forEach((L, i) => { const sp = gradeSprite(L.map, L.add, 6 + i); fx.node.add(sp); fx.layers.push({ L, sp, ph: Math.random() * 6.28 }); });
+  const mult = kind === 'pet' ? 1.5 : 1;                                                  // 펫은 몸 둘레라서 입자를 더 많이
+  for (const sd of D.dots) { const n = Math.round((kind === 'pet' ? sd.n[1] : sd.n[0]) * (kind === 'pet' ? 1 : 1));
+    for (let i = 0; i < n; i++) { const sp = gradeSprite(sd.map, sd.add, 14); fx.node.add(sp); fx.dots.push({ sp, cols: sd.cols, op: sd.op, size: sd.size, rr: sd.rr, rise: sd.rise, life: sd.life, a: Math.random() * 6.28, w: (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random() * 1.1), rad: 0, age: Math.random() * sd.life[1], lifeNow: 1, hex: 0xffffff, init: false }); } }
+  for (let i = 0; i < D.pulse.count; i++) { const sp = gradeSprite('ring', D.pulse.add, 5); fx.node.add(sp); fx.pulses.push({ sp, age: 99, life: D.pulse.grow / 4.5 + 0.5, hex: 0xffffff }); }
+  GRADE_FX.push(fx); return fx;
+}
+function gradeFxDispose(fx) {
+  if (fx.node.parent) fx.node.parent.remove(fx.node);
+  for (const b of fx.beams) { try { b.mesh.material.dispose(); b.mesh.geometry.dispose(); } catch (_) {} }
+  for (const r of fx.rings) { try { r.mesh.material.dispose(); r.mesh.geometry.dispose(); } catch (_) {} }
+  for (const l of fx.layers) { try { l.sp.material.dispose(); } catch (_) {} } for (const d of fx.dots) { try { d.sp.material.dispose(); } catch (_) {} } for (const p of fx.pulses) { try { p.sp.material.dispose(); } catch (_) {} }
+}
+function updateGradeFx(dt, cam) {                                    // 매 프레임: 알/펫을 따라다니며 기둥·마법진·후광·소용돌이 입자·파동을 움직임
+  for (let i = GRADE_FX.length - 1; i >= 0; i--) {
+    const fx = GRADE_FX[i], o = fx.owner;
+    if (!o.obj.parent) { gradeFxDispose(fx); GRADE_FX.splice(i, 1); continue; }              // 알이 사라지면(부화·판매·초기화) 효과도 같이 정리
+    o.obj.getWorldPosition(_gv); const ra = Math.max(GRADE_RA_MIN[fx.kind], o.rad()), cx = _gv.x, cz = _gv.z, cy = Math.max(0, _gv.y) + ra * 1.15;
+    let dx = cam.x - cx, dy = cam.y - cy, dz = cam.z - cz; const dist = Math.hypot(dx, dy, dz) || 1; dx /= dist; dy /= dist; dz /= dist;
+    const far = dist > 220; if (far !== fx.far) { fx.far = far; fx.node.visible = !far; } if (far) continue;                     // 아주 멀리 있는 건 안 그림
+    fx.t += dt; const t = fx.t, D = fx.def;
+    const col = (c, hue) => c === 'rainbow' ? gfxHex(((t * 0.25) + (hue || 0)) % 1, 1, 0.6) : c;
+    for (const b of fx.beams) { const B = b.B, h = B.h * ra, m = b.mesh; m.position.set(cx, h / 2, cz); m.scale.set(ra * (0.8 + 0.06 * Math.sin(t * 2 + b.ph)), h, ra * (0.8 + 0.06 * Math.sin(t * 2 + b.ph))); m.rotation.y = t * 0.3; m.material.opacity = B.op * (0.85 + 0.15 * Math.sin(t * 2.6 + b.ph)); m.material.color.setHex(col(B.color, 0)); }
+    fx.rings.forEach((rg, k) => { const R = rg.R, m = rg.mesh, sz = 2 * R.r * ra * (1 + 0.03 * Math.sin(t * 2 + k)); m.position.set(cx, 0.05 + k * 0.015, cz); m.scale.set(sz, sz, 1); m.rotation.z = R.spin * t; m.material.opacity = R.op * (0.85 + 0.15 * Math.sin(t * 3 + k)); m.material.color.setHex(col(R.color, R.hue)); });
+    for (const ly of fx.layers) {
+      const L = ly.L, sz = L.size * ra * (1 + (L.pulse || 0) * Math.sin(t * 2.2 + ly.ph)), sp = ly.sp;
+      sp.position.set(cx - dx * L.back * ra, cy - dy * L.back * ra, cz - dz * L.back * ra);          // 카메라 쪽으로 덮지 않고 몸 뒤에서 퍼지게
+      sp.scale.set(sz, sz, 1); sp.material.rotation = (L.spin || 0) * t; sp.material.opacity = L.op * (0.88 + 0.12 * Math.sin(t * 3 + ly.ph)); sp.material.color.setHex(col(L.color, L.hue));
+    }
+    for (const d of fx.dots) {
+      d.age += dt;
+      if (!d.init || d.age >= d.lifeNow) {                           // 새로 태어남
+        d.init = true; d.age = 0; d.lifeNow = d.life[0] + Math.random() * (d.life[1] - d.life[0]); d.a = Math.random() * 6.28; d.rad = d.rr[0] + Math.random() * (d.rr[1] - d.rr[0]);
+        d.hex = d.cols === 'rainbow' ? gfxHex(Math.random(), 1, 0.65) : d.cols[Math.floor(Math.random() * d.cols.length)]; d.sp.material.color.setHex(d.hex);
+      }
+      const k = d.age / d.lifeNow, ang = d.a + d.w * d.age, rr = d.rad * ra * (1 + 0.9 * k), sz = d.size * ra * (0.8 + 0.7 * k);           // 위로 오를수록 바깥으로 퍼지며 소용돌이
+      d.sp.position.set(cx + Math.cos(ang) * rr, Math.max(0, _gv.y) + (0.1 + d.rise * d.age * 2.6) * ra, cz + Math.sin(ang) * rr); d.sp.scale.set(sz, sz, 1);
+      d.sp.material.opacity = d.op * Math.pow(Math.sin(Math.PI * k), 0.7); d.sp.material.rotation = d.age * 1.5;
+    }
+    fx.pulseT += dt;                                                  // 파동: 일정 간격으로 하나씩 바깥으로 퍼지며 사라짐
+    if (fx.pulseT >= D.pulse.every) { fx.pulseT = 0; const pu = fx.pulses.find(p => p.age >= p.life); if (pu) { pu.age = 0; pu.hex = D.pulse.color === 'rainbow' ? gfxHex(Math.random(), 1, 0.65) : D.pulse.color; pu.sp.material.color.setHex(pu.hex); } }
+    for (const pu of fx.pulses) { if (pu.age >= pu.life) { pu.sp.material.opacity = 0; continue; } pu.age += dt; const k = Math.min(1, pu.age / pu.life), sz = ra * (1.4 + D.pulse.grow * k); pu.sp.position.set(cx, cy, cz); pu.sp.scale.set(sz, sz, 1); pu.sp.material.opacity = D.pulse.op * Math.pow(1 - k, 1.4); }
+    if (fx.tint) for (const tn of fx.tint) if (tn.rainbow) tn.m.emissive.setHex(gfxHex((t * 0.3) % 1, 1, 0.55));                 // 디바인 펫·알은 몸이 무지개빛으로 일렁임
+  }
+}
+// 알 크기 기준 배율(보통 크기 알의 배율): 알 모델의 '겉보기 크기'(수정·날개 같은 장식 포함 가장 긴 쪽)가 닭 약 0.7m → 호랑이 0.85 → 용 1.0 → 청룡 1.15 → 사자 1.3 → 삼족오 1.5 → 악마 1.7 → 대천사 1.9m가 되도록 맞춘 값 (캐릭터 키 0.95m)
+const EGG_TIER_VER = 2;                                         // 알 크기 기준 버전(2 = 겉보기 크기 기준으로 줄인 값). 저장 데이터에 같이 기록해 옛 저장의 크기를 새 기준으로 맞춤
+const OLD_EGG_TIER = { chicken: 1.03, tiger: 1.21, dragon: 1.39, eastern: 1.66, lion: 1.80, samjoko: 2.01, demon: 2.17, archangel: 2.37 };      // (버전 1: 알이 지금보다 2배 넘게 컸던 때의 배율)
+const EGG_VIS1 = { chicken: 1.51, tiger: 1.49, dragon: 2.17, eastern: 2.05, lion: 2.25, samjoko: 3.01, demon: 2.87, archangel: 2.84 };      // 알(크기 1)의 겉보기 크기(m): 수정·날개 같은 장식 포함 가장 긴 쪽 (모델에서 잰 값)
+const EGG_TIER = { chicken: 0.46, tiger: 0.57, dragon: 0.46, eastern: 0.56, lion: 0.58, samjoko: 0.50, demon: 0.59, archangel: 0.67 };
 function createCreatureAndEgg(zone, corridorX, wallInnerX = 8.0) {
   const root = new THREE.Group();
   // 벽 안쪽 면 x = zone.side * 8.0 (PATH_WIDTH=16, WALL_THICK=1.2)
@@ -4677,10 +4861,9 @@ function createCreatureAndEgg(zone, corridorX, wallInnerX = 8.0) {
   function spawnNestEggs() {                   // 둥지 앞에 알 3~4개를 새로 놓음 (처음 + 3분마다 '알 초기화' 때 다시 부름)
     if (!eggFactory) return;
     const count = 3 + (Math.random() < 0.5 ? 1 : 0);
-    // 크기: 같은 동물의 '보통 크기'(×1)를 기준으로 작은 알 38% / 보통 56% / 큰 알 5.2% / 아주 큰 알 0.8% (아주 큰 알은 초기화 4~5번에 하나꼴로 진짜 가끔). 자리 잡기는 '큰 알부터'
+    // 크기: 같은 동물의 '보통 크기'(×1)를 기준으로 작은 알 40% / 보통 58.95% / 큰 알 1% / 아주 큰 알 0.05% (rollEggRel). 자리 잡기는 '큰 알부터'
     const tierS = EGG_TIER[zone.id] || 1;
-    const rollRel = () => { const r = Math.random(); return r < 0.38 ? 0.5 + Math.random() * 0.2 : (r < 0.94 ? 0.85 + Math.random() * 0.3 : (r < 0.992 ? 1.4 + Math.random() * 0.3 : 2.0 + Math.random() * 0.3)); };
-    const picked = Array.from({ length: count }, () => rollRel() * tierS).sort((u, v) => v - u);
+    const picked = Array.from({ length: count }, () => rollEggRel() * tierS).sort((u, v) => v - u);
     const cx = creatureGroup.position.x;      // 생물 중심 x (root 기준)
     const placed = [];                        // 이미 놓은 알들 { eg, x, z }
     const zLo = Math.min(...creatureBoxes.map(bx => bx.min.z)) - 3.0, zHi = Math.max(...creatureBoxes.map(bx => bx.max.z)) + 3.0;
@@ -4775,13 +4958,15 @@ function createCreatureAndEgg(zone, corridorX, wallInnerX = 8.0) {
       g.position.set(best.x, 0, best.z);
       root.add(g);
       placed.push({ x: best.x, z: best.z, margin: eMargin, boxesAbs: eboxes.map(bx => ({ min: { x: bx.min.x + best.x, y: bx.min.y, z: bx.min.z + best.z }, max: { x: bx.max.x + best.x, y: bx.max.y, z: bx.max.z + best.z } })) });
-      animParts.eggs.push({
+      const eo = {
         group: g, parts, scale: sc, shell: parts.shell,
         radius: shellR,                          // 알 껍데기 반경(집기 거리 계산용)
         baseY: (zone.id === 'archangel' ? 0.38 : 0.18),
         phase: Math.random() * 6.28,
-        home: { pos: g.position.clone(), rot: g.rotation.clone() }
-      });
+        home: { pos: g.position.clone(), rot: g.rotation.clone() },
+        grade: GRADE_ZONES.includes(zone.id) ? rollGrade() : 0      // 일반/다크/이터널/디바인(알 크기와 상관없이 따로 뽑음, 용부터만)
+      };
+      animParts.eggs.push(eo); if (eo.grade) eo.fx = attachGradeFx({ obj: g, rad: () => eo.radius }, eo.grade, 'egg');
     }
   }
   spawnNestEggs();
@@ -4808,6 +4993,7 @@ function createCreatureAndEgg(zone, corridorX, wallInnerX = 8.0) {
 // 3. 배경 생성 (길게 이어진 복도 + 구역별 맞춤 배경색 + 8종 생물 & 알 배치)
 // ============================================================================
 function createBackground(scene) {
+  GRADE_SCENE = scene;
   const PATH_WIDTH = 16;      // 길의 폭 (벽 사이 간격을 더 넓힘)
   const PATH_LENGTH = 1200;   // 8종 생물이 서로 엄청 멀리 떨어져 배치되도록 길을 1200으로 대폭 확장
   const WALL_HEIGHT = 9;      // 벽 높이
@@ -5553,7 +5739,7 @@ function createBackground(scene) {
     }
     function updateSpeed(dt) {                                     // 러닝머신 위: 초당 속도 점수 +gain, 1초마다 "+숫자" 표시
       if (!onTm) { _floatAcc = 0; return; }
-      const g = tmGain(tmLevel); speedPoints += g * dt; _floatAcc += dt;
+      const g = tmGain(tmLevel) * trailMul(); speedPoints += g * dt; _floatAcc += dt;      // 트레일을 끼면 배율만큼 더
       if (_floatAcc >= 1) { _floatAcc -= 1; spawnFloater('+' + fmtNum(g)); }
     }
     function tmLevelUp() {                                         // 레벨업: 돈으로
@@ -5561,7 +5747,7 @@ function createBackground(scene) {
       const cost = TM_COST[tmLevel];
       if (moneyNow() < cost) { toast(`💰 돈이 모자라요 (필요 ${fmtNum(cost)})`, 'warn', 2200); return false; }
       bankMoney(); moneyBase -= cost; tmLevel++; saveGame(); pushRank(true); pulseMoney();
-      toast(`🏃 러닝머신 Lv.${tmLevel}! 타면 초당 +${fmtNum(tmGain(tmLevel))} · 달리기 속도 ×${tmRunMult().toFixed(2)}`, 'good', 3500); return true;
+      return true;
     }
     function updateTreadmills(dt) {                                // 벨트·롤러·코어·계기판·화염·충격파·스파크 애니메이션
       tmTime += dt;
@@ -6014,8 +6200,6 @@ function createBackground(scene) {
       const ai = c.ai;
       if (ai.state === 'chase' || ai.state === 'rush') return;
       ai.speed = guardChaseSpeed(c.id);                             // 내 속도 점수에 따라 쫓아오는 속도가 정해짐
-      const gs = GUARD_SPEED[c.id], enough = speedPoints >= gs;
-      toast(`⚠️ ${creatureName(c.id)}이(가) 깨어났어요! 지킴이 속도 ${fmtNum(gs)} ${enough ? '≤' : '>'} 내 속도 ${fmtNum(speedPoints)}` + (enough ? ' · 안전선까지 달려요!' : ' · 속도가 모자라요, 잡히면 날아가요!'), enough ? 'good' : 'warn', 3600);
       const cg = c.creatureGroup;
       const d = Math.hypot(cg.position.x - charPos.x, cg.position.z - (charPos.z - c.root.position.z));
       c.anim.setAction(ai.action);
@@ -6044,7 +6228,6 @@ function createBackground(scene) {
       let dx = charPos.x - cg.position.x - c.root.position.x, dz = charPos.z - cg.position.z - c.root.position.z;
       const d = Math.hypot(dx, dz) || 1; dx /= d; dz /= d;           // 동물에서 멀어지는 방향
       dropEggAt(charPos.x, charPos.z);
-      toast('😵 잡혔어요! 알을 떨어뜨렸어요', 'bad', 3000);
       startKnock(dx, dz);
       c.ai.state = 'return'; c.ai.cur = c.ai.speed * 0.5;            // 잡았으면 바로 자러 돌아감
     }
@@ -6110,9 +6293,9 @@ function createBackground(scene) {
       carriedEgg = null; isCarrying = false; rig.carryMount.visible = false; carryingHud.style.display = 'none';
       rig.carryMount.remove(e.group); scene.remove(e.group);
       const k = c.eggs.indexOf(e); if (k >= 0) c.eggs.splice(k, 1);                                 // 둥지에서 알이 사라짐
-      const roll = rollHatch(e.scale, c.id), item = { id: newId(), cid: c.id, s0: e.scale, grow: roll.grow, dur: roll.dur };    // 이 알의 부화 시간·최종 크기 배율이 정해짐
-      if (inv.length >= INV_MAX) { toast('🎒 가방이 가득 차서 알을 내 칸에 바로 놓았어요', 'warn', 3500); autoPlaceEgg(item); }
-      else { inv.push(item); syncCounts(); renderHotbar(); saveGame(); toast(`🎒 알을 가방에 넣었어요! 내 칸에서 직접 설치하세요 (부화 ${fmtDur(roll.dur)})`, 'good', 4000); }
+      const roll = rollHatch(e.scale, c.id), item = { id: newId(), cid: c.id, s0: e.scale, grow: roll.grow, dur: roll.dur, grade: e.grade || 0 };    // 이 알의 부화 시간·최종 크기 배율이 정해짐
+      if (inv.length >= INV_MAX) { toast('🎒 가득 참 · 내 칸에 놓았어요', 'warn', 2500); autoPlaceEgg(item); }
+      else { inv.push(item); syncCounts(); renderHotbar(); saveGame(); }
       sendHome(c);                                                                                    // 동물은 돌아가서 다시 잠
       return item;
     }
@@ -6120,8 +6303,8 @@ function createBackground(scene) {
     // ================= 부화: 내 칸의 알은 시간이 지나며 점점 커지고 → 부화 준비 → F로 '부화하기' → 흔들리다 깨지며 그 동물이 나옴 =================
     // 부화 시간(초): 동물 등급별 [가장 빠른 알, 가장 느린 알]. 앞 등급은 길어봤자 몇 분, 뒤로 갈수록 길어짐. 같은 등급 안에서는 알이 클수록 오래 걸림
     const HATCH_RANGE = { chicken: [10, 180], tiger: [30, 480], dragon: [60, 1200], eastern: [180, 2700], lion: [600, 7200], samjoko: [1800, 21600], demon: [3600, 43200], archangel: [10800, 86400] };
-    const GROW_MAX = 2, FINAL_MAX_D = 10;                    // 부화 직전 크기: 처음 크기의 1~2배(알마다 랜덤), 다 자란 알 지름은 10m를 넘지 않음 (예전 1~5배는 너무 컸음)
-    const capGrow = (cid, s0, grow) => Math.max(1, Math.min(Number(grow) || 1, GROW_MAX, FINAL_MAX_D / (1.28 * (EGG_SHELL[cid] || 1) * s0)));      // 저장된 옛 알도 같은 한도로
+    const GROW_MAX = 2, FINAL_MAX_V = 4.5;                   // 부화 직전 크기: 처음 크기의 1~2배(알마다 랜덤). 다 자란 알의 겉보기 크기(장식 포함)는 4.5m를 넘지 않음
+    const capGrow = (cid, s0, grow) => Math.max(1, Math.min(Number(grow) || 1, GROW_MAX, FINAL_MAX_V / ((EGG_VIS1[cid] || 1.5) * s0)));      // 저장된 옛 알도 같은 한도로
     const WOBBLE_SEC = 5;                                     // '부화하기'를 누른 뒤 알이 흔들리는 시간
     const SAVE_KEY = 'eggGame.v1';
     let timeOffset = 0;                                       // (시험용) 시간을 앞당길 때만 사용
@@ -6159,16 +6342,17 @@ function createBackground(scene) {
       const ext = (k) => Math.max(...bx.map(b => b.max[k])) - Math.min(...bx.map(b => b.min[k]));
       PET_FIT[c.id] = e ? (2 * e.radius / e.scale) / Math.cbrt(ext('x') * ext('y') * ext('z')) : 0.3;      // 알 지름 ÷ 몸 크기(가로·세로·높이의 기하평균)
     });
-    function createPet(cid, x, z, yaw, scale, pop) {            // 부화한 동물 1마리 만들기(내 칸·다른 사람 칸 공용). scale = 알의 마지막 크기
+    function createPet(cid, x, z, yaw, scale, pop, grade) {     // 부화한 동물 1마리 만들기(내 칸·다른 사람 칸 공용). scale = 알의 마지막 크기, grade = 등급(0~3)
       const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = yaw; scene.add(g);
       const F = CREATURE_FACTORIES[cid](g);
       F.setAction('sleep'); for (let i = 0; i < 240; i++) F.update(0.05);
-      const vis = scale * (PET_FIT[cid] || 0.3), pet = { cid, group: g, anim: F, scale, vis, t: pop ? 0 : 99, awake: false };       // vis = 눈에 보이는 크기(알 크기만큼)
+      const vis = scale * (PET_FIT[cid] || 0.3), pet = { cid, group: g, anim: F, scale, vis, t: pop ? 0 : 99, awake: false, grade: clampGrade(grade) };       // vis = 눈에 보이는 크기(알 크기만큼)
       if (pop) { F.setAction(FLYERS.includes(cid) ? 'fly' : 'run'); pet.awake = true; g.scale.setScalar(0.01); } else g.scale.setScalar(vis);
+      if (pet.grade) pet.fx = attachGradeFx({ obj: g, rad: () => 0.64 * (EGG_SHELL[cid] || 1) * scale * 1.1 }, pet.grade, 'pet');      // 주변에 흐르는 아우라(등급별)
       return pet;
     }
-    function spawnPet(cid, x, z, yaw, scale, pop, id) {         // 내 펫
-      const pet = createPet(cid, x, z, yaw, scale, pop);
+    function spawnPet(cid, x, z, yaw, scale, pop, id, grade) {  // 내 펫
+      const pet = createPet(cid, x, z, yaw, scale, pop, grade);
       const L = myFrame.toLocal(x, z); pet.a = L.a; pet.b = L.b; pet.yr = yaw - myFrame.facing; pet.id = id || newId();
       pets.push(pet); return pet;
     }
@@ -6209,9 +6393,9 @@ function createBackground(scene) {
       const pi = minePlaced.indexOf(e._placed); if (pi >= 0) minePlaced.splice(pi, 1);
       myEggs.splice(i, 1);
       bankMoney();                                              // 새 펫이 생기기 전까지 번 돈 확정 → 이제부터 새 펫 몫도 늘어남
-      spawnPet(c.id, x, z, myFrame.facing, finalScale, true);   // 내 칸의 문(광장)을 바라보게
+      spawnPet(c.id, x, z, myFrame.facing, finalScale, true, undefined, e.grade || 0);   // 내 칸의 문(광장)을 바라보게 (알의 등급이 펫에게 이어짐)
       syncCounts(); saveGame(); pushRank(true);
-      toast(`🎉 ${creatureName(c.id)} 부화! 크기 ×${(finalScale / e.hatch.s0).toFixed(1)} · 💰 +${fmtRate(petRate(c.id, finalScale))}/초`, 'good', 4000);
+      toast(`🎉 ${e.grade ? GRADE_NAME[e.grade] + ' ' : ''}${creatureName(c.id)} 부화! 💰 +${fmtRate(petRate(c.id, finalScale, e.grade || 0))}/초`, 'good', 4000);
     }
     function updateHatching(dt) {
       const now = nowMs();
@@ -6229,7 +6413,7 @@ function createBackground(scene) {
         const sc = h.s0 * (1 + (h.grow - 1) * p);
         e.scale = sc; e.group.scale.setScalar(sc); e.radius = 0.64 * e.shell * sc;
         if (e._placed) e._placed.r = e.radius * 1.05;
-        if (p >= 1 && h.state === 'incubating') { h.state = 'ready'; if (!_restoring) toast('🐣 알이 부화할 준비가 됐어요! 🥚 버튼에서 "열기"를 눌러요', 'good', 3500); }
+        if (p >= 1 && h.state === 'incubating') { h.state = 'ready'; if (!_restoring) toast('🐣 부화 준비!', 'good', 2000); }
         if (h.state === 'ready') e.group.rotation.z = Math.sin(now / 350) * 0.03;   // 부화 준비되면 살짝 들썩
       }
     }
@@ -6237,9 +6421,9 @@ function createBackground(scene) {
     // 위치는 칸 좌표(a,b)로 저장 → 로그인할 때마다 다른 칸을 배정받아도 같은 배치. 온라인이면 서버(내 계정)에, 아니면 이 기기에 저장
     function snapshotSave() {
       const eggs = myEggs.map(({ c, e }) => { const L = myFrame.toLocal(e.group.position.x, e.group.position.z);
-        return { id: e.id, cid: c.id, a: L.a, b: L.b, yr: e.group.rotation.y - myFrame.facing, s0: e.hatch.s0, grow: e.hatch.grow, start: e.hatch.start, dur: e.hatch.dur, hatching: e.hatch.state === 'hatching', hatchAt: e.hatch.hatchAt }; });
-      const ps = pets.map(p => ({ id: p.id, cid: p.cid, a: p.a, b: p.b, yr: p.yr, scale: p.scale }));
-      return { v: 2, nick: NET.nick || '', plot: myPlotIdx, look: lookToStr(myLook), money: Math.round(moneyBase * 100) / 100, moneyAt: moneyT0, tmLevel, speed: Math.floor(speedPoints), inv: inv.map(it => ({ id: it.id, cid: it.cid, s0: it.s0, grow: it.grow, dur: it.dur })), eggs, pets: ps };
+        return { id: e.id, cid: c.id, a: L.a, b: L.b, yr: e.group.rotation.y - myFrame.facing, s0: e.hatch.s0, grow: e.hatch.grow, start: e.hatch.start, dur: e.hatch.dur, hatching: e.hatch.state === 'hatching', hatchAt: e.hatch.hatchAt, grade: e.grade || 0 }; });
+      const ps = pets.map(p => ({ id: p.id, cid: p.cid, a: p.a, b: p.b, yr: p.yr, scale: p.scale, grade: p.grade || 0 }));
+      return { v: 2, tierv: EGG_TIER_VER, nick: NET.nick || '', plot: myPlotIdx, look: lookToStr(myLook), money: Math.round(moneyBase * 100) / 100, moneyAt: moneyT0, tmLevel, trail: trailLevel, trailOn: trailOn ? 1 : 0, speed: Math.floor(speedPoints), inv: inv.map(it => ({ id: it.id, cid: it.cid, s0: it.s0, grow: it.grow, dur: it.dur, grade: it.grade || 0 })), eggs, pets: ps };
     }
     function saveGame() {
       bankMoney();                                              // 저장할 때마다 지금까지 번 돈을 확정
@@ -6262,33 +6446,36 @@ function createBackground(scene) {
       if (data.look) { myLook = parseLook(data.look); applyMyLook(); }
       _restoring = true; moneyBase = Number(data.money) || 0; moneyT0 = Number(data.moneyAt) || nowMs();
       tmLevel = Math.max(1, Math.min(TM_MAX, Math.floor(Number(data.tmLevel)) || 1)); speedPoints = Math.max(0, Number(data.speed) || 0);
+      trailLevel = Math.max(0, Math.min(TRAIL_MAX, Math.floor(Number(data.trail)) || 0)); trailOn = trailLevel > 0 && (data.trailOn === undefined ? true : !!Number(data.trailOn));
       let eggsIn = toArr(data.eggs), petsIn = toArr(data.pets);
       if (data.v === 1) {                                       // 예전 저장(월드 좌표, 기본 칸) → 칸 좌표로 변환
         const F0 = { facing: Math.PI, toLocal: (x, z) => ({ a: x - 5, b: z - 599.3 }) };      // 예전(칸이 10×10이던 때) 내 칸의 문(x=5, z=599.3) 기준으로 변환 → 칸이 바뀌어도 알 배치가 문 기준으로 그대로
         const cv = (o) => { const L = F0.toLocal(o.x, o.z); return Object.assign({}, o, { a: L.a, b: L.b, yr: (o.yaw || 0) - F0.facing }); };
         eggsIn = eggsIn.map(cv); petsIn = petsIn.map(cv);
       }
+      const tv = Number(data.tierv) || 1, tmul = (cid) => tv >= EGG_TIER_VER ? 1 : EGG_TIER[cid] / (OLD_EGG_TIER[cid] || EGG_TIER[cid] || 1);      // 옛 저장(알이 더 컸을 때): 상대 크기·수입·부화 시간은 그대로 두고 눈에 보이는 크기만 새 기준으로 줄임
+      eggsIn = eggsIn.map(x => Object.assign({}, x, { s0: (Number(x.s0) || 1) * tmul(x.cid) })); petsIn = petsIn.map(x => Object.assign({}, x, { scale: (Number(x.scale) || 1) * tmul(x.cid) }));
       const now = nowMs();
       for (const sv of eggsIn) {
         const c = bg.creatures.find(k => k.id === sv.cid); if (!c || !c.makeEgg) continue;
         const g = new THREE.Group(), parts = c.makeEgg(g), W = myFrame.toWorld(sv.a, sv.b);
         const h = { s0: sv.s0, grow: capGrow(c.id, sv.s0, sv.grow), start: sv.start, dur: sv.dur, state: sv.hatching ? 'hatching' : 'incubating', hatchAt: sv.hatchAt || null };
         const p = Math.min(1, Math.max(0, (now - h.start) / h.dur)), sc = h.s0 * (1 + (h.grow - 1) * p);
-        const e = { group: g, parts, scale: sc, shell: parts.shell, radius: 0.64 * parts.shell * sc, baseY: c.id === 'archangel' ? 0.38 : 0.18, phase: Math.random() * 6.28, home: null, secured: true, hatch: h, id: sv.id || newId() };
+        const e = { group: g, parts, scale: sc, shell: parts.shell, radius: 0.64 * parts.shell * sc, baseY: c.id === 'archangel' ? 0.38 : 0.18, phase: Math.random() * 6.28, home: null, secured: true, hatch: h, id: sv.id || newId(), grade: clampGrade(sv.grade) };
+        if (e.grade) e.fx = attachGradeFx({ obj: g, rad: () => e.radius }, e.grade, 'egg');
         g.position.set(W.x, 0, W.z); g.rotation.y = myFrame.facing + (sv.yr || 0); g.scale.setScalar(sc); scene.add(g);
         c.eggs.push(e); const placed = { a: sv.a, b: sv.b, r: e.radius * 1.05 }; minePlaced.push(placed); e._placed = placed; myEggs.push({ c, e });
         if (h.state === 'incubating' && p >= 1) h.state = 'ready';
       }
-      for (const sv of petsIn) { const W = myFrame.toWorld(sv.a, sv.b); spawnPet(sv.cid, W.x, W.z, myFrame.facing + (sv.yr || 0), Math.min(Number(sv.scale) || 1, FINAL_MAX_D / (1.28 * (EGG_SHELL[sv.cid] || 1))), false, sv.id); }
-      for (const it of toArr(data.inv)) if (it && inv.length < INV_MAX && bg.creatures.find(k => k.id === it.cid)) inv.push({ id: it.id || newId(), cid: it.cid, s0: Number(it.s0) || 1, grow: capGrow(it.cid, Number(it.s0) || 1, it.grow), dur: Number(it.dur) || 30000 });
+      for (const sv of petsIn) { const W = myFrame.toWorld(sv.a, sv.b); spawnPet(sv.cid, W.x, W.z, myFrame.facing + (sv.yr || 0), Math.min(Number(sv.scale) || 1, FINAL_MAX_V / (EGG_VIS1[sv.cid] || 1.5)), false, sv.id, clampGrade(sv.grade)); }
+      for (const it of toArr(data.inv)) if (it && inv.length < INV_MAX && bg.creatures.find(k => k.id === it.cid)) inv.push({ id: it.id || newId(), cid: it.cid, grade: clampGrade(it.grade), s0: (Number(it.s0) || 1) * tmul(it.cid), grow: capGrow(it.cid, (Number(it.s0) || 1) * tmul(it.cid), it.grow), dur: Number(it.dur) || 30000 });
       renderHotbar();
       syncCounts(); updateHatching(0);                          // 부화 중이던 알의 흔들림이 이미 끝났으면 바로 부화
       _restoring = false;
       const before = moneyBase; bankMoney(); const gained = moneyBase - before;                      // 꺼져 있던 동안 펫이 번 돈(최대 24시간치)
       moneyShown = moneyBase;
       const ready = myEggs.filter(x => x.e.hatch.state === 'ready').length;
-      if (ready) toast(`🐣 부화할 준비가 된 알이 ${ready}개 있어요!`, 'good');
-      if (gained >= 1) toast(`💰 자리를 비운 동안 +${fmtNum(gained)} 벌었어요`, 'money');
+      if (gained >= 1) toast(`💰 +${fmtNum(gained)}`, 'money');
     }
     function startLocal() { NET.guest = true; applySave(readLocalSave()); }      // 혼자 하기: 이 기기에 저장
 
@@ -6303,10 +6490,10 @@ function createBackground(scene) {
     const PET_R = { chicken: 0.8, tiger: 1.6, dragon: 2.4, eastern: 3.0, lion: 1.8, samjoko: 2.0, demon: 2.4, archangel: 2.2 };    // 펫 크기(대략), 판매하려고 다가가는 거리 계산용
     const PET_TIER = { chicken: 3, tiger: 110, dragon: 4e3, eastern: 1.5e5, lion: 5.5e6, samjoko: 2e8, demon: 7.5e9, archangel: 2.8e11 };      // '보통 크기' 펫이 초당 버는 돈 (등급마다 약 37배: 앞 등급은 적게, 뒤 등급은 크게)
     const SIZE_POW = 1.7;                                       // 수입 = 등급 × (상대 크기)^1.7. 상대 크기 = 알 크기 ÷ 그 동물의 보통 크기(EGG_TIER)
-    const petRate = (cid, scale) => (PET_TIER[cid] || 1) * Math.pow(scale / (EGG_TIER[cid] || 1), SIZE_POW);
-    const petPrice = (cid, scale) => Math.max(10, Math.round(petRate(cid, scale) * SELL_SECONDS));
+    const petRate = (cid, scale, grade = 0) => (PET_TIER[cid] || 1) * Math.pow(scale / (EGG_TIER[cid] || 1), SIZE_POW) * (GRADE_MULT[clampGrade(grade)] || 1);      // 등급 배율: 다크 ×2 · 이터널 ×5 · 디바인 ×10
+    const petPrice = (cid, scale, grade = 0) => Math.max(10, Math.round(petRate(cid, scale, grade) * SELL_SECONDS));
     let moneyBase = 0, moneyT0 = nowMs(), moneyShown = 0, _restoring = false, sellHold = 0, sellLock = false;
-    const totalRate = () => pets.reduce((a, p) => a + petRate(p.cid, p.scale), 0);
+    const totalRate = () => pets.reduce((a, p) => a + petRate(p.cid, p.scale, p.grade), 0);
     const moneyNow = () => moneyBase + totalRate() * Math.min(OFFLINE_CAP_SEC, Math.max(0, (nowMs() - moneyT0) / 1000));
     function bankMoney() { moneyBase = moneyNow(); moneyT0 = nowMs(); }      // 지금까지 번 돈을 확정(펫이 바뀌기 직전·저장할 때 호출)
     // 돈 단위(방치형 게임식): 1000배마다 K 천 / M 백만 / B 십억 / T 조 / Qa 천조 / Qi / Sx. 소수 첫째 자리까지 (예: 472.4T, 17.1B, 120M). Sx 위는 안 쓰는 단위라 없앰
@@ -6330,15 +6517,15 @@ function createBackground(scene) {
     let _hudAcc = 0, _saveAcc = 0;
     function updateMoney(dt) {                                  // 돈 표시(숫자가 부드럽게 올라감) + 1분마다 자동 저장·순위 갱신
       const target = moneyNow(); moneyShown += (target - moneyShown) * Math.min(1, dt * 8); if (Math.abs(target - moneyShown) < 0.5) moneyShown = target;
-      _hudAcc += dt; if (_hudAcc > 0.1) { _hudAcc = 0; document.getElementById('speed-val').textContent = fmtNum(speedPoints); document.getElementById('speed-rate').textContent = onTm ? `+${fmtNum(tmGain(tmLevel))}/초` : ''; moneyValEl.textContent = fmtNum(moneyShown); const r = totalRate(); moneyRateEl.textContent = r > 0 ? `+${fmtRate(r)}/초` : ''; }
+      _hudAcc += dt; if (_hudAcc > 0.1) { _hudAcc = 0; document.getElementById('speed-val').textContent = fmtNum(speedPoints); document.getElementById('speed-rate').textContent = onTm ? `+${fmtNum(tmGain(tmLevel) * trailMul())}/초` : ''; moneyValEl.textContent = fmtNum(moneyShown); const r = totalRate(); moneyRateEl.textContent = r > 0 ? `+${fmtRate(r)}/초` : ''; }
       _saveAcc += dt; if (_saveAcc > 60) { _saveAcc = 0; saveGame(); pushRank(true); }
     }
     function sellPet(p) {                                       // 펫 팔기: 크기에 따른 값을 받고 펫은 사라짐
       const i = pets.indexOf(p); if (i < 0) return;
-      bankMoney(); const price = petPrice(p.cid, p.scale); moneyBase += price;
+      bankMoney(); const price = petPrice(p.cid, p.scale, p.grade); moneyBase += price;
       burstShards(p.group.position.x, p.group.position.z, Math.min(3, p.scale));
       scene.remove(p.group); pets.splice(i, 1); syncCounts(); saveGame(); pushRank(true);
-      pulseMoney(); toast(`💰 ${creatureName(p.cid)} 판매! +${fmtNum(price)}`, 'money');
+      pulseMoney(); toast(`💰 +${fmtNum(price)}`, 'money');
     }
     function updateSellHold(dt, near) {                         // 키보드: F를 꾹 눌러 판매(모바일은 알 버튼이 같은 역할)
       const on = !!(near && near.kind === 'sell') && !wardrobe.open;
@@ -6372,7 +6559,7 @@ function createBackground(scene) {
       rows.slice(0, 10).forEach((r, i) => rankListEl.appendChild(mk(r, i)));
       const myI = rows.findIndex(r => r.uid === NET.uid); if (myI >= 10) rankListEl.appendChild(mk(rows[myI], myI));
       rankFootEl.textContent = NET.rankErr ? '⚠ 순위표를 쓰려면 Firebase 규칙에 ranks를 추가해주세요 (FIREBASE_SETUP.md)' : (myI >= 0 ? `내 순위 ${myI + 1}위 / 총 ${rows.length}명` : '');
-      rankNoteEl.textContent = key === 'speed' ? '🏃 러닝머신을 탈수록 속도 점수가 올라가요! (레벨이 높을수록 초당 많이)' : '';
+      rankNoteEl.textContent = key === 'speed' ? '' : '';
       document.getElementById('rank-tab-money').classList.toggle('on', key === 'money'); document.getElementById('rank-tab-speed').classList.toggle('on', key === 'speed');
     }
     function setRankOpen(on) { rank.open = on; rankPanelEl.style.display = on ? 'flex' : 'none'; if (on) { pushRank(true); renderRank(); } }
@@ -6388,7 +6575,10 @@ function createBackground(scene) {
     const minimapEl = document.getElementById('minimap'); let miniCtx = null; try { miniCtx = minimapEl.getContext('2d'); } catch (_) {}
     const hexCss = (n) => '#' + (n >>> 0).toString(16).padStart(6, '0');
     let _miniAcc = 0;
-    function drawMinimap(dt) {                                  // 위: 전체 길(구역별 색·내 위치·쫓아오는 동물) / 아래: 안전구역 가까이에선 칸 지도, 멀리선 현재 구역 정보
+    let SHOW_MINIMAP = (typeof __MINIMAP !== 'undefined' && __MINIMAP);          // 미니맵은 화면에서 뺌(다시 쓰려면 true로). 시험에서만 켬
+    document.getElementById('minimap').style.display = SHOW_MINIMAP ? '' : 'none';
+    function drawMinimap(dt) {
+      if (!SHOW_MINIMAP) return;                                  // 위: 전체 길(구역별 색·내 위치·쫓아오는 동물) / 아래: 안전구역 가까이에선 칸 지도, 멀리선 현재 구역 정보
       _miniAcc += dt; if (_miniAcc < 0.12 || !miniCtx) return; _miniAcc = 0;
       const g = miniCtx, W = 220, H = 132, z0 = -600, z1 = bg.endZ, bx = 8, bw = W - 16, zx = (z) => bx + (z - z0) / (z1 - z0) * bw;
       g.clearRect(0, 0, W, H);
@@ -6431,7 +6621,7 @@ function createBackground(scene) {
       escapeFillEl.style.width = (me * 100).toFixed(1) + '%'; escapeMeEl.style.left = (me * 100).toFixed(1) + '%';
       escapeFoeEl.style.display = chasing ? 'block' : 'none'; escapeFoeEl.style.left = (foe * 100).toFixed(1) + '%';
       escapeFillEl.style.background = (chasing && dist < 12) ? 'linear-gradient(90deg,#f87171,#ef4444)' : 'linear-gradient(90deg,#4ade80,#facc15)';
-      escapeTextEl.textContent = `🏁 안전선까지 ${Math.max(0, Math.round(SAFE_LINE_Z - charPos.z))}m` + (chasing ? ` · ${creatureName(c.id)} ${Math.round(dist)}m 뒤` : '');
+      escapeTextEl.textContent = `🏠 ${Math.max(0, Math.round(SAFE_LINE_Z - charPos.z))}m` + (chasing ? ` · 👹 ${Math.round(dist)}m` : '');
     }
 
     // ================= 가방(핫바) · 직접 설치 · 알/펫 목록 창 =================
@@ -6444,7 +6634,9 @@ function createBackground(scene) {
     function makeEggObj(item) {                                 // 가방의 알 → 장면에 놓을 알 객체
       const c = bg.creatures.find(k => k.id === item.cid), g = new THREE.Group(), parts = c.makeEgg(g);
       g.scale.setScalar(item.s0);
-      return { c, e: { group: g, parts, scale: item.s0, shell: parts.shell, radius: 0.64 * parts.shell * item.s0, baseY: item.cid === 'archangel' ? 0.38 : 0.18, phase: Math.random() * 6.28, home: null, secured: true, id: item.id } };
+      const e = { group: g, parts, scale: item.s0, shell: parts.shell, radius: 0.64 * parts.shell * item.s0, baseY: item.cid === 'archangel' ? 0.38 : 0.18, phase: Math.random() * 6.28, home: null, secured: true, id: item.id, grade: clampGrade(item.grade) };
+      if (e.grade) e.fx = attachGradeFx({ obj: g, rad: () => e.radius }, e.grade, 'egg');
+      return { c, e };
     }
     function placeEggObj(c, e, item, a, b, yr) {                // 내 칸에 놓음: 여기서부터 부화 시간이 흐름
       const w = myFrame.toWorld(a, b);
@@ -6458,23 +6650,28 @@ function createBackground(scene) {
       const { c, e } = makeEggObj(item), r = e.radius * 1.05, spot = slotInMyPlot(r) || bestEffortSlot(r);
       placeEggObj(c, e, item, spot.a, spot.b, (Math.random() - 0.5) * 0.6); syncCounts(); renderHotbar(); saveGame(); return e;
     }
-    function placementTarget(item) {                            // 캐릭터 바로 앞 자리(칸 좌표)와, 거기에 놓을 수 있는지
-      const r = eggRadiusOf(item) * 1.05, d = r + 1.0, m = 0.7 + r;
-      const L = myFrame.toLocal(charPos.x + Math.sin(charYaw) * d, charPos.z + Math.cos(charYaw) * d);
-      const P = bg.plotBounds.all[myPlotIdx], inZone = charPos.x > P.x0 - 2 && charPos.x < P.x1 + 2 && charPos.z > P.z0 - 2 && charPos.z < P.z1 + 2;
-      let why = '';
+    function placementTarget(item) {                            // 설치할 자리(칸 좌표): '내가 서 있는 자리'를 기준으로 가장 가까운 빈 자리. 먼저 바로 앞, 안 되면 둘레로 넓혀가며 찾음
+      const r = eggRadiusOf(item) * 1.05, d = r + 1.0, m = 0.7 + r, P = bg.plotBounds.all[myPlotIdx];
+      const inZone = charPos.x > P.x0 - 2 && charPos.x < P.x1 + 2 && charPos.z > P.z0 - 2 && charPos.z < P.z1 + 2;
+      const clampA = (a) => Math.min(PLOT_N / 2 - m, Math.max(-PLOT_N / 2 + m, a)), clampB = (b) => Math.min(PLOT_N - m, Math.max(m, b));      // 벽에 붙어 서 있어도 안쪽으로 당겨 줌
+      const free = (a, b) => !(b - r < 3.5 && Math.abs(a) < bg.gateWidth / 2 + 0.5 + r) && !minePlaced.some(o => Math.hypot(a - o.a, b - o.b) < r + o.r + 0.2);      // 문 앞 길이 아니고 다른 알과 안 겹침
+      const at = (ang, rho) => { const L = myFrame.toLocal(charPos.x + Math.sin(ang) * rho, charPos.z + Math.cos(ang) * rho); return { a: clampA(L.a), b: clampB(L.b) }; };
+      const front = at(charYaw, d); let spot = null, why = '';
       if (!inZone) why = '내 칸 안으로 들어가서 설치해요';
-      else if (L.a < -PLOT_N / 2 + m || L.a > PLOT_N / 2 - m || L.b < m || L.b > PLOT_N - m) why = '칸 안쪽으로 조금 더 들어가요';
-      else if (L.b - r < 3.5 && Math.abs(L.a) < bg.gateWidth / 2 + 0.5 + r) why = '문 앞 길이라 놓을 수 없어요';
-      else if (minePlaced.some(o => Math.hypot(L.a - o.a, L.b - o.b) < r + o.r + 0.2)) why = '다른 알과 겹쳐요';
-      return { a: L.a, b: L.b, r, ok: !why, why, inZone, world: myFrame.toWorld(L.a, L.b) };
+      else {
+        const offs = [0, 22.5, -22.5, 45, -45, 67.5, -67.5, 90, -90, 112.5, -112.5, 135, -135, 157.5, -157.5, 180];
+        search: for (const extra of [0, 1.2, 2.4, 3.6, 5, 7]) for (const o of offs) { const c = at(charYaw + o * Math.PI / 180, d + extra); if (free(c.a, c.b)) { spot = c; break search; } }
+        if (!spot) why = '칸이 꽉 찼어요';
+      }
+      const use = spot || front;
+      return { a: use.a, b: use.b, r, ok: !!spot, why, inZone, world: myFrame.toWorld(use.a, use.b) };
     }
     function placeSelected() {                                  // 고른 알을 캐릭터 앞에 직접 설치
       const item = inv[invSel]; if (!item) return false;
       const t = placementTarget(item); if (!t.ok) { toast('⚠️ ' + t.why, 'warn', 2200); return false; }
       const { c, e } = makeEggObj(item); placeEggObj(c, e, item, t.a, t.b, (Math.random() - 0.5) * 0.6);
       inv.splice(invSel, 1); invSel = -1; syncCounts(); renderHotbar(); saveGame();
-      toast(`🥚 ${creatureName(item.cid)} 알을 설치했어요! 부화까지 ${fmtDur(item.dur)}`, 'good', 3000); return true;
+      return true;
     }
     function selectSlot(i) {                                    // 알 칸 고르기/해제(같은 칸을 다시 누르면 해제). 알 칸을 고르면 도구는 내려놓음
       if (wardrobe.open) return;
@@ -6484,12 +6681,11 @@ function createBackground(scene) {
       hotbarEl.textContent = '';
       TOOLS.forEach((name, i) => {                              // 1번 방망이 · 2번 함정
         const b = document.createElement('button'); b.className = 'slot tool' + (toolSel === name ? ' on' : ''); b.textContent = TOOL_ICON[name];
-        const bd = document.createElement('span'); bd.className = 'bd'; bd.textContent = TOOL_NAME[name]; b.appendChild(bd);
         const nm = document.createElement('span'); nm.className = 'num'; nm.textContent = String(i + 1); b.appendChild(nm);
         b.addEventListener('click', () => selectTool(name)); hotbarEl.appendChild(b);
       });
       for (let i = 0; i < Math.max(2, inv.length); i++) {       // 3번부터 가방의 알
-        const it = inv[i], b = document.createElement('button'); b.className = 'slot' + (it ? '' : ' empty') + (i === invSel ? ' on' : '');
+        const it = inv[i], b = document.createElement('button'); b.className = 'slot' + (it ? '' : ' empty') + (it && it.grade ? ' g' + it.grade : '') + (i === invSel ? ' on' : '');
         if (it) { b.textContent = '🥚'; const bd = document.createElement('span'); bd.className = 'bd'; bd.textContent = creatureName(it.cid).split(' ')[0]; b.appendChild(bd); }
         const nm = document.createElement('span'); nm.className = 'num'; nm.textContent = String((i + 3) % 10); b.appendChild(nm);
         b.addEventListener('click', () => selectSlot(i)); hotbarEl.appendChild(b);
@@ -6539,26 +6735,26 @@ function createBackground(scene) {
     }
     function sendHit(R) {                                       // 맞은 사람에게 이벤트 전송 (맞은 사람의 화면에서 날아가고 알을 떨어뜨림)
       if (NET.online) { const pr = NET.db.ref('hits/' + R.uid + '/' + newId()).set({ from: NET.uid, nick: NET.nick, kind: 'bat', x: r2p(charPos.x), z: r2p(charPos.z), t: nowMs() }); if (pr && pr.catch) pr.catch(netFail); }
-      toast(`🏏 ${R.nick || '상대'}을(를) 쳤어요!`, 'good', 1800);
+      toast('🏏 명중!', 'good', 1200);
     }
     function handleHit(key, v) {                                // 서버에서 온 이벤트: 내가 맞았거나(bat) / 내 함정에 누가 걸렸음(trapped)
       if (!v || seenHits.has(key)) return; seenHits.add(key); if (seenHits.size > 200) seenHits.clear();
       try { NET.db.ref('hits/' + NET.uid + '/' + key).remove(); } catch (_) {}
       if (nowMs() - (v.t || 0) > 8000) return;                  // 너무 오래된 건 무시
-      if (v.kind === 'trapped') { toast(`🪤 ${v.nick || '누군가'}이(가) 함정에 걸렸어요! 떨어진 알을 가져가요`, 'good', 3500); return; }
+      if (v.kind === 'trapped') { toast(`🪤 ${v.nick || '누군가'} 걸림!`, 'good', 2500); return; }
       if (v.kind !== 'bat') return;
       if (!inField() || onTm || wardrobe.open || hitInvuln > 0) return;                                     // 안전구역 안이면 안 맞음
       if (Math.hypot((v.x || 0) - charPos.x, (v.z || 0) - charPos.z) > BAT_RANGE + 4) return;               // 너무 멀면(지연·조작) 무효
       let dx = charPos.x - v.x, dz = charPos.z - v.z; const d = Math.hypot(dx, dz) || 1; dx /= d; dz /= d;   // 때린 사람에게서 멀어지는 방향
       if (carriedEgg) dropCarriedAsLoot();
-      startKnock(dx, dz); hitInvuln = HIT_INVULN; toast(`🏏 ${v.nick || '누군가'}에게 맞았어요!`, 'bad', 3000);
+      startKnock(dx, dz); hitInvuln = HIT_INVULN;
     }
     // ---- 떨어진 알(loot): 서버에 올라가 모두에게 보임, 먼저 줍는 한 명이 가져감 ----
     function dropCarriedAsLoot() {                              // 들고 있던 알을 지금 서 있는 자리에 떨어뜨림
       const { c, e } = carriedEgg; carriedEgg = null; isCarrying = false; rig.carryMount.visible = false; carryingHud.style.display = 'none';
       rig.carryMount.remove(e.group); scene.remove(e.group);
       const k = c.eggs.indexOf(e); if (k >= 0) c.eggs.splice(k, 1);                                         // 둥지의 알 목록에서 빠짐(이제 떨어진 알)
-      const id = newId(), rec = { cid: c.id, s0: e.scale, x: r2p(charPos.x), z: r2p(charPos.z), t: nowMs(), by: myId() };
+      const id = newId(), rec = { cid: c.id, s0: e.scale, gr: e.grade || 0, x: r2p(charPos.x), z: r2p(charPos.z), t: nowMs(), by: myId() };
       if (NET.online) { const pr = NET.db.ref('loot/' + id).set(rec); if (pr && pr.catch) pr.catch(netFail); }
       spawnLoot(id, rec);                                       // (서버 이벤트로도 오지만 같은 id는 한 번만 만들어짐)
       sendHome(c);                                              // 알을 놓았으니 쫓아오던 지킴이는 돌아가 잠
@@ -6568,12 +6764,14 @@ function createBackground(scene) {
       if (nowMs() - (rec.t || 0) > LOOT_LIFE * 1000) return;
       const g = new THREE.Group(), parts = c.makeEgg(g), s0 = Number(rec.s0) || 1;
       g.scale.setScalar(s0); g.position.set(rec.x, 0, rec.z); g.rotation.y = Math.random() * 6.28; scene.add(g);
-      lootEggs.set(id, { id, c, rec, pending: false, e: { group: g, parts, scale: s0, shell: parts.shell, radius: 0.64 * parts.shell * s0, baseY: rec.cid === 'archangel' ? 0.38 : 0.18, phase: Math.random() * 6.28, home: null, loot: id } });
+      const le = { group: g, parts, scale: s0, shell: parts.shell, radius: 0.64 * parts.shell * s0, baseY: rec.cid === 'archangel' ? 0.38 : 0.18, phase: Math.random() * 6.28, home: null, loot: id, grade: clampGrade(rec.gr) };
+      if (le.grade) le.fx = attachGradeFx({ obj: g, rad: () => le.radius }, le.grade, 'egg');
+      lootEggs.set(id, { id, c, rec, pending: false, e: le });
     }
     function removeLoot(id) { const l = lootEggs.get(id); if (!l) return; scene.remove(l.e.group); lootEggs.delete(id); }
     function takeLoot(t) {                                      // 떨어진 알 줍기: 서버에서 한 명만 성공(나머지는 사라진 알이 됨)
       const l = lootEggs.get(t.id); if (!l || l.pending || carriedEgg) return;
-      const go = () => { if (carriedEgg) return; lootEggs.delete(t.id); pickupEgg({ c: l.c, e: l.e }, true); toast('🥚 떨어진 알을 주웠어요! 안전구역으로 달려요', 'good', 3000); };      // (서버가 알을 지웠다는 소식이 '성공' 응답보다 먼저 와서 화면의 알이 사라져 있을 수 있으므로 미리 잡아 둔 알 정보로 처리)
+      const go = () => { if (carriedEgg) return; lootEggs.delete(t.id); pickupEgg({ c: l.c, e: l.e }, true); };      // (서버가 알을 지웠다는 소식이 '성공' 응답보다 먼저 와서 화면의 알이 사라져 있을 수 있으므로 미리 잡아 둔 알 정보로 처리)
       if (!NET.online) { go(); return; }
       l.pending = true;
       NET.db.ref('loot/' + t.id).transaction(cur => cur ? null : undefined).then(res => { if (res.committed) go(); else removeLoot(t.id); }).catch(err => { l.pending = false; netFail(err); });
@@ -6610,7 +6808,7 @@ function createBackground(scene) {
       if (z >= SAFE_LINE_Z - 1) { toast('⚠️ 안전구역 밖에서만 설치할 수 있어요', 'warn', 2000); return false; }
       const id = newId(), rec = { owner: myId(), nick: NET.nick || '', x: r2p(x), z: r2p(z), t: nowMs() };
       if (NET.online) { const ref = NET.db.ref('traps/' + id), pr = ref.set(rec); if (pr && pr.catch) pr.catch(netFail); try { ref.onDisconnect().remove(); } catch (_) {} }       // 내가 나가면 내 함정도 사라짐
-      spawnTrap(id, rec); trapCD = TRAP_CD; toast('🪤 함정을 설치했어요', 'good', 1800); return true;
+      spawnTrap(id, rec); trapCD = TRAP_CD; return true;
     }
     function triggerTrap(id, tr) {                              // 밟음: 서버에서 한 명만 성공
       tr.pending = true;
@@ -6621,7 +6819,6 @@ function createBackground(scene) {
     function onTrapped(rec) {                                   // 함정에 걸림: 3초 정지 + 들고 있던 알 떨어뜨림
       stunT = TRAP_STUN; velY = 0; hitInvuln = TRAP_STUN + TRAP_AFTER;
       if (carriedEgg) dropCarriedAsLoot();
-      toast(`🪤 함정에 걸렸어요! ${TRAP_STUN}초 동안 못 움직여요`, 'bad', 3000);
       if (NET.online && rec.owner && rec.owner !== myId()) { const pr = NET.db.ref('hits/' + rec.owner + '/' + newId()).set({ from: NET.uid, nick: NET.nick, kind: 'trapped', x: r2p(charPos.x), z: r2p(charPos.z), t: nowMs() }); if (pr && pr.catch) pr.catch(netFail); }      // 함정 주인에게 알려줌
     }
     function updateTraps(dt) {
@@ -6645,12 +6842,13 @@ function createBackground(scene) {
       updateLoot(dt); updateTraps(dt);
     }
     // ---- 방망이를 든 모습 + 휘두르는 동작 (내 캐릭터·다른 사람 캐릭터 공용: 오른팔만 덮어씀) ----
-    function makeBatMesh() {                                    // 손에서 팔 방향(-y)으로 뻗은 나무 방망이
-      const g = new THREE.Group(), wood = new THREE.MeshStandardMaterial({ color: 0xb7793e, roughness: 0.8 }), tape = new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.9 });
-      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, 0.34, 8), wood); handle.position.y = -0.17; g.add(handle);
-      const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.042, 0.16, 8), tape); grip.position.y = -0.08; g.add(grip);
-      const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.045, 0.55, 10), wood); barrel.position.y = -0.62; g.add(barrel);
-      const tip = new THREE.Mesh(new THREE.SphereGeometry(0.085, 10, 6), wood); tip.position.y = -0.895; g.add(tip);
+    function makeBatMesh() {                                    // 손에서 팔 방향(-y)으로 뻗은 야구 방망이: 손잡이 끝 혹 → 가는 손잡이(감은 테이프) → 굵어지는 타격 부분 → 둥근 끝
+      const V = (r, y) => new THREE.Vector2(r, y), g = new THREE.Group();
+      const wood = new THREE.MeshStandardMaterial({ color: 0xd9a066, roughness: 0.65, metalness: 0.05 }), tape = new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.95 });
+      const body = [V(0, 0.02), V(0.045, 0.012), V(0.052, -0.02), V(0.036, -0.055), V(0.028, -0.11), V(0.027, -0.34), V(0.034, -0.48), V(0.056, -0.60), V(0.073, -0.71), V(0.079, -0.80), V(0.074, -0.88), V(0.052, -0.94), V(0, -0.96)];
+      g.add(new THREE.Mesh(new THREE.LatheGeometry(body, 18), wood));
+      g.add(new THREE.Mesh(new THREE.LatheGeometry([V(0.031, -0.075), V(0.031, -0.31)], 14), tape));                // 손잡이 테이프
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.062, 0.008, 6, 18), tape); ring.position.y = -0.66; ring.rotation.x = Math.PI / 2; g.add(ring);   // 타격 부분 아래 장식 띠
       return g;
     }
     function ensureBat(rg) {                                    // 캐릭터를 다시 만들면(꾸미기) 새 손에 다시 붙임
@@ -6672,6 +6870,95 @@ function createBackground(scene) {
       const base = rg.torso.rotation.y - (rg._tw || 0); rg.torso.rotation.y = base + tw; rg._tw = tw;      // 몸통 비틀림: 지난 프레임에 더한 만큼 빼고 다시 더함(애니메이션이 값을 되돌리는 속도 때문에 그냥 더하면 계속 쌓임)
     }
 
+    // ================= 트레일(잔상): 걸을 때 뒤에 따라오는 빛. 사서(단계별) 끼면 러닝머신에서 속도 점수가 배로 오름 =================
+    const TRAIL_MAX = 10;
+    const TRAIL_MULT = [1.2, 1.4, 2, 2.5, 3, 4, 5, 7, 10, 15];                           // 러닝머신 속도 점수 증가 배율
+    const TRAIL_COST = [1e6, 1e7, 1e8, 1.5e9, 1.5e10, 2e11, 2e12, 2.5e13, 3e14, 3e15];       // 사는 값(엄청 비쌈, 최대 3Qa): 1M · 10M · 100M · 1.5B · 15B · 200B · 2T · 25T · 300T · 3Qa
+    const TRAIL_DEF = [                                          // 단계가 높을수록 더 크고 길고 알록달록·반짝임 (rainbow: 빛깔이 계속 바뀌는 속도, spark: 초당 반짝이 수, twin: 두 줄)
+      { name: '하얀 구름', cols: [0xffffff], rate: 18, life: 0.50, size: 0.50, spark: 0, rainbow: 0, twin: false },
+      { name: '하늘 물결', cols: [0x7dd3fc, 0xe0f2fe], rate: 20, life: 0.55, size: 0.55, spark: 0, rainbow: 0, twin: false },
+      { name: '초록 바람', cols: [0x4ade80, 0xbbf7d0], rate: 22, life: 0.60, size: 0.58, spark: 0, rainbow: 0, twin: false },
+      { name: '노란 번개', cols: [0xfde047, 0xfef08a, 0xffffff], rate: 24, life: 0.65, size: 0.62, spark: 2, rainbow: 0, twin: false },
+      { name: '주황 불꽃', cols: [0xfb923c, 0xfdba74, 0xfde047], rate: 26, life: 0.70, size: 0.68, spark: 4, rainbow: 0, twin: false },
+      { name: '분홍 별빛', cols: [0xf472b6, 0xfb7185, 0xfda4af, 0xfff1f2], rate: 28, life: 0.75, size: 0.72, spark: 7, rainbow: 0, twin: false },
+      { name: '보라 오로라', cols: [0xa855f7, 0xe879f9, 0x7dd3fc], rate: 30, life: 0.85, size: 0.78, spark: 10, rainbow: 0, twin: false },
+      { name: '무지개', cols: null, rate: 32, life: 0.95, size: 0.84, spark: 12, rainbow: 0.6, twin: false },
+      { name: '무지개 별가루', cols: null, rate: 34, life: 1.05, size: 0.92, spark: 18, rainbow: 1.0, twin: false },
+      { name: '은하수', cols: null, rate: 36, life: 1.20, size: 1.05, spark: 26, rainbow: 1.8, twin: true }
+    ];
+    let trailLevel = 0, trailOn = false;                         // 산 단계(0=없음) / 지금 끼고 있는지
+    const trailMul = () => (trailOn && trailLevel > 0) ? TRAIL_MULT[trailLevel - 1] : 1;
+    function trailBuy() {                                        // 다음 단계 사기 (사면 바로 끼워짐)
+      if (trailLevel >= TRAIL_MAX) return false;
+      const cost = TRAIL_COST[trailLevel];
+      if (moneyNow() < cost) { toast(`💰 돈이 모자라요 (필요 ${fmtNum(cost)})`, 'warn', 2200); return false; }
+      bankMoney(); moneyBase -= cost; trailLevel++; trailOn = true; saveGame(); pulseMoney();
+      return true;
+    }
+    function trailToggle() { if (trailLevel <= 0) return false; trailOn = !trailOn; saveGame(); return true; }
+    const _trailTex = { puff: null, star: null };
+    function trailTexture(kind) {                                // 부드러운 빛 덩어리(0) / 네 갈래 반짝이(1) — 캔버스로 한 번만 그려서 모두가 같이 씀
+      if (_trailTex[kind ? 'star' : 'puff']) return _trailTex[kind ? 'star' : 'puff'];
+      let tex = null;
+      try {
+        const cv = document.createElement('canvas'); cv.width = cv.height = 64; const g = cv.getContext('2d');
+        if (!kind) { const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.35, 'rgba(255,255,255,0.6)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); }
+        else { g.fillStyle = '#fff'; g.beginPath(); g.moveTo(32, 2); g.quadraticCurveTo(35, 29, 62, 32); g.quadraticCurveTo(35, 35, 32, 62); g.quadraticCurveTo(29, 35, 2, 32); g.quadraticCurveTo(29, 29, 32, 2); g.fill(); }
+        tex = new THREE.CanvasTexture(cv);
+      } catch (_) {}
+      _trailTex[kind ? 'star' : 'puff'] = tex; return tex;
+    }
+    function hslHex(h, sat, l) {                                 // 빛깔(색상 h 0~1)을 0xRRGGBB로
+      const f = (n) => { const k = (n + h * 12) % 12, a = sat * Math.min(l, 1 - l); return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
+      return (Math.round(f(0) * 255) << 16) | (Math.round(f(8) * 255) << 8) | Math.round(f(4) * 255);
+    }
+    const makeTrail = () => ({ live: [], freeP: [], freeS: [], acc: 0, sacc: 0, t: 0, idx: 0, px: 0, py: 0, pz: 0, has: false });
+    function trailSpawn(T, kind, x, y, z, vx, vy, vz, hex, size, life, a0) {      // 빛 하나 만들기(쉬고 있는 것을 다시 씀)
+      const pool = kind ? T.freeS : T.freeP; let it = pool.pop();
+      if (!it) {
+        if (T.live.length >= 180) return null;
+        const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: trailTexture(kind), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+        spr.renderOrder = 5; scene.add(spr); it = { s: spr, kind };
+      }
+      it.s.visible = true; it.s.position.set(x, y, z); it.s.scale.set(size, size, 1); it.s.material.color.setHex(hex); it.s.material.opacity = a0;
+      it.age = 0; it.life = life; it.vx = vx; it.vy = vy; it.vz = vz; it.size = size; it.a0 = a0; it.col = hex; it.ph = Math.random() * 6.28; T.live.push(it); return it;
+    }
+    // 한 프레임: (x,y,z)=지금 위치. ride={out}이면 러닝머신 위(제자리에서 달림 → 뒤로 흘러가는 빛). lvl 0이면 새로 안 만들고 남은 빛만 사라짐
+    function trailStep(T, lvl, x, y, z, ride, dt, rateScale) {
+      const def = lvl > 0 ? TRAIL_DEF[lvl - 1] : null, dx = T.has ? x - T.px : 0, dz = T.has ? z - T.pz : 0, dist = Math.hypot(dx, dz), jumped = dist > 8;
+      T.t += dt;
+      if (def && !jumped && dt > 0) {
+        const moving = dist / dt > 1.5;
+        if (moving || ride) {
+          const inv = dist > 1e-6 ? 1 / dist : 0, nx = ride ? -ride.out.z : -dz * inv, nz = ride ? ride.out.x : dx * inv;      // 옆 방향(두 줄일 때)
+          const bvx = ride ? -ride.out.x * 7 : 0, bvz = ride ? -ride.out.z * 7 : 0;                                              // 러닝머신: 뒤로 흘러감
+          T.acc += dt * def.rate * (rateScale || 1); let n = Math.min(6, Math.floor(T.acc)); T.acc -= n;
+          for (let k = 1; k <= n; k++) {
+            const tt = k / n, px = x - dx * (1 - tt), pz = z - dz * (1 - tt), hex = def.rainbow ? hslHex((T.t * def.rainbow + T.idx * 0.045) % 1, 1, 0.6) : def.cols[T.idx % def.cols.length]; T.idx++;
+            const lat = def.twin ? [-0.30, 0.30] : [0];
+            for (const o of lat) trailSpawn(T, 0, px + nx * o, y + 0.3, pz + nz * o, bvx, 0, bvz, hex, def.size, def.life, 0.85);
+          }
+          if (def.spark > 0) {                                                              // 반짝이(높은 단계일수록 많이)
+            T.sacc += dt * def.spark * (rateScale || 1); let m = Math.min(4, Math.floor(T.sacc)); T.sacc -= m;
+            for (let k = 0; k < m; k++) { const hex = def.rainbow ? hslHex(Math.random(), 1, 0.7) : (def.cols ? def.cols[Math.floor(Math.random() * def.cols.length)] : 0xffffff);
+              trailSpawn(T, 1, x + (Math.random() - 0.5) * 0.7 - dx * Math.random(), y + 0.2 + Math.random() * 0.7, z + (Math.random() - 0.5) * 0.7 - dz * Math.random(), bvx * 0.6 + (Math.random() - 0.5) * 0.4, 0.5 + Math.random() * 0.7, bvz * 0.6 + (Math.random() - 0.5) * 0.4, hex, 0.16 + Math.random() * 0.12 + def.size * 0.08, 0.6 + Math.random() * 0.5, 1); }
+          }
+        }
+      }
+      for (let i = T.live.length - 1; i >= 0; i--) {
+        const it = T.live[i]; it.age += dt; const k = it.age / it.life;
+        if (k >= 1) { it.s.visible = false; (it.kind ? T.freeS : T.freeP).push(it); T.live.splice(i, 1); continue; }
+        it.s.position.x += it.vx * dt; it.s.position.y += it.vy * dt; it.s.position.z += it.vz * dt;
+        const fade = Math.pow(1 - k, 1.3), sc = it.kind ? it.size * (1 - 0.3 * k) : it.size * (1 + 0.5 * k);
+        const cd = Math.hypot(it.s.position.x - camera.position.x, it.s.position.y - camera.position.y, it.s.position.z - camera.position.z), cf = Math.max(0, Math.min(1, (cd - 1.2) / 2.0));      // 카메라 바로 앞에 온 빛은 흐려져서 화면을 가리지 않음
+        it.s.scale.set(sc, sc, 1); it.s.material.opacity = cf * (it.kind ? it.a0 * fade * (0.6 + 0.4 * Math.sin(it.age * 22 + it.ph)) : it.a0 * fade);
+      }
+      T.px = x; T.py = y; T.pz = z; T.has = true;
+    }
+    function trailDispose(T) { for (const it of [...T.live, ...T.freeP, ...T.freeS]) { scene.remove(it.s); try { it.s.material.dispose(); } catch (_) {} } T.live.length = 0; T.freeP.length = 0; T.freeS.length = 0; }
+    const myTrail = makeTrail();
+    function updateMyTrail(dt) { trailStep(myTrail, trailOn ? trailLevel : 0, charPos.x, charPos.y, charPos.z, onTm ? { out: onTm.out } : null, dt, 1); }
+
     // ---- 오른쪽 세로 버튼 + 목록 창(성장하는 달걀 / 펫) ----
     const tmPanelEl = document.getElementById('tm-panel'), eggsPanelEl = document.getElementById('eggs-panel'), petsPanelEl = document.getElementById('pets-panel'), eggsListEl = document.getElementById('eggs-list'), petsListEl = document.getElementById('pets-list');
     let openMenu = null, _menuAcc = 0, sellConfirm = { pet: null, t: 0 };
@@ -6683,10 +6970,31 @@ function createBackground(scene) {
       renderMenus();
     }
     function renderMenus() { if (openMenu === 'eggs') renderEggsPanel(); else if (openMenu === 'pets') renderPetsPanel(); else if (openMenu === 'tm') renderTmPanel(); updateEggsDot(); }
-    function renderTmPanel() {                                  // 러닝머신 창: 내 레벨·속도 + 레벨표 + 레벨업 버튼
+    let tmTab = 'run';                                           // 러닝머신 창의 탭: 'run' | 'trail'
+    const TRAIL_SW = (lv) => { const d = TRAIL_DEF[lv - 1]; return d.rainbow ? 'linear-gradient(90deg,#f87171,#fbbf24,#4ade80,#38bdf8,#a78bfa,#f472b6)' : `linear-gradient(90deg,#${d.cols[0].toString(16).padStart(6, '0')},#${d.cols[d.cols.length - 1].toString(16).padStart(6, '0')})`; };
+    function renderTrailPanel() {                                // 트레일 탭: 산 단계·끼기 + 단계표(속도 배율·가격) + 사기
+      document.getElementById('tm-title').textContent = `트레일 Lv.${trailLevel}${trailLevel >= TRAIL_MAX ? ' (MAX)' : ''}`;
+      const info = document.getElementById('tm-info');
+      info.textContent = trailLevel > 0 ? `✨ ${TRAIL_DEF[trailLevel - 1].name} ${trailOn ? '(끼는 중)' : '(빼 둠)'}\n⚡ 러닝머신 속도 점수 ×${TRAIL_MULT[trailLevel - 1]}${trailOn ? '' : ' (끼면 적용)'}` + (trailLevel < TRAIL_MAX ? `\n다음 레벨 ×${TRAIL_MULT[trailLevel]}` : '') : '✨ 트레일 없음';
+      const list = document.getElementById('tm-list'); list.textContent = '';
+      for (let lv = 1; lv <= TRAIL_MAX; lv++) {
+        const row = mkEl2('div', 'trow' + (lv === trailLevel ? ' cur' : (lv < trailLevel ? ' done' : ''))); row.appendChild(mkEl2('span', 'lv', `Lv.${lv}`));
+        const sw = mkEl2('span', 'sw', ''); sw.style.background = TRAIL_SW(lv); row.appendChild(sw);
+        row.appendChild(mkEl2('span', 'g', `×${TRAIL_MULT[lv - 1]}`)); row.appendChild(mkEl2('span', 'c', lv <= trailLevel ? '✔' : `💰 ${fmtNum(TRAIL_COST[lv - 1])}`)); list.appendChild(row);
+      }
+      const up = document.getElementById('tm-up'), eq = document.getElementById('tm-equip'), cost = TRAIL_COST[trailLevel];
+      up.textContent = trailLevel >= TRAIL_MAX ? '최고 레벨이에요' : `트레일 Lv.${trailLevel + 1} 💰 ${fmtNum(cost)}`; up.disabled = trailLevel >= TRAIL_MAX || moneyNow() < cost;
+      eq.style.display = trailLevel > 0 ? 'block' : 'none'; eq.textContent = trailOn ? '트레일 빼기' : '트레일 끼기';
+    }
+    function setTmTab(tab) {
+      tmTab = tab; document.getElementById('tm-tab-run').classList.toggle('on', tab === 'run'); document.getElementById('tm-tab-trail').classList.toggle('on', tab === 'trail');
+      if (tab === 'run') document.getElementById('tm-equip').style.display = 'none'; renderMenus();
+    }
+    function renderTmPanel() { if (tmTab === 'trail') renderTrailPanel(); else { document.getElementById('tm-equip').style.display = 'none'; renderRunPanel(); } }
+    function renderRunPanel() {                                  // 러닝머신 탭: 내 레벨·속도 + 레벨표 + 레벨업 버튼
       document.getElementById('tm-title').textContent = `러닝머신 Lv.${tmLevel}${tmLevel >= TM_MAX ? ' (MAX)' : ''}`;
       const info = document.getElementById('tm-info'), runNow = BASE_RUN_SPEED * tmRunMult(), runNext = BASE_RUN_SPEED * tmRunMult(tmLevel + 1);
-      info.textContent = `👟 속도 점수 ${fmtNum(speedPoints)}\n⚡ 타면 초당 +${fmtNum(tmGain(tmLevel))}\n🏃 달리기 속도 ${runNow.toFixed(1)}` + (tmLevel < TM_MAX ? ` → ${runNext.toFixed(1)} (다음 레벨)` : ' (최고)');
+      info.textContent = `👟 속도 점수 ${fmtNum(speedPoints)}\n⚡ 타면 초당 +${fmtNum(tmGain(tmLevel) * trailMul())}${trailMul() > 1 ? ` (트레일 ×${trailMul()})` : ''}\n🏃 달리기 속도 ${runNow.toFixed(1)}` + (tmLevel < TM_MAX ? ` → ${runNext.toFixed(1)} (다음 레벨)` : ' (최고)');
       const list = document.getElementById('tm-list'); list.textContent = '';
       for (let lv = 1; lv <= TM_MAX; lv++) {
         const row = mkEl2('div', 'trow' + (lv === tmLevel ? ' cur' : (lv < tmLevel ? ' done' : ''))); row.appendChild(mkEl2('span', 'lv', `Lv.${lv}`)); row.appendChild(mkEl2('span', 'g', `+${fmtNum(tmGain(lv))}/초`));
@@ -6714,17 +7022,17 @@ function createBackground(scene) {
         bar.appendChild(mkEl2('span', '', h.state === 'hatching' ? '열리는 중...' : (h.state === 'ready' ? '부화하기!' : fmtDur(left)))); mid.appendChild(bar); row.appendChild(mid);
         const btn = mkEl2('button', h.state === 'ready' ? 'gbtn open' : 'gbtn', h.state === 'ready' ? '열기' : (h.state === 'hatching' ? '…' : '▶'));
         if (h.state === 'hatching') btn.disabled = true;
-        btn.addEventListener('click', () => { if (h.state === 'ready') { startHatch(e); toast(`🥚 ${creatureName(c.id)} 알이 흔들려요! 곧 부화해요`, 'good', 3000); renderMenus(); } else goToEgg(e); });      // 열기 → 알이 흔들리다 깨지고 펫이 나옴
+        btn.addEventListener('click', () => { if (h.state === 'ready') { startHatch(e); renderMenus(); } else goToEgg(e); });      // 열기 → 알이 흔들리다 깨지고 펫이 나옴
         row.appendChild(btn); eggsListEl.appendChild(row);
       }
     }
     function renderPetsPanel() {
       petsListEl.textContent = ''; document.getElementById('pets-title').textContent = `펫 ${pets.length}마리`; document.getElementById('pets-total').textContent = pets.length ? `💰 +${fmtRate(totalRate())}/초` : '';
       if (!pets.length) { petsListEl.appendChild(mkEl2('div', 'gempty', '펫이 없어요.\n알을 부화시켜보세요!')); return; }
-      for (const p of pets.slice().sort((a, b) => petRate(b.cid, b.scale) - petRate(a.cid, a.scale))) {
+      for (const p of pets.slice().sort((a, b) => petRate(b.cid, b.scale, b.grade) - petRate(a.cid, a.scale, a.grade))) {
         const row = mkEl2('div', 'grow'); row.appendChild(mkEl2('div', 'gicon', creatureName(p.cid).split(' ')[0]));
-        const mid = mkEl2('div', 'gmid'); mid.appendChild(mkEl2('div', 'gname', `${creatureName(p.cid).replace(/^\S+\s*/, '')} (크기 ${(p.scale / (EGG_TIER[p.cid] || 1)).toFixed(1)})`)); mid.appendChild(mkEl2('div', 'gincome', `(💰 ${fmtRate(petRate(p.cid, p.scale))}/초)`)); row.appendChild(mid);
-        const sure = sellConfirm.pet === p && Date.now() - sellConfirm.t < 2500, btn = mkEl2('button', 'gbtn red', sure ? `정말? 💰${fmtNum(petPrice(p.cid, p.scale))}` : '팔기');
+        const mid = mkEl2('div', 'gmid'); mid.appendChild(mkEl2('div', 'gname' + (p.grade ? ' g' + p.grade : ''), `${p.grade ? GRADE_NAME[p.grade] + ' ' : ''}${creatureName(p.cid).replace(/^\S+\s*/, '')} (크기 ${(p.scale / (EGG_TIER[p.cid] || 1)).toFixed(1)})`)); mid.appendChild(mkEl2('div', 'gincome', `(💰 ${fmtRate(petRate(p.cid, p.scale, p.grade))}/초)`)); row.appendChild(mid);
+        const sure = sellConfirm.pet === p && Date.now() - sellConfirm.t < 2500, btn = mkEl2('button', 'gbtn red', sure ? `정말? 💰${fmtNum(petPrice(p.cid, p.scale, p.grade))}` : '팔기');
         btn.addEventListener('click', () => { if (sellConfirm.pet === p && Date.now() - sellConfirm.t < 2500) { sellConfirm = { pet: null, t: 0 }; sellPet(p); } else sellConfirm = { pet: p, t: Date.now() }; renderMenus(); });
         row.appendChild(btn); petsListEl.appendChild(row);
       }
@@ -6737,8 +7045,10 @@ function createBackground(scene) {
     document.getElementById('btn-eggs').addEventListener('click', () => setMenu('eggs'));
     document.getElementById('btn-pets').addEventListener('click', () => setMenu('pets'));
     document.getElementById('btn-tm').addEventListener('click', () => setMenu('tm'));
-    document.getElementById('tm-up').addEventListener('click', () => { tmLevelUp(); renderMenus(); });
-    document.getElementById('eggs-all').addEventListener('click', () => { let n = 0; for (const { e } of myEggs) if (e.hatch.state === 'ready') { startHatch(e); n++; } if (n) toast(`🥚 알 ${n}개를 열었어요! 곧 부화해요`, 'good', 2800); renderMenus(); });
+    document.getElementById('tm-up').addEventListener('click', () => { if (tmTab === 'trail') trailBuy(); else tmLevelUp(); renderMenus(); });
+    document.getElementById('tm-equip').addEventListener('click', () => { trailToggle(); renderMenus(); });
+    document.getElementById('tm-tab-run').addEventListener('click', () => setTmTab('run')); document.getElementById('tm-tab-trail').addEventListener('click', () => setTmTab('trail'));
+    document.getElementById('eggs-all').addEventListener('click', () => { let n = 0; for (const { e } of myEggs) if (e.hatch.state === 'ready') { startHatch(e); n++; }  renderMenus(); });
     renderHotbar();                                             // 처음부터 빈 가방 칸이 보이게
 
     // 가장 가까운 알 찾기: 'pick'(들 수 있는 알) / 'hatch'(부화 준비된 내 알) / 'info'(아직 키우는 중인 내 알: 남은 시간만 보여줌)
@@ -6781,20 +7091,20 @@ function createBackground(scene) {
       if (placing) {                                                               // 가방에서 고른 알: 캐릭터 앞에 설치 자리를 보여줌
         const item = inv[invSel], t = placementTarget(item);
         prompt = t.ok ? '🥚 F — 여기에 설치' : '';
-        info = `🎒 ${creatureName(item.cid)} 알 · ×${(item.s0 / (EGG_TIER[item.cid] || 1)).toFixed(1)} · 부화 ${fmtDur(item.dur)}` + (t.ok ? '' : ` · ⚠ ${t.why}`);
+        info = `🎒 ${creatureName(item.cid)} · ${fmtDur(item.dur)}` + (t.ok ? '' : ` · ⚠ ${t.why}`);
         btnMode = t.ok ? 'place' : null; updatePlaceMarker(t);
       } else {
         updatePlaceMarker(null);
         if (near) {
           if (near.kind === 'sell') {
             const p = near.pet;
-            prompt = '🐾 F 꾹 — 팔기'; info = `${creatureName(p.cid)} · 💰 +${fmtRate(petRate(p.cid, p.scale))}/초 · 판매가 💰 ${fmtNum(petPrice(p.cid, p.scale))}`; bar = sellHold / SELL_HOLD;
+            prompt = '🐾 F 꾹 — 팔기'; info = `${creatureName(p.cid)} · 💰 +${fmtRate(petRate(p.cid, p.scale, p.grade))}/초 · 판매가 💰 ${fmtNum(petPrice(p.cid, p.scale, p.grade))}`; bar = sellHold / SELL_HOLD;
           } else {
             const h = near.e.hatch, mult = h ? near.e.scale / h.s0 : 1;
             if (near.kind === 'pick') { const gs = GUARD_SPEED[near.c.id]; prompt = '🥚 F — 알 들기'; info = `👟 지킴이 ${fmtNum(gs)} · 내 속도 ${fmtNum(speedPoints)} ${speedPoints >= gs ? '✅' : '⚠ 부족'}`; bar = Math.min(1, speedPoints / gs); }
-            else if (near.kind === 'loot') { const l = lootEggs.get(near.id); prompt = '🥚 F — 떨어진 알 줍기'; info = '🥚 떨어진 알 · 빨리 주워요!'; bar = l ? Math.max(0, 1 - (nowMs() - l.rec.t) / (LOOT_LIFE * 1000)) : 0; }
-            else if (near.kind === 'hatch') { prompt = '🥚 F — 부화하기'; info = `🥚 부화 준비 완료 · 크기 ×${mult.toFixed(1)}`; bar = 1; }
-            else { info = `🥚 부화까지 ${fmtDur(h.start + h.dur - nowMs())} · 크기 ×${mult.toFixed(1)}`; bar = Math.min(1, Math.max(0, (nowMs() - h.start) / h.dur)); }
+            else if (near.kind === 'loot') { const l = lootEggs.get(near.id); prompt = '🥚 F — 떨어진 알 줍기'; info = '🥚 떨어진 알'; bar = l ? Math.max(0, 1 - (nowMs() - l.rec.t) / (LOOT_LIFE * 1000)) : 0; }
+            else if (near.kind === 'hatch') { prompt = '🥚 F — 부화하기'; info = '🥚 부화 준비'; bar = 1; }
+            else { info = `🥚 ${fmtDur(h.start + h.dur - nowMs())}`; bar = Math.min(1, Math.max(0, (nowMs() - h.start) / h.dur)); }
           }
           if (!carriedEgg && near.kind !== 'info') btnMode = near.kind;
         }
@@ -6802,7 +7112,7 @@ function createBackground(scene) {
       if (toolSel && !carriedEgg && !placing && (!near || near.kind === 'info')) {            // 방망이/함정을 들고 있을 때(줍거나 부화할 알이 없을 때)
         const why = toolSel === 'bat' ? batCheck() : trapCheck();
         prompt = why === null ? (toolSel === 'bat' ? '🏏 F — 휘두르기' : '🪤 F — 함정 설치') : '';
-        info = why ? '⚠ ' + why : ''; bar = 0; btnMode = (why === null || why === '') ? (toolSel === 'bat' ? 'swing' : 'trap') : null;
+        info = ''; bar = 0; btnMode = (why === null || why === '') ? (toolSel === 'bat' ? 'swing' : 'trap') : null;
       }
       if (prompt && prompt !== _lastPrompt) { pickupPrompt.textContent = prompt; _lastPrompt = prompt; }
       pickupPrompt.style.display = (prompt && !IS_TOUCH_UI) ? 'block' : 'none';      // 터치 기기에서는 화면 버튼이 대신함
@@ -6932,7 +7242,7 @@ function createBackground(scene) {
     const NIGHT_SKY = new THREE.Color(0x070b1f);
     let resetSeen = resetCycleOf(), resetNight = 0, resetBarrier = 0, resetLocked = false, resetBannerT = 0, _resetTxt = '', _resetCls = '';
     const resetTimerEl = document.getElementById('reset-timer'), resetIcoEl = document.getElementById('reset-ico'), resetTimeEl = document.getElementById('reset-time'), resetLabelEl = document.getElementById('reset-label'), resetBannerEl = document.getElementById('reset-banner');
-    resetLabelEl.textContent = '알 초기화까지'; resetIcoEl.textContent = '🌙';
+    resetLabelEl.textContent = ''; resetIcoEl.textContent = '🌙';
     const barrier = new THREE.Group(); barrier.visible = false; scene.add(barrier);       // 안전선 바로 바깥의 하얀 가림막(길 폭 전체)
     { const bw = bg.pathWidth + 3, bh = 12, wm = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xc7d7ff, emissiveIntensity: 0.55, roughness: 0.9 });
       const wall = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, 1.0), wm); wall.position.set(0, bh / 2, 0); barrier.add(wall);
@@ -6945,6 +7255,15 @@ function createBackground(scene) {
     }
     barrier.position.set(0, -12, bg.safeZone.minZ - 1.3);
     const fmtMS = (sec) => sec >= 60 ? `${Math.floor(sec / 60)}분 ${sec % 60}초` : `${sec}초`;
+    const gradeAlertEl = document.getElementById('grade-alert'); let gradeAlertT = 0;
+    function announceGradeEggs(remain) {                         // 알 초기화 중(가림막이 있는 동안): 새로 뜬 등급 알이 있으면 어디에 어떤 등급인지 화면 가운데에 알려줌
+      const groups = new Map();
+      for (const c of bg.creatures) for (const e of c.eggs) { if (e.hatch || !e.grade) continue; const k = c.id + ':' + e.grade, cur = groups.get(k); groups.set(k, { c, g: e.grade, n: (cur ? cur.n : 0) + 1 }); }
+      const list = [...groups.values()].sort((a, b) => b.g - a.g || bg.creatures.indexOf(b.c) - bg.creatures.indexOf(a.c));
+      gradeAlertEl.textContent = '';
+      for (const it of list.slice(0, 8)) { const zone = BIOME_ZONES.find(z => z.id === it.c.id), line = document.createElement('div'); line.className = 'ga-line g' + it.g; line.textContent = `${GRADE_ICON[it.g]} ${GRADE_NAME[it.g]} 알${it.n > 1 ? ' ×' + it.n : ''} · ${zone ? zone.name.replace(/\s*\(.*\)\s*$/, '').replace(/Lv\.\d+\s*/, '') : creatureName(it.c.id)}`; gradeAlertEl.appendChild(line); }
+      gradeAlertEl.style.display = list.length ? 'flex' : 'none'; gradeAlertT = list.length ? Math.max(3, remain) : 0;
+    }
     function doEggReset(effects) {                              // effects=true: 지금 막 초기화가 시작됨(가림막·밤·큰 글씨) / false: 놓쳤던 초기화를 조용히 반영
       if (carriedEgg) { const e = carriedEgg.e; carriedEgg = null; isCarrying = false; rig.carryMount.visible = false; carryingHud.style.display = 'none'; try { rig.carryMount.remove(e.group); } catch (_) {} }
       let moved = false;
@@ -6955,8 +7274,8 @@ function createBackground(scene) {
         c.respawnEggs();                                         // 둥지 알 새로 뽑기(내 칸에 설치한 알은 그대로)
       }
       clearPvpWorld();                                         // 떨어진 알·함정도 치움
-      if (effects) { resetBannerT = 3; toast(moved ? '🌙 알이 초기화돼요! 안전구역으로 옮겨졌어요' : '🌙 알이 초기화돼요! 10초 뒤에 나갈 수 있어요', 'warn', 4000); }
-      else toast('🥚 새 알이 나왔어요!', 'good', 2500);
+      if (effects) announceGradeEggs(RESET_LOCK - resetPhase()); else { gradeAlertT = 0; gradeAlertEl.style.display = 'none'; }      // 등급 알이 떴으면 어디에 뭐가 떴는지(가림막이 열릴 때까지) 알림
+      if (effects) resetBannerT = 3;                           // (큰 글씨 "모든 알 초기화!"만 띄움)
     }
     function updateEggReset(dt) {
       const cyc = resetCycleOf(), ph = resetPhase();
@@ -6966,10 +7285,11 @@ function createBackground(scene) {
       resetNight += ((resetLocked ? 1 : 0) - resetNight) * Math.min(1, dt * 3);
       resetBarrier += ((resetLocked ? 1 : 0) - resetBarrier) * Math.min(1, dt * 5);
       barrier.visible = resetBarrier > 0.01; barrier.position.y = -12 + 12 * Math.min(1, resetBarrier * 1.05);
+      if (gradeAlertT > 0) { gradeAlertT -= dt; if (gradeAlertT <= 0 || !resetLocked) { gradeAlertT = 0; gradeAlertEl.style.display = 'none'; } }      // 가림막이 열리면 알림도 사라짐
       if (resetBannerT > 0) { resetBannerT -= dt; resetBannerEl.classList[resetBannerT > 0 ? 'add' : 'remove']('show'); }
       const remain = Math.ceil(resetLocked ? RESET_LOCK - ph : RESET_PERIOD - ph), txt = fmtMS(Math.max(0, remain)), cls = resetLocked ? 'locked' : (remain <= 10 ? 'warn' : '');
       if (txt !== _resetTxt) { _resetTxt = txt; resetTimeEl.textContent = txt; }
-      if (cls !== _resetCls) { _resetCls = cls; resetTimerEl.className = cls; resetLabelEl.textContent = resetLocked ? '알 초기화 중 · 열리기까지' : '알 초기화까지'; resetIcoEl.textContent = resetLocked ? '🔒' : '🌙'; }
+      if (cls !== _resetCls) { _resetCls = cls; resetTimerEl.className = cls; resetLabelEl.textContent = ''; resetIcoEl.textContent = resetLocked ? '🔒' : '🌙'; }
     }
 
     // ================= 모바일 조작: 조이스틱 · 점프 버튼 · 알 꾹 누르기 버튼 =================
@@ -7027,7 +7347,10 @@ function createBackground(scene) {
     const EGG_HOLD_TIME = 0.6;
     const eggBtn = document.getElementById('btn-egg'), eggBtnLabel = document.getElementById('btn-egg-label'), eggRing = document.getElementById('egg-ring-prog');
     let eggHeld = false, eggHold = 0, eggLock = false;
-    eggBtn.addEventListener('pointerdown', e => { enableTouchUI(); eggHeld = true; try { eggBtn.setPointerCapture(e.pointerId); } catch (_) {} e.preventDefault(); });
+    eggBtn.addEventListener('pointerdown', e => {
+      enableTouchUI(); eggHeld = true; try { eggBtn.setPointerCapture(e.pointerId); } catch (_) {} e.preventDefault();
+      const m = eggBtn.dataset.mode; if (m === 'swing' || m === 'trap') { eggInteract(); eggHold = 0; eggLock = true; }      // 방망이·함정은 꾹 누르기 없이 누르는 즉시
+    });
     for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) eggBtn.addEventListener(ev, () => { eggHeld = false; });
     function eggInteract(fromKey) {
       if (stunT > 0 || knockT > 0) return;                       // 함정에 걸렸거나 날아가는 중엔 아무것도 못 함
@@ -7041,7 +7364,12 @@ function createBackground(scene) {
       if (!mode) { eggBtn.style.display = 'none'; eggHold = 0; eggLock = false; return; }
       eggBtn.style.display = 'flex'; eggBtn.dataset.mode = mode;
       eggBtnLabel.textContent = mode === 'pick' ? '알 들기' : (mode === 'hatch' ? '부화하기' : (mode === 'sell' ? '팔기' : (mode === 'place' ? '설치' : (mode === 'loot' ? '알 줍기' : (mode === 'swing' ? '휘두르기' : (mode === 'trap' ? '함정 설치' : '내려놓기'))))));
-      const need = (mode === 'swing' || mode === 'trap') ? 0.08 : (mode === 'place' ? 0.25 : (mode === 'loot' ? 0.35 : EGG_HOLD_TIME));      // 도구는 톡 눌러도 됨, 떨어진 알은 빨리 주워야 해서 짧게      // 설치는 반복해서 하니까 짧게 눌러도 됨
+      if (mode === 'swing' || mode === 'trap') {                 // 도구: 누르는 즉시 쓰고(위 pointerdown), 방망이는 누르고 있으면 쿨타임마다 계속 휘두름
+        eggBtn.classList.toggle('held', eggHeld); eggHold = 0; eggRing.style.strokeDashoffset = 283;
+        if (!eggHeld) eggLock = false; else if (mode === 'swing' && swingCD <= 0) eggInteract();
+        return;
+      }
+      const need = mode === 'place' ? 0.25 : (mode === 'loot' ? 0.35 : EGG_HOLD_TIME);      // 떨어진 알은 빨리 주워야 해서 짧게      // 설치는 반복해서 하니까 짧게 눌러도 됨
       eggBtn.classList.toggle('held', eggHeld);
       if (eggHeld && !eggLock) {
         eggHold += dt;
@@ -7157,7 +7485,7 @@ function createBackground(scene) {
       const H = buildRemoteHuman(parseLook(v.look));
       const label = makeLabel(v.nick || '?'); label.position.set(0, 2.2, 0); label.scale.set(3.2, 0.8, 1); H.holder.add(label);
       const R = { uid, holder: H.holder, rig: H.rig, st: H.st, label, lookStr: v.look || '', nick: v.nick, plot: v.plot, x: v.x, z: v.z, y: v.y || 0, yaw: v.yaw || 0, tx: v.x, tz: v.z, ty: v.y || 0, tyaw: v.yaw || 0,
-        mv: 0, cc: 0, cs: 0, tool: 0, sw: 0, swingT: 0, eggObj: null, saveRef: null, saveCb: null, save: null, saveDirty: false, builtPlot: null, eggs: new Map(), pets: new Map(), savedOnce: false };
+        mv: 0, cc: 0, cs: 0, tool: 0, sw: 0, swingT: 0, trail: 0, trailObj: null, eggObj: null, saveRef: null, saveCb: null, save: null, saveDirty: false, builtPlot: null, eggs: new Map(), pets: new Map(), savedOnce: false };
       H.holder.position.set(R.x, R.y, R.z); H.holder.rotation.y = R.yaw; remotes.set(uid, R);
       R.saveRef = NET.db.ref('saves/' + uid); R.saveCb = (snap) => { R.save = snap.val(); R.saveDirty = true; }; R.saveRef.on('value', R.saveCb);
       return R;
@@ -7183,6 +7511,7 @@ function createBackground(scene) {
       if (nickChanged) { R.nick = v.nick; R.holder.remove(R.label); R.label = makeLabel(v.nick || '?'); R.label.position.set(0, 2.2, 0); R.label.scale.set(3.2, 0.8, 1); R.holder.add(R.label); }
       if ((v.look || '') !== R.lookStr) setRemoteLook(R, v.look || '');
       setRemoteCarry(R, v.cc, v.cs);
+      R.trail = Math.max(0, Math.min(TRAIL_MAX, Math.floor(Number(v.tr)) || 0));
       R.tool = v.tl || 0; if ((v.sw || 0) !== R.sw) { if (existing && (v.sw || 0) > R.sw) R.swingT = BAT_SWING; R.sw = v.sw || 0; }      // 다른 사람이 방망이를 들고 있는지 / 휘둘렀는지
       if (!existing || plotChanged || nickChanged) { R.saveDirty = true; refreshSigns(); }     // 새로 들어왔거나 칸/닉네임이 바뀌면 표지판 갱신
     }
@@ -7192,7 +7521,7 @@ function createBackground(scene) {
     }
     function onRemoteGone(uid) {
       const R = remotes.get(uid); if (!R) return;
-      scene.remove(R.holder); try { R.saveRef.off('value', R.saveCb); } catch (_) {}
+      scene.remove(R.holder); try { R.saveRef.off('value', R.saveCb); } catch (_) {} if (R.trailObj) trailDispose(R.trailObj);
       clearRemotePlot(R); remotes.delete(uid); refreshSigns();
     }
     function syncRemotePlot(R) {                                // 다른 사람 칸의 알·펫 그리기(안전구역 근처에 있을 때만: 멀리 있을 땐 안 그려서 가볍게)
@@ -7209,6 +7538,7 @@ function createBackground(scene) {
           const g = new THREE.Group(), parts = c.makeEgg(g), W = F.toWorld(sv.a, sv.b);
           g.position.set(W.x, 0, W.z); g.rotation.y = F.facing + (sv.yr || 0); scene.add(g);
           o = { g, parts, cid: sv.cid, baseY: sv.cid === 'archangel' ? 0.38 : 0.18, phase: Math.random() * 6.28, h: null }; R.eggs.set(sv.id, o);
+          if (clampGrade(sv.grade)) o.fx = attachGradeFx({ obj: g, rad: () => 0.64 * parts.shell * g.scale.x }, sv.grade, 'egg');      // 다른 사람 칸의 등급 알도 효과가 보임
         }
         o.h = { s0: sv.s0, grow: sv.grow, start: sv.start, dur: sv.dur, hatchAt: sv.hatching ? sv.hatchAt : null };
       }
@@ -7218,7 +7548,7 @@ function createBackground(scene) {
         if (!R.pets.has(sv.id)) {
           if (_petBudget <= 0) { R.saveDirty = true; continue; }                 // 한 프레임에 동물 1마리씩만 만들어서 끊김 방지
           _petBudget--; const W = F.toWorld(sv.a, sv.b);
-          R.pets.set(sv.id, createPet(sv.cid, W.x, W.z, F.facing + (sv.yr || 0), sv.scale, R.savedOnce));
+          R.pets.set(sv.id, createPet(sv.cid, W.x, W.z, F.facing + (sv.yr || 0), sv.scale, R.savedOnce, sv.grade));
         }
       }
       for (const [id, p] of [...R.pets]) if (!seenP.has(id)) { scene.remove(p.group); R.pets.delete(id); }
@@ -7232,6 +7562,7 @@ function createBackground(scene) {
         R.holder.position.set(R.x, R.y, R.z); R.holder.rotation.y = R.yaw;
         animateHuman(R.rig, R.st, dt, R.mv > 0, R.mv === 2);
         R.swingT = Math.max(0, R.swingT - dt); toolPose(R.rig, R.tool === 1 && !R.st.carrying ? 1 : 0, R.swingT);
+        if (R.trail || (R.trailObj && R.trailObj.live.length)) { const T = R.trailObj || (R.trailObj = makeTrail()), tm = treadmillsByPlot.get(R.plot); trailStep(T, R.trail, R.x, R.y, R.z, (R.ty > 0.15 && tm) ? { out: tm.out } : null, dt, 0.6); }      // 다른 사람의 트레일(가볍게 60%)
         syncRemotePlot(R);
         for (const o of R.eggs.values()) {
           const h = o.h; if (!h) continue;
@@ -7250,7 +7581,7 @@ function createBackground(scene) {
     function netTick(dt) {
       if (!NET.online || !NET.meRef) return;
       const carry = carriedEgg ? carriedEgg.c.id : 0, r2 = (v) => Math.round(v * 100) / 100;
-      const st = { x: r2(charPos.x), z: r2(charPos.z), y: r2(charPos.y), yaw: r2(charYaw), mv: curMove.mv, cc: carry, cs: carry ? r2(carriedEgg.e.scale) : 0, look: lookToStr(myLook), tl: (toolSel === 'bat' && !carriedEgg) ? 1 : (toolSel === 'trap' ? 2 : 0), sw: swingN };
+      const st = { x: r2(charPos.x), z: r2(charPos.z), y: r2(charPos.y), yaw: r2(charYaw), mv: curMove.mv, cc: carry, cs: carry ? r2(carriedEgg.e.scale) : 0, look: lookToStr(myLook), tl: (toolSel === 'bat' && !carriedEgg) ? 1 : (toolSel === 'trap' ? 2 : 0), sw: swingN, tr: trailOn ? trailLevel : 0 };
       const str = JSON.stringify(st), now = performance.now();
       if ((str !== _lastStr && now - _lastSent >= 100) || now - _lastSent > 5000) { const pr = NET.meRef.update(st); if (pr && pr.catch) pr.catch(netFail); _lastStr = str; _lastSent = now; }     // 바뀔 때만 초당 10번, 가만히 있으면 5초에 한 번
     }
@@ -7451,15 +7782,288 @@ function createBackground(scene) {
     });
 
     const WALK_SPEED = 1.6, RUN_SPEED = 6.5;
+    // ================= 구역 꾸미기: 구역마다 다른 장식물 · 벽 장식 · 벽 너머 먼 배경 · 둥둥 떠 있는 것 · 흩날리는 입자 =================
+    // 상자를 모아 한 번에 그리는(InstancedMesh) 블록형 장식이라 구역당 1~2번만 그림. 가까운 구역만 보이게 하고, 입자는 플레이어 주변에서만 움직임.
+    // 모든 배치는 구역 이름으로 정한 '고정 난수'라서 누가 봐도 같은 모습. 가운데 달리는 길(|x|<2.5)은 비워 두고, 생물·알이 있는 자리(생물 쪽 벽 앞 ±16m)도 비워 둠.
+    const zdSeed = (str) => { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+    const zdRng = (seed) => { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
+    const zdShade = (hex, f) => (Math.min(255, Math.round(((hex >> 16) & 255) * f)) << 16) | (Math.min(255, Math.round(((hex >> 8) & 255) * f)) << 8) | Math.min(255, Math.round((hex & 255) * f));
+    const zdBatch = () => ({ a: [], box(x, y0, z, w, h, d, hex, ry) { this.a.push(x, y0 + h / 2, z, w, h, d, hex, ry || 0); } });      // box: 아래 y0에서 위로 h만큼 서는 상자 하나
+    function zdFlush(B, lit) {                                                // 상자 목록 → 한 덩어리(InstancedMesh). lit: 불빛처럼 항상 밝게(용암·등불)
+      const n = B.a.length / 8; if (!n) return null;
+      const mat = lit ? new THREE.MeshBasicMaterial({ color: 0xffffff }) : new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, metalness: 0.05 });
+      const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), mat, n), d = new THREE.Object3D(), col = new THREE.Color();
+      for (let i = 0; i < n; i++) { const o = i * 8; d.position.set(B.a[o], B.a[o + 1], B.a[o + 2]); d.rotation.set(0, B.a[o + 7], 0); d.scale.set(B.a[o + 3], B.a[o + 4], B.a[o + 5]); d.updateMatrix(); mesh.setMatrixAt(i, d.matrix); col.setHex(B.a[o + 6]); mesh.setColorAt(i, col); }
+      mesh.instanceMatrix.needsUpdate = true; if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true; mesh.frustumCulled = false; return mesh;
+    }
+    function zdCtx(zone) {
+      const R = zdRng(zdSeed(zone.id)), c = { zone, R, B: zdBatch(), G: zdBatch(), lights: [], anim: [], statics: [], group: null };
+      const span = zone.zMax - zone.zMin;
+      c.blocked = (x, z) => Math.abs(z - zone.zCenter) < 16 && x * zone.side > 1.0;                       // 생물·알 자리
+      c.pickZ = () => zone.zMin + 3 + R() * (span - 6);
+      c.wall = (n, fn) => { for (let i = 0, k = 0; i < n && k < n * 8; k++) { const side = R() < 0.5 ? -1 : 1, x = side * (5.4 + R() * 2.4), z = c.pickZ(); if (c.blocked(x, z)) continue; fn(x, z, side); i++; } };      // 벽 가까이 바닥에 서는 것
+      c.wallFace = (n, fn) => { for (let i = 0, k = 0; i < n && k < n * 8; k++) { const side = R() < 0.5 ? -1 : 1, z = c.pickZ(); if (c.blocked(side * 8, z)) continue; fn(side * 7.86, z, side); i++; } };      // 벽 안쪽 면에 붙는 것
+      c.edge = (n, fn) => { for (let i = 0, k = 0; i < n && k < n * 8; k++) { const side = R() < 0.5 ? -1 : 1, x = side * (3.2 + R() * 4.0), z = c.pickZ(); if (c.blocked(x, z)) continue; fn(x, z); i++; } };      // 길 가장자리(가운데 달리는 길은 비움)에 서는 키 있는 것
+      c.floor = (n, fn) => { for (let i = 0, k = 0; i < n && k < n * 8; k++) { const x = (R() - 0.5) * 14.4, z = c.pickZ(); if (c.blocked(x, z)) continue; fn(x, z); i++; } };                                      // 바닥 무늬(납작하게)
+      c.out = (n, fn, minX = 11, maxX = 38) => { for (let i = 0; i < n; i++) { const side = R() < 0.5 ? -1 : 1, x = side * (minX + R() * (maxX - minX)), z = zone.zMin - 6 + R() * (span + 12); fn(x, z, side); } };   // 벽 너머 먼 배경
+      c.base = (x, z, w, d, hex) => c.B.box(x, -14, z, w, 14, d, hex);                                    // 먼 배경이 땅에서 솟은 것처럼 받침
+      c.lamp = (x, y, z, hex, big) => c.lights.push({ x, y, z, hex, big: !!big });
+      // 움직이는 것들(몇 개 안 되는 개별 물체)
+      const mk = (geo, hex, lit, em) => new THREE.Mesh(geo, lit ? new THREE.MeshBasicMaterial({ color: hex }) : new THREE.MeshStandardMaterial({ color: hex, roughness: 0.7, emissive: em || 0x000000, emissiveIntensity: em ? 0.6 : 0 }));
+      c.crystal = (x, y, z, s, hex) => { const m = mk(new THREE.OctahedronGeometry(s, 0), hex, false, hex); m.scale.y = 1.7; m.position.set(x, y, z); const ph = R() * 6.28; c.anim.push({ obj: m, update: (t, dt) => { m.rotation.y += dt * 0.6; m.position.y = y + Math.sin(t * 0.8 + ph) * 0.6; } }); return m; };
+      c.halo = (x, y, z, r, hex) => { const m = mk(new THREE.TorusGeometry(r, r * 0.07, 6, 28), hex, true); m.position.set(x, y, z); m.rotation.x = Math.PI / 2.2; const ph = R() * 6.28; c.anim.push({ obj: m, update: (t, dt) => { m.rotation.z += dt * 0.7; m.position.y = y + Math.sin(t * 0.7 + ph) * 0.5; } }); return m; };
+      c.island = (x, y, z, s, top, under) => { const g = new THREE.Group(); g.position.set(x, y, z); g.add(mk(new THREE.BoxGeometry(7 * s, 0.9 * s, 7 * s), top)); const u = mk(new THREE.BoxGeometry(5 * s, 1.5 * s, 5 * s), under); u.position.y = -1.2 * s; g.add(u); const u2 = mk(new THREE.BoxGeometry(2.6 * s, 2 * s, 2.6 * s), under); u2.position.y = -2.9 * s; g.add(u2); const ph = R() * 6.28; c.anim.push({ obj: g, update: (t) => { g.position.y = y + Math.sin(t * 0.5 + ph) * 0.9; } }); return g; };
+      c.cloud = (x, y, z, s) => { const g = new THREE.Group(); g.position.set(x, y, z); const w = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, emissive: 0xffffff, emissiveIntensity: 0.25 }); for (let i = 0; i < 5; i++) { const b = new THREE.Mesh(new THREE.BoxGeometry((2 + R() * 2) * s, (1 + R()) * s, (2 + R() * 2) * s), w); b.position.set((i - 2) * 1.6 * s, R() * 0.6 * s, (R() - 0.5) * 2 * s); g.add(b); } const ph = R() * 6.28; c.anim.push({ obj: g, update: (t) => { g.position.y = y + Math.sin(t * 0.35 + ph) * 0.7; g.position.x = x + Math.sin(t * 0.12 + ph) * 1.5; } }); return g; };
+      c.planet = (x, y, z, r, hex, ring) => { const g = new THREE.Group(); g.position.set(x, y, z); g.add(mk(new THREE.SphereGeometry(r, 18, 12), hex, true)); if (ring) { const rg = mk(new THREE.TorusGeometry(r * 1.6, r * 0.08, 4, 36), ring, true); rg.rotation.x = Math.PI / 2.4; g.add(rg); } c.anim.push({ obj: g, update: (t, dt) => { g.rotation.y += dt * 0.05; } }); return g; };
+      c.windmill = (x, z) => { const g = new THREE.Group(); g.position.set(x, 0, z); const hub = new THREE.Group(); hub.position.set(0, 10.5, 2.4); for (let i = 0; i < 4; i++) { const arm = new THREE.Group(); arm.rotation.z = i * Math.PI / 2; const b = mk(new THREE.BoxGeometry(1.3, 6.5, 0.25), 0xf5f5f4); b.position.y = 3.6; arm.add(b); hub.add(arm); } g.add(hub); c.anim.push({ obj: g, update: (t, dt) => { hub.rotation.z += dt * 0.9; } }); c.B.box(x, 0, z, 3.4, 10.5, 3.4, 0xa16207); c.B.box(x, 10.5, z, 4, 1, 4, 0x7c2d12); c.base(x, z, 8, 8, 0x6b8e23); return g; };
+      c.beam = (x, z, h, hex) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.6, h, 14, 1, true), new THREE.MeshBasicMaterial({ map: gradeTexture('beam'), color: hex, transparent: true, opacity: 0.38, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending })); m.position.set(x, h / 2, z); const ph = R() * 6.28; c.anim.push({ obj: m, update: (t) => { m.material.opacity = 0.3 + 0.1 * Math.sin(t * 1.6 + ph); } }); return m; };
+      c.sprite = (x, y, z, size, hex, tex, add, op) => { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: gradeTexture(tex), transparent: true, depthWrite: false, blending: add ? THREE.AdditiveBlending : GFX_NORMAL })); sp.material.color.setHex(hex); sp.material.opacity = op; sp.position.set(x, y, z); sp.scale.set(size, size, 1); sp.renderOrder = 2; c.statics.push(sp); return sp; };
+      return c;
+    }
+    const zdTree = (c, x, z, s, trunk, leaf1, leaf2, h) => { const B = c.B, H = (h || 4) * s; B.box(x, 0, z, 0.55 * s, H, 0.55 * s, trunk); B.box(x, H * 0.7, z, 2.6 * s, 1.0 * s, 2.6 * s, leaf1); B.box(x, H * 0.7 + 0.9 * s, z, 1.8 * s, 1.0 * s, 1.8 * s, leaf2); B.box(x, H * 0.7 + 1.7 * s, z, 1.0 * s, 0.8 * s, 1.0 * s, leaf1); };
+    const zdRock = (c, x, z, s, hex) => { const B = c.B, R = c.R; B.box(x, 0, z, 1.4 * s, 0.9 * s, 1.2 * s, hex, R() * 3); B.box(x + 0.6 * s, 0, z + 0.3 * s, 0.9 * s, 0.6 * s, 0.8 * s, zdShade(hex, 0.85), R() * 3); B.box(x - 0.2 * s, 0.9 * s, z, 0.7 * s, 0.45 * s, 0.6 * s, zdShade(hex, 1.1), R() * 3); };
+    const zdPillar = (c, x, z, h, hex, cap) => { const B = c.B; B.box(x, 0, z, 1.5, 0.5, 1.5, zdShade(hex, 0.85)); B.box(x, 0.5, z, 1.0, h, 1.0, hex); B.box(x, 0.5 + h, z, 1.5, 0.5, 1.5, cap || zdShade(hex, 1.1)); };
+    const ZD_BUILD = {
+      chicken(c) {                                                       // 🐔 햇살 가득한 밀밭 농장: 건초·울타리·해바라기·허수아비·헛간·풍차·사과나무
+        const { B, R, zone } = c, hay = 0xe9c46a, hay2 = 0xd4a24a, wood = 0x8b5a2b, wood2 = 0x6b4423;
+        c.wall(12, (x, z) => { B.box(x, 0, z, 2.2, 1.0, 1.6, hay, R() * 0.5); B.box(x, 1.0, z, 1.7, 0.9, 1.3, hay2, R() * 0.5); B.box(x, 1.9, z, 1.1, 0.7, 0.9, hay, R() * 0.5); });
+        for (const side of [-1, 1]) for (let z = zone.zMin + 4; z < zone.zMax - 3; z += 6) { if (c.blocked(side * 6.9, z) || c.blocked(side * 6.9, z + 3.2)) continue; const x = side * 7.2; for (const dz of [0, 2.9]) B.box(x, 0, z + dz, 0.3, 1.5, 0.3, wood); B.box(x, 0.5, z + 1.5, 0.15, 0.2, 3.2, wood2); B.box(x, 1.0, z + 1.5, 0.15, 0.2, 3.2, wood2); }
+        c.wall(26, (x, z) => { const h = 1.6 + R() * 1.0; B.box(x, 0, z, 0.12, h, 0.12, 0x4d7c0f); B.box(x, h, z, 0.55, 0.55, 0.2, R() < 0.8 ? 0xfacc15 : 0xf97316); B.box(x, h + 0.12, z + 0.02, 0.25, 0.25, 0.22, 0x78350f); });
+        c.wall(6, (x, z) => { B.box(x, 0, z, 0.9, 1.1, 0.9, wood); B.box(x, 0.4, z, 0.95, 0.12, 0.95, 0x3f3f46); B.box(x, 0.8, z, 0.95, 0.12, 0.95, 0x3f3f46); });
+        c.wall(4, (x, z) => { B.box(x, 0, z, 1.0, 1.0, 1.0, 0xa16207); B.box(x, 0, z, 1.06, 0.14, 1.06, wood2); B.box(x, 0.86, z, 1.06, 0.14, 1.06, wood2); });
+        c.wall(2, (x, z) => { B.box(x, 0, z, 0.15, 2.4, 0.15, wood); B.box(x, 1.6, z, 1.6, 0.15, 0.15, wood); B.box(x, 1.1, z, 0.6, 0.9, 0.3, 0xdc2626); B.box(x, 2.3, z, 0.5, 0.5, 0.5, 0xfde68a); B.box(x, 2.75, z, 0.9, 0.12, 0.9, 0x854d0e); B.box(x, 2.8, z, 0.5, 0.45, 0.5, 0x854d0e); });
+        c.floor(34, (x, z) => B.box(x, 0.02, z, 0.5 + R() * 0.5, 0.04, 0.5 + R() * 0.5, [0xf87171, 0xfacc15, 0xffffff, 0xc084fc, 0xfb923c][Math.floor(R() * 5)], R() * 3));
+        c.edge(26, (x, z) => { for (let i = 0; i < 4; i++) B.box(x + (R() - 0.5) * 1.2, 0, z + (R() - 0.5) * 1.2, 0.18, 0.5 + R() * 0.5, 0.18, R() < 0.5 ? 0xfacc15 : 0xeab308); });
+        c.wallFace(8, (x, z, side) => { B.box(x, 3.2, z, 0.2, 3.0, 1.0, [0xdc2626, 0xfacc15, 0x22c55e][Math.floor(R() * 3)]); });                 // 벽걸이 깃발
+        c.out(10, (x, z) => { zdTree(c, x, z, 2.2 + R(), 0x78350f, 0x65a30d, 0x84cc16, 5); c.base(x, z, 6, 6, 0x6b8e23); });
+        c.out(2, (x, z) => { B.box(x, 0, z, 9, 7, 7, 0xb91c1c); B.box(x, 7, z, 9.6, 1.2, 7.6, 0x7f1d1d); B.box(x, 8.2, z, 6, 1.4, 6.5, 0x7f1d1d); B.box(x, 9.6, z, 2.6, 1.2, 6.5, 0x7f1d1d); B.box(x, 0.2, z + 3.55, 3.2, 4.6, 0.2, 0xfef3c7); c.base(x, z, 11, 9, 0x6b8e23); }, 16, 34);
+        c.windmill(-22, zone.zMin + 42); c.windmill(24, zone.zMax - 40);
+        c.island(30, 24, zone.zCenter, 1.2, 0x65a30d, 0x78716c); c.cloud(-26, 22, zone.zCenter + 30, 1.4); c.cloud(20, 26, zone.zCenter - 25, 1.2);
+      },
+      tiger(c) {                                                         // 🐯 야생 초원과 정글: 키 큰 풀·아카시아·바위·뼈·횃불·대나무
+        const { B, R, zone } = c, rock = 0x8b7d6b;
+        c.wall(60, (x, z) => { for (let i = 0; i < 3; i++) B.box(x + (R() - 0.5) * 0.7, 0, z + (R() - 0.5) * 0.7, 0.1, 1.0 + R() * 1.3, 0.1, [0x65a30d, 0xa3a30d, 0x84cc16][Math.floor(R() * 3)], R() * 3); });
+        c.wall(6, (x, z) => zdTree(c, Math.sign(x) * Math.min(Math.abs(x), 5.9), z, 1.1 + R() * 0.4, 0x78350f, 0x4d7c0f, 0x65a30d, 4.4));
+        c.wall(14, (x, z) => zdRock(c, x, z, 0.7 + R() * 0.8, rock));
+        c.wall(4, (x, z) => { B.box(x, 0, z, 0.9, 0.3, 0.5, 0xf5f5f4, R() * 3); B.box(x + 0.3, 0.3, z, 0.18, 0.2, 0.7, 0xf5f5f4, R() * 3); B.box(x - 0.2, 0, z + 0.4, 0.35, 0.35, 0.35, 0xe7e5e4); });
+        c.wall(6, (x, z) => { B.box(x, 0, z, 0.2, 2.6, 0.2, 0x57534e); B.box(x, 2.6, z, 0.5, 0.35, 0.5, 0x44403c); c.G.box(x, 2.95, z, 0.34, 0.5, 0.34, 0xffa21a); c.lamp(x, 3.2, z, 0xff8a1a, false); });
+        c.wallFace(24, (x, z, side) => { B.box(x, 2 + R() * 4, z + (R() - 0.5) * 1.4, 0.14, 0.35, 2.4 + R() * 2, 0x1c1917, R() * 0.1); });   // 호랑이 줄무늬
+        c.floor(24, (x, z) => B.box(x, 0.02, z, 1 + R() * 1.4, 0.04, 1 + R() * 1.4, [0xb08850, 0xa07a3c, 0xc2a05a][Math.floor(R() * 3)], R() * 3));
+        c.out(12, (x, z) => { const s = 1.4 + R() * 0.8; B.box(x, 0, z, 0.9 * s, 7 * s, 0.9 * s, 0x6b4423); B.box(x, 7 * s, z, 7 * s, 0.9 * s, 6 * s, 0x4d7c0f); B.box(x, 7.9 * s, z, 4.5 * s, 0.8 * s, 4 * s, 0x65a30d); c.base(x, z, 7, 7, 0x8a7a45); });          // 아카시아
+        c.out(10, (x, z) => { for (let i = 0; i < 5; i++) B.box(x + (i - 2) * 0.9, 0, z + (R() - 0.5) * 2, 0.45, 9 + R() * 8, 0.45, [0x65a30d, 0x84cc16, 0x4d7c0f][i % 3]); c.base(x, z, 7, 5, 0x6b5a2a); }, 12, 32);   // 대나무
+        c.out(3, (x, z) => { zdRock(c, x, z, 4 + R() * 2, 0x9a8b78); c.base(x, z, 14, 12, 0x7a6a50); }, 18, 40);
+        c.island(-28, 22, zone.zCenter, 1.0, 0x4d7c0f, 0x78716c);
+      },
+      dragon(c) {                                                        // 🐉 고대 드래곤의 보물 동굴: 돌기둥·금화 더미·보물 상자·해골·꽂힌 칼·화로·용암 균열·화산
+        const { B, G, R, zone } = c, stone = 0x6b6f76;
+        c.wall(10, (x, z) => zdPillar(c, x, z, 4.2 + R() * 1.6, stone, 0x8b9099));
+        c.wall(14, (x, z) => { for (let i = 0; i < 7; i++) B.box(x + (R() - 0.5) * 1.6, 0, z + (R() - 0.5) * 1.6, 0.4 + R() * 0.3, 0.2 + R() * 0.6, 0.4 + R() * 0.3, R() < 0.8 ? 0xfacc15 : 0xf59e0b, R() * 3); c.lamp(x, 0.9, z, 0xffd54a, false); });
+        c.wall(4, (x, z) => { B.box(x, 0, z, 1.5, 0.9, 1.0, 0x7c4a1e); B.box(x, 0.9, z, 1.5, 0.35, 1.0, 0x92400e); B.box(x, 0.4, z + 0.51, 0.3, 0.3, 0.1, 0xfacc15); c.lamp(x, 1.1, z, 0xffd54a, false); });
+        c.wall(6, (x, z) => { B.box(x, 0, z, 0.55, 0.5, 0.55, 0xf5f5f4); B.box(x, 0.5, z, 0.7, 0.4, 0.6, 0xf5f5f4); G.box(x - 0.15, 0.55, z + 0.31, 0.12, 0.12, 0.05, 0xff3b1f); G.box(x + 0.15, 0.55, z + 0.31, 0.12, 0.12, 0.05, 0xff3b1f); });
+        c.wall(10, (x, z) => { B.box(x, 0, z, 0.1, 1.8, 0.1, 0x9ca3af); B.box(x, 1.1, z, 0.5, 0.1, 0.1, 0x57534e); });
+        c.wall(8, (x, z) => { B.box(x, 0, z, 0.9, 0.7, 0.9, 0x44403c); B.box(x, 0.7, z, 0.7, 0.15, 0.7, 0x292524); G.box(x, 0.85, z, 0.5, 0.4, 0.5, 0xff7a18); G.box(x, 1.15, z, 0.3, 0.4, 0.3, 0xffd000); c.lamp(x, 1.5, z, 0xff7a18, true); });
+        c.floor(22, (x, z) => { G.box(x, 0.03, z, 0.25 + R() * 0.25, 0.04, 1.5 + R() * 3, R() < 0.7 ? 0xff5a14 : 0xffb347, R() * 3); });
+        c.wallFace(10, (x, z, side) => { B.box(x, 3 + R() * 3, z, 0.2, 1.8, 0.9, 0x7f1d1d); });
+        c.out(2, (x, z) => { for (let i = 0; i < 7; i++) B.box(x, i * 2.6, z, (7 - i) * 3.4, 2.6, (7 - i) * 3.4, i < 5 ? 0x3f3f46 : 0x27272a); G.box(x, 18.2, z, 6, 1, 6, 0xff5a14); c.lamp(x, 20, z, 0xff7a18, true); c.base(x, z, 30, 30, 0x3f3f46); }, 22, 40);
+        c.out(4, (x, z) => { B.box(x, 0, z, 4, 16 + R() * 8, 4, 0x57534e); B.box(x, 16, z, 5, 1, 5, 0x44403c); c.base(x, z, 7, 7, 0x44403c); });
+        c.out(2, (x, z) => { for (let i = 0; i < 6; i++) { B.box(x, 0, z + i * 1.2, 0.35, 5 - Math.abs(i - 2.5) * 0.8, 0.35, 0xf5f5f4, 0); B.box(x + 3, 0, z + i * 1.2, 0.35, 5 - Math.abs(i - 2.5) * 0.8, 0.35, 0xf5f5f4, 0); } c.base(x, z, 8, 9, 0x57534e); }, 12, 22);                                       // 용 갈비뼈
+        c.crystal(-26, 20, zone.zCenter, 1.6, 0xff6a2a); c.crystal(24, 25, zone.zCenter - 35, 1.3, 0xff9a2a);
+      },
+      eastern(c) {                                                       // 🐲 구름 위 신선들의 정원: 홍등·도리이·벚나무·석등·잉어 연못·대나무·탑
+        const { B, G, R, zone } = c, red = 0xdc2626;
+        c.wall(14, (x, z) => { B.box(x, 0, z, 0.2, 3.4, 0.2, 0x7f1d1d); B.box(x, 3.0, z, 0.9, 0.12, 0.12, 0x7f1d1d); G.box(x, 2.3, z, 0.55, 0.75, 0.55, 0xff3b3b); B.box(x, 2.15, z, 0.45, 0.1, 0.45, 0xfacc15); B.box(x, 3.05, z, 0.45, 0.1, 0.45, 0xfacc15); c.lamp(x, 2.7, z, 0xff5a4a, false); });
+        c.wall(10, (x, z) => zdTree(c, Math.sign(x) * Math.min(Math.abs(x), 5.9), z, 1.1 + R() * 0.4, 0x6b3a2a, 0xf9a8d4, 0xfbcfe8, 3.6));
+        c.wall(8, (x, z) => { B.box(x, 0, z, 0.8, 0.4, 0.8, 0x9ca3af); B.box(x, 0.4, z, 0.4, 0.9, 0.4, 0x9ca3af); B.box(x, 1.3, z, 0.9, 0.5, 0.9, 0x9ca3af); B.box(x, 1.8, z, 1.1, 0.25, 1.1, 0x78716c); G.box(x, 1.4, z, 0.5, 0.3, 0.5, 0xffe08a); c.lamp(x, 1.5, z, 0xffd27a, false); });
+        c.wall(12, (x, z) => { for (let i = 0; i < 4; i++) B.box(x + (R() - 0.5), 0, z + (R() - 0.5), 0.3, 4 + R() * 3, 0.3, [0x65a30d, 0x84cc16, 0x4d7c0f][i % 3]); });
+        for (const gz of [zone.zMin + 22, zone.zMax - 22]) { for (const sx of [-1, 1]) B.box(sx * 7.2, 0, gz, 0.7, 6.4, 0.7, red); B.box(0, 6.0, gz, 17.4, 0.55, 0.9, red); B.box(0, 7.0, gz, 19, 0.6, 1.2, 0x1c1917); B.box(0, 5.2, gz, 15, 0.3, 0.5, red); G.box(0, 6.1, gz + 0.5, 3, 0.4, 0.05, 0xfacc15); }
+        c.floor(4, (x, z) => { const w = 3 + R() * 2; B.box(x, 0.02, z, w, 0.05, w * 0.7, 0x38bdf8, R() * 3); G.box(x + 0.4, 0.06, z, 0.5, 0.05, 0.25, 0xfb923c, R() * 3); G.box(x - 0.6, 0.06, z + 0.3, 0.4, 0.05, 0.2, 0xffffff, R() * 3); });
+        c.floor(40, (x, z) => B.box(x, 0.02, z, 0.3 + R() * 0.3, 0.04, 0.3 + R() * 0.3, [0xf9a8d4, 0xfbcfe8, 0xffffff][Math.floor(R() * 3)], R() * 3));
+        c.wallFace(10, (x, z) => { B.box(x, 2.6, z, 0.2, 3.2, 0.9, red); G.box(x, 4.4, z, 0.22, 0.25, 0.7, 0xfacc15); });
+        c.out(4, (x, z) => { let y = 0; for (let i = 0; i < 5; i++) { const w = 9 - i * 1.5; B.box(x, y, z, w - 1.6, 2.6, w - 1.6, 0xfef3c7); B.box(x, y + 2.6, z, w + 1.4, 0.7, w + 1.4, i % 2 ? 0xdc2626 : 0x7f1d1d); y += 3.3; } B.box(x, y, z, 0.4, 3, 0.4, 0xfacc15); c.lamp(x, 12, z, 0xffd27a, true); c.base(x, z, 13, 13, 0x6b7280); }, 16, 38);
+        c.out(8, (x, z) => { zdTree(c, x, z, 2.4 + R(), 0x6b3a2a, 0xf9a8d4, 0xfbcfe8, 4.4); c.base(x, z, 7, 7, 0x84cc16); });
+        for (let i = 0; i < 6; i++) c.cloud((i % 2 ? 1 : -1) * (16 + R() * 14), 14 + R() * 10, zone.zMin + 15 + i * 22, 1.3 + R());
+        c.island(-30, 26, zone.zCenter, 1.4, 0x84cc16, 0x78716c); c.island(32, 30, zone.zCenter - 40, 1.1, 0x84cc16, 0x78716c);
+      },
+      lion(c) {                                                          // 🌌 보라빛 성운 성소: 별 기둥·떠다니는 수정·성운 구슬·행성·별자리 바닥
+        const { B, G, R, zone } = c;
+        c.wall(8, (x, z) => { zdPillar(c, x, z, 5 + R() * 2, 0x3b2a6b, 0x6d4ac4); G.box(x, 6.2 + 0.2, z, 0.7, 0.7, 0.7, 0xc4b5fd); c.lamp(x, 6.6, z, 0xa78bfa, true); });
+        c.wall(14, (x, z) => { for (let i = 0; i < 4; i++) { const h = 0.8 + R() * 1.6, hex = [0xa855f7, 0x22d3ee, 0xec4899, 0x8b5cf6][Math.floor(R() * 4)]; G.box(x + (R() - 0.5) * 1.2, 0, z + (R() - 0.5) * 1.2, 0.3, h, 0.3, hex, R() * 3); } c.lamp(x, 1.0, z, 0xa78bfa, false); });
+        c.floor(7, (x, z) => { const ps = []; for (let i = 0; i < 6; i++) ps.push([x + (R() - 0.5) * 4, z + (R() - 0.5) * 6]); for (const q of ps) G.box(q[0], 0.04, q[1], 0.22, 0.05, 0.22, 0xe9d5ff); for (let i = 1; i < ps.length; i++) { const a = ps[i - 1], b = ps[i], l = Math.hypot(b[0] - a[0], b[1] - a[1]); G.box((a[0] + b[0]) / 2, 0.035, (a[1] + b[1]) / 2, 0.06, 0.04, l, 0x8b5cf6, -Math.atan2(b[1] - a[1], b[0] - a[0]) + Math.PI / 2); } });
+        c.floor(26, (x, z) => B.box(x, 0.02, z, 0.4 + R() * 0.6, 0.04, 0.4 + R() * 0.6, [0x4c1d95, 0x6d28d9, 0x312e81][Math.floor(R() * 3)], R() * 3));
+        c.wallFace(10, (x, z) => { G.box(x, 2.4 + R() * 4, z + (R() - 0.5) * 3, 0.14, 0.5, 0.5, [0xc4b5fd, 0x67e8f9, 0xf0abfc][Math.floor(R() * 3)]); });
+        c.out(8, (x, z) => { for (let i = 0; i < 5; i++) B.box(x + (R() - 0.5) * 3, 0, z + (R() - 0.5) * 3, 1.2, 8 + R() * 14, 1.2, [0x6d28d9, 0x7c3aed, 0x0e7490][i % 3], R() * 3); c.base(x, z, 8, 8, 0x312e81); }, 14, 40);
+        for (let i = 0; i < 12; i++) c.crystal((i % 2 ? 1 : -1) * (12 + R() * 22), 8 + R() * 18, zone.zMin + 10 + i * 11, 0.9 + R() * 1.4, [0xa855f7, 0x22d3ee, 0xec4899, 0x8b5cf6][i % 4]);
+        c.planet(-44, 40, zone.zCenter - 20, 9, 0xa78bfa, 0xe9d5ff); c.planet(46, 34, zone.zCenter + 30, 6, 0x22d3ee, 0xbae6fd); c.planet(-30, 55, zone.zCenter + 50, 4, 0xf0abfc, null);
+        for (let i = 0; i < 4; i++) c.halo((i % 2 ? 1 : -1) * 14, 12 + R() * 6, zone.zMin + 20 + i * 30, 2 + R(), 0xc4b5fd);
+      },
+      samjoko(c) {                                                       // 🌑 흑일식의 어둠: 검은 석비·붉은 룬·마른 나무·삼족오 석상·검은 해
+        const { B, G, R, zone } = c;
+        c.wall(10, (x, z) => { B.box(x, 0, z, 1.2, 0.5, 1.2, 0x18181b); B.box(x, 0.5, z, 0.9, 5 + R() * 3, 0.9, 0x0a0a0b); const h = 0.5 + 0; G.box(x, 2.2, z + 0.46, 0.3, 0.9, 0.05, 0xff2a1a); G.box(x, 3.4, z + 0.46, 0.5, 0.18, 0.05, 0xff2a1a); c.lamp(x, 2.8, z, 0xff3b1f, false); });
+        c.wall(10, (x, z) => { B.box(x, 0, z, 0.35, 3 + R() * 2, 0.35, 0x1c1917); for (let i = 0; i < 3; i++) B.box(x + (i - 1) * 0.5, 2.2 + i * 0.5, z, 1.4, 0.12, 0.12, 0x1c1917, R() * 3); });
+        c.wall(3, (x, z) => { B.box(x, 0, z, 1.6, 0.9, 1.6, 0x27272a); B.box(x, 0.9, z, 0.9, 1.0, 0.7, 0x0a0a0b); B.box(x, 1.9, z, 0.5, 0.5, 0.5, 0x0a0a0b); for (const dx of [-0.35, 0, 0.35]) B.box(x + dx, 0.9, z + 0.4, 0.1, 0.6, 0.1, 0x0a0a0b); B.box(x - 0.8, 1.3, z, 0.7, 0.2, 0.9, 0x0a0a0b, 0.3); B.box(x + 0.8, 1.3, z, 0.7, 0.2, 0.9, 0x0a0a0b, -0.3); G.box(x, 2.0, z + 0.27, 0.12, 0.12, 0.05, 0xff2a1a); });
+        c.wall(20, (x, z) => { for (let i = 0; i < 3; i++) B.box(x + (R() - 0.5) * 1.2, 0, z + (R() - 0.5) * 1.2, 0.3, 0.8 + R() * 1.3, 0.3, 0x111113, R() * 3); });
+        c.floor(8, (x, z) => { const r = 1.8 + R() * 1.2; for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; G.box(x + Math.cos(a) * r, 0.035, z + Math.sin(a) * r, 0.5, 0.04, 0.12, 0xff2a1a, -a + Math.PI / 2); } G.box(x, 0.036, z, 0.5, 0.04, 0.5, 0xff5a3a, 0.78); });
+        c.wallFace(10, (x, z) => { G.box(x, 2 + R() * 5, z, 0.14, 0.9, 0.18, 0xff2a1a); });
+        c.out(8, (x, z) => { const h = 18 + R() * 16; B.box(x, 0, z, 3, h, 3, 0x0b0b0e); B.box(x, h, z, 1.6, 4, 1.6, 0x0b0b0e); G.box(x, h * 0.5, z + 1.52, 0.3, 4, 0.05, 0xff2a1a); c.base(x, z, 7, 7, 0x18181b); }, 14, 40);
+        c.out(14, (x, z) => { B.box(x, 0, z, 0.8, 8 + R() * 6, 0.8, 0x0e0e10); for (let i = 0; i < 5; i++) B.box(x, 5 + i * 1.6, z, 4 - i * 0.4, 0.2, 0.2, 0x0e0e10, R() * 3); c.base(x, z, 5, 5, 0x18181b); });
+        for (let i = 0; i < 8; i++) c.crystal((i % 2 ? 1 : -1) * (12 + R() * 20), 9 + R() * 14, zone.zMin + 10 + i * 16, 0.8 + R(), 0x3b0a0a);
+        c.sprite(0, 52, zone.zCenter - 70, 70, 0x000000, 'glow', false, 0.95); c.sprite(0, 52, zone.zCenter - 69.5, 118, 0xff3b1f, 'ring', true, 0.9); c.sprite(0, 52, zone.zCenter - 69, 170, 0xff7a18, 'glow', true, 0.45);        // 흑일식(검은 해 + 붉은 코로나)
+      },
+      demon(c) {                                                         // 🔥 심연의 마왕성: 용암 균열·흑요석 탑·쇠사슬·뼈 가시·화로·해골
+        const { B, G, R, zone } = c;
+        c.floor(30, (x, z) => { G.box(x, 0.03, z, 0.3 + R() * 0.3, 0.04, 2 + R() * 4, R() < 0.6 ? 0xff4d00 : (R() < 0.5 ? 0xffb000 : 0xff2200), R() * 3); });
+        c.floor(10, (x, z) => { for (let i = 0; i < 4; i++) G.box(x + (R() - 0.5) * 2, 0.035, z + (R() - 0.5) * 2, 0.25 + R() * 0.4, 0.04, 0.25 + R() * 0.4, 0xffd000, R() * 3); });
+        c.wall(12, (x, z) => { B.box(x, 0, z, 0.9, 0.7, 0.9, 0x1c1917); B.box(x, 0.7, z, 0.7, 0.15, 0.7, 0x0c0a09); G.box(x, 0.85, z, 0.5, 0.45, 0.5, 0xff5a14); G.box(x, 1.25, z, 0.3, 0.5, 0.3, 0xffd000); c.lamp(x, 1.6, z, 0xff5a14, true); });
+        c.wall(18, (x, z) => { const h = 1.2 + R() * 2; B.box(x, 0, z, 0.4, h, 0.4, 0xe7e5e4, R() * 3); B.box(x, h, z, 0.2, 0.7, 0.2, 0xd6d3d1, R() * 3); });
+        c.wall(8, (x, z) => { B.box(x, 0, z, 0.8, 0.5, 0.6, 0xf5f5f4); B.box(x, 0.5, z, 0.9, 0.6, 0.7, 0xf5f5f4); G.box(x - 0.2, 0.7, z + 0.36, 0.15, 0.15, 0.05, 0xff2200); G.box(x + 0.2, 0.7, z + 0.36, 0.15, 0.15, 0.05, 0xff2200); });
+        c.wallFace(16, (x, z) => { for (let i = 0; i < 6; i++) B.box(x, 8.4 - i * 0.7, z, 0.12, 0.35, 0.35, 0x78716c, 0); });
+        c.wallFace(8, (x, z) => { G.box(x, 2.5 + R() * 4, z + (R() - 0.5) * 2, 0.14, 0.3, 2 + R() * 2, 0xff4d00); });
+        c.out(6, (x, z) => { const h = 22 + R() * 14; B.box(x, 0, z, 6, h, 6, 0x0c0a09); B.box(x, h, z, 8, 1.4, 8, 0x1c1917); B.box(x, h + 1.4, z, 4, 5, 4, 0x0c0a09); B.box(x, h + 6.4, z, 1.4, 4, 1.4, 0x0c0a09); for (let i = 0; i < 4; i++) G.box(x, 6 + i * 5, z + 3.05, 0.9, 1.4, 0.05, 0xff6a14); c.lamp(x, h + 3, z, 0xff4d00, true); c.base(x, z, 11, 11, 0x1c1917); }, 15, 40);
+        c.out(5, (x, z) => { G.box(x, -0.1, z, 6 + R() * 4, 0.3, 50 + R() * 40, 0xff4d00, 0); c.lamp(x, 1, z, 0xff4d00, true); }, 14, 34);       // 용암 강
+        c.out(14, (x, z) => { for (let i = 0; i < 3; i++) B.box(x + (i - 1) * 1.2, 0, z, 0.9, 6 + R() * 6, 0.9, 0x0c0a09, R() * 3); c.base(x, z, 6, 4, 0x1c1917); });
+        for (let i = 0; i < 8; i++) c.crystal((i % 2 ? 1 : -1) * (11 + R() * 20), 7 + R() * 14, zone.zMin + 10 + i * 16, 0.9 + R(), 0xff3a14);
+      },
+      archangel(c) {                                                     // ✨ 빛나는 천상계: 대리석 기둥·금빛 아치·구름·날개 석상·빛기둥·떠다니는 후광
+        const { B, G, R, zone } = c, white = 0xf5f5f4, gold = 0xfacc15;
+        c.wall(12, (x, z) => { zdPillar(c, x, z, 6 + R() * 2, white, gold); B.box(x, 0, z, 1.7, 0.25, 1.7, gold); c.lamp(x, 7.6, z, 0xfff1a8, false); });
+        for (const gz of [zone.zMin + 40, zone.zMax - 40, zone.zCenter + 26]) { for (const sx of [-1, 1]) { B.box(sx * 7.3, 0, gz, 0.9, 7, 0.9, white); B.box(sx * 7.3, 7, gz, 1.3, 0.4, 1.3, gold); } B.box(0, 7.4, gz, 15.6, 0.5, 0.9, gold); B.box(0, 8.0, gz, 12, 0.5, 0.9, white); B.box(0, 8.5, gz, 8, 0.5, 0.9, gold); G.box(0, 9.1, gz, 3, 0.7, 0.3, 0xfff1a8); }
+        c.wall(3, (x, z) => { B.box(x, 0, z, 1.6, 0.6, 1.6, white); B.box(x, 0.6, z, 0.8, 2.2, 0.6, white); B.box(x, 2.8, z, 0.6, 0.6, 0.6, white); B.box(x - 1.1, 1.8, z, 1.6, 1.2, 0.2, 0xfef3c7, 0.2); B.box(x + 1.1, 1.8, z, 1.6, 1.2, 0.2, 0xfef3c7, -0.2); G.box(x, 3.5, z, 1, 0.1, 1, 0xfff1a8); });
+        c.floor(40, (x, z) => B.box(x, 0.02, z, 0.5 + R() * 0.8, 0.04, 0.5 + R() * 0.8, [0xffffff, 0xfef3c7, 0xe0f2fe][Math.floor(R() * 3)], R() * 3));
+        c.floor(16, (x, z) => { G.box(x, 0.03, z, 0.3, 0.04, 0.3, 0xfff1a8, 0.78); G.box(x, 0.03, z, 0.8, 0.04, 0.1, 0xfff1a8); G.box(x, 0.03, z, 0.1, 0.04, 0.8, 0xfff1a8); });
+        c.wallFace(10, (x, z) => { B.box(x, 2.4, z, 0.2, 4.2, 1.0, 0xfef3c7); G.box(x, 4.7, z, 0.22, 0.3, 0.7, gold); });
+        c.out(8, (x, z) => { let y = 0; for (let i = 0; i < 5; i++) { B.box(x, y, z, 9 - i * 1.6, 1.4, 9 - i * 1.6, i % 2 ? gold : white); y += 1.4; } B.box(x, y, z, 1.2, 8 + R() * 5, 1.2, white); G.box(x, y + 8, z, 2, 2, 2, 0xfff1a8); c.lamp(x, y + 9, z, 0xfff1a8, true); c.base(x, z, 11, 11, 0xdbeafe); }, 14, 40);
+        for (let i = 0; i < 12; i++) c.cloud((i % 2 ? 1 : -1) * (10 + R() * 26), 2 + R() * 22, zone.zMin + 8 + i * 15, 1.4 + R() * 1.4);
+        for (let i = 0; i < 6; i++) c.beam((i % 2 ? 1 : -1) * (14 + R() * 18), zone.zMin + 20 + i * 30, 70, 0xfff1a8);
+        for (let i = 0; i < 6; i++) c.halo((i % 2 ? 1 : -1) * (9 + R() * 8), 12 + R() * 10, zone.zMin + 14 + i * 28, 1.8 + R(), 0xfde047);
+        c.island(-28, 28, zone.zCenter, 1.5, 0xffffff, 0xdbeafe); c.island(30, 34, zone.zCenter - 50, 1.2, 0xfef3c7, 0xdbeafe);
+      }
+    };
+    // ---- 흩날리는 입자(구역별): n 개수 · tex 모양 · size 크기(m) · cols 색 · add 빛을 더함 · fall 떨어지는 속도(음수면 위로 오름) · sway 흔들림 · top 높이 · op 투명도 · twinkle 반짝 ----
+    const ZD_PARTS = {
+      chicken: [{ n: 70, tex: 'dot', size: 0.22, cols: [0xfde68a, 0xfacc15, 0xfff7ae], add: true, fall: -0.12, sway: 0.3, top: 9, op: 0.7 }, { n: 34, tex: 'leaf', size: 0.36, cols: [0xa3e635, 0xfacc15, 0xeab308], add: false, fall: 0.45, sway: 0.7, top: 11, op: 0.9 }],
+      tiger: [{ n: 34, tex: 'dot', size: 0.28, cols: [0xd9f99d, 0xfde047], add: true, fall: 0, sway: 0.9, top: 4, op: 0.85, twinkle: true }, { n: 46, tex: 'leaf', size: 0.4, cols: [0xea580c, 0xca8a04, 0x65a30d], add: false, fall: 0.7, sway: 0.8, top: 12, op: 0.9 }],
+      dragon: [{ n: 70, tex: 'ember', size: 0.24, cols: [0xff7a18, 0xffb347, 0xff4d00], add: true, fall: -0.9, sway: 0.4, top: 14, op: 0.95 }, { n: 36, tex: 'flake', size: 0.3, cols: [0x6b7280, 0x9ca3af, 0x4b5563], add: false, fall: 0.3, sway: 0.4, top: 14, op: 0.75 }],
+      eastern: [{ n: 80, tex: 'petal', size: 0.44, cols: [0xf9a8d4, 0xfbcfe8, 0xf472b6, 0xffffff], add: false, fall: 0.6, sway: 1.0, top: 13, op: 0.9 }, { n: 24, tex: 'dot', size: 0.24, cols: [0xa5f3fc, 0xffffff, 0xfde68a], add: true, fall: -0.15, sway: 0.5, top: 9, op: 0.75, twinkle: true }],
+      lion: [{ n: 90, tex: 'star', size: 0.3, cols: [0xffffff, 0xc4b5fd, 0x67e8f9, 0xf0abfc], add: true, fall: -0.04, sway: 0.35, top: 14, op: 0.95, twinkle: true }, { n: 14, tex: 'dot', size: 0.7, cols: [0x8b5cf6, 0x22d3ee, 0xec4899], add: true, fall: -0.08, sway: 0.3, top: 10, op: 0.28 }],
+      samjoko: [{ n: 64, tex: 'flake', size: 0.34, cols: [0x111111, 0x27272a, 0x3f3f46], add: false, fall: 0.45, sway: 0.5, top: 14, op: 0.85 }, { n: 34, tex: 'ember', size: 0.24, cols: [0xff3b1f, 0xff7a18], add: true, fall: -0.8, sway: 0.35, top: 12, op: 0.95 }],
+      demon: [{ n: 80, tex: 'ember', size: 0.26, cols: [0xff4d00, 0xff9500, 0xffd000, 0xff2200], add: true, fall: -1.5, sway: 0.4, top: 15, op: 0.95 }, { n: 16, tex: 'dot', size: 0.8, cols: [0x44403c, 0x57534e], add: false, fall: -0.4, sway: 0.3, top: 14, op: 0.32 }],
+      archangel: [{ n: 64, tex: 'feather', size: 0.54, cols: [0xffffff, 0xfef3c7, 0xe0f2fe], add: false, fall: 0.5, sway: 0.9, top: 14, op: 0.9 }, { n: 46, tex: 'dot', size: 0.24, cols: [0xfde68a, 0xffffff, 0xfbbf24], add: true, fall: -0.35, sway: 0.45, top: 12, op: 0.8, twinkle: true }]
+    };
+    const _zdTex = {};
+    function zdTexture(kind) {                                       // 입자 모양: 빛점/불씨/별은 등급 효과 그림을 같이 쓰고, 꽃잎·잎·깃털·재 조각은 여기서 그림
+      if (kind === 'dot' || kind === 'ember') return gradeTexture('glow'); if (kind === 'star') return gradeTexture('star');
+      if (_zdTex[kind] !== undefined) return _zdTex[kind];
+      let tex = null;
+      try {
+        const cv = document.createElement('canvas'); cv.width = cv.height = 64; const g = cv.getContext('2d'); g.fillStyle = '#fff';
+        if (kind === 'petal') { g.beginPath(); g.moveTo(32, 6); g.quadraticCurveTo(58, 24, 32, 58); g.quadraticCurveTo(6, 24, 32, 6); g.fill(); g.fillStyle = 'rgba(0,0,0,0.12)'; g.fillRect(31, 14, 2, 36); }
+        else if (kind === 'leaf') { g.beginPath(); g.moveTo(8, 56); g.quadraticCurveTo(10, 14, 56, 8); g.quadraticCurveTo(54, 50, 8, 56); g.fill(); g.strokeStyle = 'rgba(0,0,0,0.25)'; g.lineWidth = 2; g.beginPath(); g.moveTo(10, 54); g.lineTo(50, 14); g.stroke(); }
+        else if (kind === 'feather') { g.beginPath(); g.moveTo(32, 4); g.quadraticCurveTo(60, 24, 36, 60); g.quadraticCurveTo(32, 62, 28, 60); g.quadraticCurveTo(4, 24, 32, 4); g.fill(); g.strokeStyle = 'rgba(0,0,0,0.2)'; g.lineWidth = 2; g.beginPath(); g.moveTo(32, 6); g.lineTo(32, 60); g.stroke(); }
+        else { g.beginPath(); g.moveTo(10, 40); g.lineTo(24, 8); g.lineTo(50, 18); g.lineTo(54, 46); g.lineTo(30, 56); g.closePath(); g.fill(); }      // flake: 재 조각
+        tex = new THREE.CanvasTexture(cv);
+      } catch (_) {}
+      _zdTex[kind] = tex; return tex;
+    }
+    function zdParticles(spec) {
+      const n = spec.n, pos = new Float32Array(n * 3), col = new Float32Array(n * 3), geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      const mat = new THREE.PointsMaterial({ size: spec.size, map: zdTexture(spec.tex), vertexColors: true, transparent: true, depthWrite: false, sizeAttenuation: true, blending: spec.add ? THREE.AdditiveBlending : GFX_NORMAL }); mat.opacity = 0;
+      const pts = new THREE.Points(geo, mat); pts.frustumCulled = false; pts.visible = false; pts.renderOrder = 3;
+      const P = [], base = []; for (let i = 0; i < n; i++) { P.push({ ph: Math.random() * 6.28, sf: 0.6 + Math.random() * 0.8 }); const hx = spec.cols[Math.floor(Math.random() * spec.cols.length)]; base.push([((hx >> 16) & 255) / 255, ((hx >> 8) & 255) / 255, (hx & 255) / 255]); }
+      return { spec, points: pts, pos, col, geo, P, base, init: false };
+    }
+    function zdUpdateParticles(L, dt, t, z0, z1, fade, cam) {       // 플레이어 앞뒤 창(z0~z1) 안에서만 움직이고, 창을 벗어나거나 카메라 코앞(약 3.7m 안)으로 오면 다른 곳에 새로 나타남
+      const sp = L.spec, n = sp.n, pos = L.pos, col = L.col;
+      for (let i = 0; i < n; i++) {
+        const q = L.P[i], o = i * 3;
+        let respawn = !L.init || pos[o + 2] < z0 || pos[o + 2] > z1;
+        if (!respawn) {
+          pos[o + 1] -= sp.fall * q.sf * dt; pos[o] += Math.sin(t * 0.5 + q.ph) * sp.sway * dt; pos[o + 2] += Math.cos(t * 0.4 + q.ph) * sp.sway * 0.5 * dt;      // 천천히 흔들리게(어지럽지 않게)
+          if (pos[o] > 8) pos[o] -= 16; else if (pos[o] < -8) pos[o] += 16;
+          if (pos[o + 1] < 0) pos[o + 1] = sp.top; else if (pos[o + 1] > sp.top) pos[o + 1] = 0;
+          if (cam) { const dx = pos[o] - cam.x, dy = pos[o + 1] - cam.y, dz = pos[o + 2] - cam.z; if (dx * dx + dy * dy + dz * dz < 14) respawn = true; }      // 카메라 코앞의 큰 가루는 화면을 어지럽히니 치움
+        }
+        if (respawn) { pos[o] = (Math.random() - 0.5) * 16; pos[o + 1] = Math.random() * sp.top; pos[o + 2] = z0 + Math.random() * (z1 - z0); }
+        const k = sp.twinkle ? 0.7 + 0.3 * Math.sin(t * 2.5 + q.ph * 3) : 1; col[o] = L.base[i][0] * k; col[o + 1] = L.base[i][1] * k; col[o + 2] = L.base[i][2] * k;
+      }
+      L.init = true; L.geo.attributes.position.needsUpdate = true; L.geo.attributes.color.needsUpdate = true; L.points.material.opacity = sp.op * fade;
+    }
+    function zdLights(list) {                                        // 등불·횃불·용암 주변의 번지는 빛(한 번에 그림)
+      if (!list.length) return null;
+      const pos = new Float32Array(list.length * 3), col = new Float32Array(list.length * 3), geo = new THREE.BufferGeometry();
+      list.forEach((l, i) => { pos[i * 3] = l.x; pos[i * 3 + 1] = l.y; pos[i * 3 + 2] = l.z; col[i * 3] = ((l.hex >> 16) & 255) / 255 * (l.big ? 1 : 0.8); col[i * 3 + 1] = ((l.hex >> 8) & 255) / 255 * (l.big ? 1 : 0.8); col[i * 3 + 2] = (l.hex & 255) / 255 * (l.big ? 1 : 0.8); });
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      const mat = new THREE.PointsMaterial({ size: 2.8, map: gradeTexture('glow'), vertexColors: true, transparent: true, depthWrite: false, sizeAttenuation: true, blending: THREE.AdditiveBlending }); mat.opacity = 0.55;
+      const pts = new THREE.Points(geo, mat); pts.frustumCulled = false; pts.renderOrder = 3; return pts;
+    }
+    function createZoneDecor() {
+      const zones = [];
+      for (const zone of BIOME_ZONES) {
+        const c = zdCtx(zone); ZD_BUILD[zone.id](c);
+        const group = new THREE.Group(); group.visible = false; scene.add(group);
+        const solid = zdFlush(c.B, false), glow = zdFlush(c.G, true); if (solid) group.add(solid); if (glow) group.add(glow);
+        for (const an of c.anim) group.add(an.obj); for (const st of c.statics) group.add(st);
+        const lights = zdLights(c.lights); if (lights) group.add(lights);
+        const parts = (ZD_PARTS[zone.id] || []).map(zdParticles); for (const L of parts) scene.add(L.points);
+        zones.push({ zone, group, solid, glow, anim: c.anim, statics: c.statics, lights, parts, boxes: c.B.a, glowBoxes: c.G.a, lightList: c.lights });
+      }
+      return zones;
+    }
+    const ZONE_DECOR = createZoneDecor(); let zdClock = 0;
+    function updateZoneDecor(dt, cam) {                              // 매 프레임: 가까운 구역만 보이게 · 움직이는 장식 · 입자 (cam: 카메라 위치, 코앞 입자 치우기용)
+      zdClock += dt; const pz = charPos.z, t = zdClock;
+      for (const Z of ZONE_DECOR) {
+        const z = Z.zone, d = pz < z.zMin ? z.zMin - pz : (pz > z.zMax ? pz - z.zMax : 0), vis = d < 200;
+        if (vis !== Z.group.visible) Z.group.visible = vis;
+        if (!vis) { for (const L of Z.parts) L.points.visible = false; continue; }
+        for (const an of Z.anim) an.update(t, dt);
+        if (Z.lights) Z.lights.material.opacity = 0.5 + 0.09 * Math.sin(t * 4.1) + 0.04 * Math.sin(t * 9.3);        // 불빛이 일렁임(너무 번쩍이지 않게)
+        const act = d < 38, z0 = Math.max(z.zMin, pz - 38), z1 = Math.min(z.zMax, pz + 38), fade = Math.max(0, 1 - d / 38);
+        for (const L of Z.parts) { if (!act || z1 <= z0) { L.points.visible = false; continue; } L.points.visible = true; zdUpdateParticles(L, dt, t, z0, z1, fade, cam); }
+      }
+    }
+
     let last = performance.now();
-    const zoneBanner = document.getElementById("zone-banner");
+    const zoneBanner = document.getElementById("zone-banner"); let _bannerT = 0;
+    const SKY_DEFAULT = 0x9fd8ef, SKY_BAND = 32;
+    const lerpHex = (a, b, w) => { const f = (sh) => Math.round(((a >> sh) & 255) * (1 - w) + ((b >> sh) & 255) * w); return (f(16) << 16) | (f(8) << 8) | f(0); };
+    function zoneSkyAt(z) {                                          // 이 위치의 하늘색(0xRRGGBB): 구역 안은 그 구역 색, 경계에서 32m 안쪽부터 이웃 구역 색과 섞여 경계에서 정확히 반반
+      const sm = (x) => x * x * (3 - 2 * x), q = BIOME_ZONES.find(k => z >= k.zMin && z < k.zMax);
+      if (!q) { const top = BIOME_ZONES.reduce((m, k) => k.zMax > m.zMax ? k : m, BIOME_ZONES[0]); if (z >= top.zMax && z < top.zMax + SKY_BAND) return lerpHex(SKY_DEFAULT, top.skyColor, 0.5 * sm(1 - (z - top.zMax) / SKY_BAND)); return SKY_DEFAULT; }
+      let col = q.skyColor; const dLo = z - q.zMin, dHi = q.zMax - z;
+      if (dLo < SKY_BAND) { const o = BIOME_ZONES.find(k => Math.abs(k.zMax - q.zMin) < 1e-6); if (o) col = lerpHex(col, o.skyColor, 0.5 * sm(1 - dLo / SKY_BAND)); }
+      if (dHi < SKY_BAND) { const o = BIOME_ZONES.find(k => Math.abs(k.zMin - q.zMax) < 1e-6), oc = o ? o.skyColor : SKY_DEFAULT; col = lerpHex(col, oc, 0.5 * sm(1 - dHi / SKY_BAND)); }
+      return col;
+    }
     const currentSkyColor = new THREE.Color(0x9fd8ef);
     const targetSkyColor = new THREE.Color(0x9fd8ef);
 
+    const _res = { max: Math.min(window.devicePixelRatio || 1, 2), cur: Math.min(window.devicePixelRatio || 1, 1.5), min: 1, slow: 0, fast: 0, hold: 0 };
+    function setRes(v) { _res.cur = v; try { renderer.setPixelRatio(v); renderer.setSize(innerWidth, innerHeight); } catch (_) {} }
+    function adaptResolution(raw) {                                  // 화면 해상도 자동 조절: 한동안 느리면 한 단계 낮추고, 한참 부드러우면(그리고 최근에 낮춘 게 아니면) 다시 올림
+      if (!(raw > 0) || raw > 0.25) return;                          // 탭 전환·로딩 같은 긴 멈춤은 무시
+      if (_res.hold > 0) _res.hold -= raw;
+      if (raw > 0.028) { _res.slow += raw; _res.fast = 0; } else { _res.slow = Math.max(0, _res.slow - raw * 0.5); _res.fast = raw < 0.0195 ? _res.fast + raw : 0; }
+      if (_res.slow > 1.0 && _res.cur > _res.min) { setRes(Math.max(_res.min, _res.cur - 0.25)); _res.slow = 0; _res.hold = 45; }
+      else if (_res.fast > 10 && _res.hold <= 0 && _res.cur < _res.max) { setRes(Math.min(_res.max, _res.cur + 0.25)); _res.fast = 0; _res.hold = 20; }
+    }
+    if (typeof renderer.getPixelRatio !== 'function' || _res.cur !== renderer.getPixelRatio()) setRes(_res.cur);
+    function prewarmDecor() {                                        // 처음 한 번: 구역 장식·입자·등급 효과의 화면 처리 준비(셰이더·버퍼·그림)를 미리 해 둬서, 구역에 들어설 때 멈칫하지 않게
+      try {
+        const keep = ZONE_DECOR.map(Z => Z.group.visible), tmp = new THREE.Group(); scene.add(tmp);
+        for (const Z of ZONE_DECOR) { Z.group.visible = true; for (const L of Z.parts) L.points.visible = true; }
+        for (const g of [1, 2, 3]) for (const kd of ['egg', 'pet']) attachGradeFx({ obj: tmp, rad: () => 1 }, g, kd);
+        if (renderer.initTexture) { for (const k of ['glow', 'ring', 'star', 'rays', 'rays2', 'dash', 'dash2', 'beam']) { const tx = gradeTexture(k); if (tx) renderer.initTexture(tx); } for (const k of ['petal', 'leaf', 'feather', 'flake']) { const tx = zdTexture(k); if (tx) renderer.initTexture(tx); } }
+        renderer.compile(scene, camera); renderer.render(scene, camera);
+        ZONE_DECOR.forEach((Z, i) => { Z.group.visible = keep[i]; for (const L of Z.parts) L.points.visible = false; });
+        scene.remove(tmp);                                           // 준비용 등급 효과는 다음 프레임에 알아서 정리됨
+      } catch (_) {}
+    }
+    if (typeof renderer.compile === 'function') prewarmDecor();
     function frame(now) {
       try {
-      const dt = Math.min((now - last) / 1000, 0.05);
-      last = now;
+      const rawDt = (now - last) / 1000, dt = Math.min(rawDt, 0.05);
+      last = now; adaptResolution(rawDt);
 
       const fwdX = -Math.sin(camYaw), fwdZ = -Math.cos(camYaw);
       const rightX = -fwdZ, rightZ = fwdX;
@@ -7519,6 +8123,9 @@ function createBackground(scene) {
       if (charPos.y <= GROUND_Y) { charPos.y = GROUND_Y; velY = 0; isOnGround = true; }
 
       updateTreadmillMount(dt); updateSpeed(dt); updateTreadmills(dt);   // 러닝머신: 올라타기/고정 + 속도 점수 + 벨트·불꽃 효과
+      updateMyTrail(dt);                                       // 트레일(걸을 때 뒤에 따라오는 빛)
+      updateGradeFx(dt, camera.position);                      // 등급 알·펫의 빛줄기·아우라
+      updateZoneDecor(dt, camera.position);                    // 구역 장식·흩날리는 입자
       updateEggGame(dt);       // 안전선 확인 + 깨어난 동물들 움직임
       updateDanger(dt);        // 쫓기는 동안 화면 가장자리가 은은하게 붉어짐
       updateMoney(dt);         // 돈 표시 + 1분마다 자동 저장·순위 갱신
@@ -7541,9 +8148,10 @@ function createBackground(scene) {
       // 현재 플레이어가 위치한 생물 바이옴 구역 확인 및 하늘/안개 색상 부드럽게 전환
       const activeZone = BIOME_ZONES.find(z => charPos.z >= z.zMin && charPos.z < z.zMax);
       const bannerText = bannerOf(activeZone);   // 예: '🐔 Lv.1 닭의 보금자리'
-      if (activeZone) targetSkyColor.setHex(activeZone.skyColor); else targetSkyColor.setHex(0x9fd8ef);
-      if (bannerText !== _lastBanner) { zoneBanner.textContent = bannerText; _lastBanner = bannerText; }
-      currentSkyColor.lerp(targetSkyColor, Math.min(1, dt * 3.5));
+      targetSkyColor.setHex(zoneSkyAt(charPos.z));            // 구역 경계 앞뒤 32m에서 이웃 구역 색과 연속으로 섞음(넘어갈 때 색이 뚝 바뀌지 않게)
+      if (bannerText !== _lastBanner) { zoneBanner.textContent = bannerText; _lastBanner = bannerText; _bannerT = 2.5; }
+      _bannerT = Math.max(0, _bannerT - dt); zoneBanner.style.opacity = _bannerT > 0 ? '1' : '0';      // 구역 이름은 구역이 바뀔 때 2.5초만
+      currentSkyColor.lerp(targetSkyColor, Math.min(1, dt * 5));
       scene.background.copy(currentSkyColor);
       if (resetNight > 0.002) scene.background.lerp(NIGHT_SKY, resetNight * 0.92);                 // 알 초기화 중에는 밤하늘로
       scene.fog.color.copy(scene.background);
