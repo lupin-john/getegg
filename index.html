@@ -7507,6 +7507,18 @@ function createBackground(scene) {
     function onRemote(uid, v) {
       if (uid === NET.uid || !v) return;
       const existing = remotes.get(uid), R = existing || makeRemote(uid, v), plotChanged = R.plot !== v.plot, nickChanged = R.nick !== v.nick;
+      const nowP = performance.now();
+      if (existing && R.lastUpd !== undefined) {                 // 위치가 이어서 오는 중이면 속도를 어림해 둠(다음 소식이 올 때까지 그 방향으로 조금 더 가게 해서 끊겨 보이지 않게)
+        const dtm = nowP - R.lastUpd;
+        if ((v.mv || 0) > 0 && dtm >= 40 && dtm < 800) {              // 간격이 너무 짧거나(몰려서 도착) 긴 건 믿지 않음
+          let vx = (v.x - R.lastX) / (dtm / 1000), vz = (v.z - R.lastZ) / (dtm / 1000); const sp = Math.hypot(vx, vz), vmax = v.mv === 2 ? 12 : 40;      // 천천히 12 · 달리기 40 m/s(기본 25, 러닝머신 최대 약 36)를 넘지 않게(튀는 값 방지)
+          if (sp > vmax * 1.5 + 2 / (dtm / 1000)) { R.vx = 0; R.vz = 0; }                       // 달리기로 설명이 안 되는 큰 이동 = 순간이동(알 초기화 등): 속도 어림 안 함
+          else { if (sp > vmax) { vx *= vmax / sp; vz *= vmax / sp; } R.vx = (R.vx || 0) * 0.5 + vx * 0.5; R.vz = (R.vz || 0) * 0.5 + vz * 0.5; }
+        }
+        else { R.vx = 0; R.vz = 0; }
+      }
+      R.lastUpd = nowP; R.lastX = v.x; R.lastZ = v.z; R.updN = (R.updN || 0) + 1;
+      if (v.ts) { const lat = Math.max(0, Date.now() + (NET.offset || 0) - v.ts); R.lat = R.lat === undefined ? lat : R.lat * 0.7 + lat * 0.3; }      // 상대가 보낸 시각과 지금의 차이 = 이 소식이 얼마나 늦게 도착했는지
       R.tx = v.x; R.tz = v.z; R.ty = v.y || 0; R.tyaw = v.yaw || 0; R.mv = v.mv || 0; R.plot = v.plot;
       if (nickChanged) { R.nick = v.nick; R.holder.remove(R.label); R.label = makeLabel(v.nick || '?'); R.label.position.set(0, 2.2, 0); R.label.scale.set(3.2, 0.8, 1); R.holder.add(R.label); }
       if ((v.look || '') !== R.lookStr) setRemoteLook(R, v.look || '');
@@ -7557,7 +7569,11 @@ function createBackground(scene) {
     function updateRemotes(dt) {
       if (!remotes.size) return;
       const now = nowMs(), t = performance.now() / 1000, k = 1 - Math.exp(-12 * dt); _petBudget = 1;
+      const nowP = performance.now();
       for (const R of remotes.values()) {
+        const stale = R.lastUpd !== undefined && nowP - R.lastUpd > 20000;         // 20초 넘게 소식이 없으면(폰이 꺼졌거나 연결이 끊김) 가만히 서 있는 유령처럼 보이지 않게 숨김 — 소식이 오면 다시 나타남
+        if (stale !== !!R.stale) { R.stale = stale; R.holder.visible = !stale; }
+        if (R.mv > 0 && R.lastUpd !== undefined) { const age = Math.min(0.1, (nowP - R.lastUpd) / 1000); R.tx = R.lastX + (R.vx || 0) * age; R.tz = R.lastZ + (R.vz || 0) * age; }          // 다음 소식이 오기 전까지 가던 방향으로 최대 0.1초 더 감(빠르게 달려서 멈출 때 너무 앞서 갔다 되돌아오지 않게)
         R.x += (R.tx - R.x) * k; R.z += (R.tz - R.z) * k; R.y += (R.ty - R.y) * k; R.yaw += angDiff(R.yaw, R.tyaw) * k;
         R.holder.position.set(R.x, R.y, R.z); R.holder.rotation.y = R.yaw;
         animateHuman(R.rig, R.st, dt, R.mv > 0, R.mv === 2);
@@ -7577,13 +7593,30 @@ function createBackground(scene) {
     }
 
     // ---- 내 상태 보내기 ----
-    let _lastSent = 0, _lastStr = '';
+    let _lastSent = 0, _lastStr = '', _sentFields = {};
     function netTick(dt) {
-      if (!NET.online || !NET.meRef) return;
+      if (!NET.online || !NET.meRef || NET._connWas === false) return;       // 연결이 끊긴 동안엔 보내지 않음(쌓였다가 돌아온 뒤 한꺼번에 재생되면 '몇 초 늦게' 보임) — 돌아오면 최신 상태를 한 번에 올림
       const carry = carriedEgg ? carriedEgg.c.id : 0, r2 = (v) => Math.round(v * 100) / 100;
       const st = { x: r2(charPos.x), z: r2(charPos.z), y: r2(charPos.y), yaw: r2(charYaw), mv: curMove.mv, cc: carry, cs: carry ? r2(carriedEgg.e.scale) : 0, look: lookToStr(myLook), tl: (toolSel === 'bat' && !carriedEgg) ? 1 : (toolSel === 'trap' ? 2 : 0), sw: swingN, tr: trailOn ? trailLevel : 0 };
-      const str = JSON.stringify(st), now = performance.now();
-      if ((str !== _lastStr && now - _lastSent >= 100) || now - _lastSent > 5000) { const pr = NET.meRef.update(st); if (pr && pr.catch) pr.catch(netFail); _lastStr = str; _lastSent = now; }     // 바뀔 때만 초당 10번, 가만히 있으면 5초에 한 번
+      const str = JSON.stringify(st), now = performance.now(), beat = now - _lastSent > 5000;
+      const stuck = (NET.inflight || 0) >= 3 && now - (NET.inflightAt || 0) < 3000;        // 서버 응답을 못 받은 전송이 3개 밀려 있으면 더 쌓지 않음(쌓이면 한참 뒤에 옛 위치가 차례로 재생됨)
+      if (((str !== _lastStr && now - _lastSent >= 66) || beat) && !stuck) {
+        const diff = {}; for (const k in st) if (beat || st[k] !== _sentFields[k]) diff[k] = st[k];        // 바뀐 값만 보냄(모습 같은 긴 값을 매번 안 보냄). 5초 신호 때는 전부
+        if (beat) diff.hb = Math.floor(now / 1000) % 1000000;      // 가만히 있어도 5초마다 바뀌는 숫자(서버는 값이 같으면 변화 신호를 안 보내서, 안 그러면 '살아있음'이 전달되지 않음)
+        diff.ts = Math.round(Date.now() + (NET.offset || 0));      // 보낸 시각(서버 시각 기준): 받는 쪽이 지연이 얼마나 되는지 잴 수 있게
+        NET.inflight = (NET.inflight || 0) + 1; NET.inflightAt = now;
+        const pr = NET.meRef.update(diff);
+        if (pr && pr.then) pr.then(() => { NET.inflight = Math.max(0, (NET.inflight || 1) - 1); NET.rtt = performance.now() - now; }, (e) => { NET.inflight = Math.max(0, (NET.inflight || 1) - 1); netFail(e); });
+        else NET.inflight = Math.max(0, NET.inflight - 1);
+        Object.assign(_sentFields, st); _lastStr = str; _lastSent = now; NET.sent = (NET.sent || 0) + 1;
+      }
+    }
+    let _latBad = 0, _latToast = -1e9;
+    function checkLatency(dt) {                                      // 지연이 크면(2.5초 넘게 6초 이상 계속) 게임 탓이 아니라 네트워크 탓이라고 화면에 알림
+      if (!NET.online) return;
+      let worst = NET.rtt > 2500 ? NET.rtt : 0; for (const R of remotes.values()) if (R.lat > worst) worst = R.lat;
+      if (worst > 2500) _latBad += dt; else _latBad = Math.max(0, _latBad - dt * 2);
+      const nowP = performance.now(); if (_latBad > 6 && nowP - _latToast > 60000) { _latToast = nowP; toast(`⚠️ 네트워크가 느려요 (지연 약 ${Math.round(worst / 1000)}초) · 와이파이/데이터를 확인해 주세요`, 'bad', 5000); }
     }
 
     // ---- 로그인 / 접속 ----
@@ -7655,6 +7688,11 @@ function createBackground(scene) {
         if (migrated) { saveGame(); try { localStorage.removeItem(SAVE_KEY); } catch (_) {} }
         NET.meRef = db.ref('players/' + NET.uid); NET.meRef.onDisconnect().remove();
         await NET.meRef.set({ nick: NET.nick, plot: idx, x: charPos.x, z: charPos.z, y: charPos.y, yaw: charYaw, mv: 0, cc: 0, cs: 0, look: lookToStr(myLook) });
+        db.ref('.info/connected').on('value', sn => {                  // 연결이 끊겼다 돌아오면: 서버가 내 기록을 지웠을 수 있으니 이름·칸·모습까지 다시 올리고, '나가면 지움'도 다시 걸어 둠
+          const up = sn.val() === true;
+          if (up && NET.online && NET.meRef) { try { NET.meRef.onDisconnect().remove(); if (NET._connWas === false) { const pr = NET.meRef.update({ nick: NET.nick, plot: myPlotIdx, x: charPos.x, z: charPos.z, y: charPos.y, yaw: charYaw, mv: curMove.mv, cc: carriedEgg ? carriedEgg.c.id : 0, cs: carriedEgg ? carriedEgg.e.scale : 0, look: lookToStr(myLook), tl: 0, sw: swingN, tr: trailOn ? trailLevel : 0 }); if (pr && pr.catch) pr.catch(netFail); _lastStr = ''; } } catch (_) {} }
+          NET._connWas = up;
+        });
         const pref = db.ref('players');
         pref.on('child_added', sn => onRemote(sn.key, sn.val())); pref.on('child_changed', sn => onRemote(sn.key, sn.val())); pref.on('child_removed', sn => onRemoteGone(sn.key));
         db.ref('loot').on('child_added', sn => spawnLoot(sn.key, sn.val())); db.ref('loot').on('child_removed', sn => removeLoot(sn.key));          // 떨어진 알(모두에게 보임)
@@ -8009,16 +8047,16 @@ function createBackground(scene) {
       }
       return zones;
     }
-    const ZONE_DECOR = createZoneDecor(); let zdClock = 0;
+    const ZONE_DECOR = createZoneDecor(); let zdClock = 0, ZD_FX = 2;                // ZD_FX: 화질 단계(2 전부 · 1 입자·불빛 끔 · 0 장식 끔)
     function updateZoneDecor(dt, cam) {                              // 매 프레임: 가까운 구역만 보이게 · 움직이는 장식 · 입자 (cam: 카메라 위치, 코앞 입자 치우기용)
       zdClock += dt; const pz = charPos.z, t = zdClock;
       for (const Z of ZONE_DECOR) {
-        const z = Z.zone, d = pz < z.zMin ? z.zMin - pz : (pz > z.zMax ? pz - z.zMax : 0), vis = d < 200;
+        const z = Z.zone, d = pz < z.zMin ? z.zMin - pz : (pz > z.zMax ? pz - z.zMax : 0), vis = ZD_FX >= 2 ? d < 200 : (ZD_FX === 1 ? d < 110 : false);
         if (vis !== Z.group.visible) Z.group.visible = vis;
         if (!vis) { for (const L of Z.parts) L.points.visible = false; continue; }
         for (const an of Z.anim) an.update(t, dt);
-        if (Z.lights) Z.lights.material.opacity = 0.5 + 0.09 * Math.sin(t * 4.1) + 0.04 * Math.sin(t * 9.3);        // 불빛이 일렁임(너무 번쩍이지 않게)
-        const act = d < 38, z0 = Math.max(z.zMin, pz - 38), z1 = Math.min(z.zMax, pz + 38), fade = Math.max(0, 1 - d / 38);
+        if (Z.lights) { Z.lights.visible = ZD_FX >= 2; Z.lights.material.opacity = 0.5 + 0.09 * Math.sin(t * 4.1) + 0.04 * Math.sin(t * 9.3); }        // 불빛이 일렁임(너무 번쩍이지 않게)
+        const act = d < 38 && ZD_FX >= 2, z0 = Math.max(z.zMin, pz - 38), z1 = Math.min(z.zMax, pz + 38), fade = Math.max(0, 1 - d / 38);
         for (const L of Z.parts) { if (!act || z1 <= z0) { L.points.visible = false; continue; } L.points.visible = true; zdUpdateParticles(L, dt, t, z0, z1, fade, cam); }
       }
     }
@@ -8038,16 +8076,26 @@ function createBackground(scene) {
     const currentSkyColor = new THREE.Color(0x9fd8ef);
     const targetSkyColor = new THREE.Color(0x9fd8ef);
 
-    const _res = { max: Math.min(window.devicePixelRatio || 1, 2), cur: Math.min(window.devicePixelRatio || 1, 1.5), min: 1, slow: 0, fast: 0, hold: 0 };
-    function setRes(v) { _res.cur = v; try { renderer.setPixelRatio(v); renderer.setSize(innerWidth, innerHeight); } catch (_) {} }
-    function adaptResolution(raw) {                                  // 화면 해상도 자동 조절: 한동안 느리면 한 단계 낮추고, 한참 부드러우면(그리고 최근에 낮춘 게 아니면) 다시 올림
+    // 화질 단계: 한동안 느리면 한 단계씩 낮추고(해상도 → 입자·불빛 끄기 → 구역 장식 줄이기 → 장식 끄기), 한참 부드러우면 다시 올림. 느린 폰에서도 게임이 슬로모션이 되지 않게.
+    const QUALITY = [{ res: 1.5, fx: 2 }, { res: 1.25, fx: 2 }, { res: 1.0, fx: 2 }, { res: 0.8, fx: 2 }, { res: 0.8, fx: 1 }, { res: 0.65, fx: 1 }, { res: 0.65, fx: 0 }];      // fx 2 = 전부 · 1 = 입자·불빛 끄고 장식은 110m 안만 · 0 = 구역 장식 끔
+    const _dpr = Math.min(window.devicePixelRatio || 1, 2), qRes = (lv) => Math.min(_dpr, QUALITY[lv].res);
+    const _res = { level: 0, start: 0, slow: 0, fast: 0, hold: 0 };
+    _res.start = _res.level = Math.max(0, QUALITY.findIndex(q => q.res <= Math.min(_dpr, 1.5)));
+    function setRes(v) { try { renderer.setPixelRatio(v); renderer.setSize(innerWidth, innerHeight); } catch (_) {} }
+    function applyQuality() { setRes(qRes(_res.level)); ZD_FX = QUALITY[_res.level].fx; }
+    function stepQuality(dir) {                                      // dir +1 = 낮춤, -1 = 올림. 실제로 달라지는 단계까지 건너뜀
+      let j = _res.level + dir; const same = (x) => qRes(x) === qRes(_res.level) && QUALITY[x].fx === QUALITY[_res.level].fx;
+      while (j >= _res.start && j < QUALITY.length && same(j)) j += dir;
+      if (j < _res.start || j >= QUALITY.length) return false; _res.level = j; applyQuality(); return true;
+    }
+    function adaptResolution(raw) {                                  // 매 프레임: 1초 넘게 느리면 낮추고, 10초 넘게 부드러우면(최근에 낮춘 게 아니면) 올림
       if (!(raw > 0) || raw > 0.25) return;                          // 탭 전환·로딩 같은 긴 멈춤은 무시
       if (_res.hold > 0) _res.hold -= raw;
       if (raw > 0.028) { _res.slow += raw; _res.fast = 0; } else { _res.slow = Math.max(0, _res.slow - raw * 0.5); _res.fast = raw < 0.0195 ? _res.fast + raw : 0; }
-      if (_res.slow > 1.0 && _res.cur > _res.min) { setRes(Math.max(_res.min, _res.cur - 0.25)); _res.slow = 0; _res.hold = 45; }
-      else if (_res.fast > 10 && _res.hold <= 0 && _res.cur < _res.max) { setRes(Math.min(_res.max, _res.cur + 0.25)); _res.fast = 0; _res.hold = 20; }
+      if (_res.slow > 1.0) { _res.slow = 0; if (stepQuality(1)) _res.hold = 45; }
+      else if (_res.fast > 10 && _res.hold <= 0) { _res.fast = 0; if (stepQuality(-1)) _res.hold = 20; }
     }
-    if (typeof renderer.getPixelRatio !== 'function' || _res.cur !== renderer.getPixelRatio()) setRes(_res.cur);
+    if (typeof renderer.getPixelRatio !== 'function' || qRes(_res.level) !== renderer.getPixelRatio()) applyQuality(); else ZD_FX = QUALITY[_res.level].fx;
     function prewarmDecor() {                                        // 처음 한 번: 구역 장식·입자·등급 효과의 화면 처리 준비(셰이더·버퍼·그림)를 미리 해 둬서, 구역에 들어설 때 멈칫하지 않게
       try {
         const keep = ZONE_DECOR.map(Z => Z.group.visible), tmp = new THREE.Group(); scene.add(tmp);
@@ -8060,10 +8108,23 @@ function createBackground(scene) {
       } catch (_) {}
     }
     if (typeof renderer.compile === 'function') prewarmDecor();
+    const DEBUG_ON = (() => { try { return new URLSearchParams(location.search).get('debug') === '1'; } catch (_) { return false; } })();      // 주소 끝에 ?debug=1 을 붙이면 위쪽에 FPS·화질·위치 전송/수신 상태가 작게 보임(문제 찾기용)
+    let _dbgEl = null, _dbgT = 0, _dbgN = 0, _dbgSent = 0;
+    function updateDebug(raw) {
+      if (!DEBUG_ON) return;
+      if (!_dbgEl) { _dbgEl = document.createElement('div'); _dbgEl.style.cssText = 'position:fixed;top:4px;left:50%;transform:translateX(-50%);z-index:99;font:12px monospace;color:#7CFC7C;background:rgba(0,0,0,.6);padding:2px 8px;border-radius:6px;pointer-events:none;white-space:pre;text-align:center'; document.body.appendChild(_dbgEl); }
+      _dbgT += raw; _dbgN++;
+      if (_dbgT >= 0.5) {
+        const fps = Math.round(_dbgN / _dbgT), sent = Math.round(((NET.sent || 0) - _dbgSent) / _dbgT), nowP = performance.now();
+        const rem = [...remotes.values()].map(R => (R.nick || '?') + ' ' + (R.lastUpd === undefined ? '-' : ((nowP - R.lastUpd) / 1000).toFixed(1) + '초 전') + (R.lat !== undefined ? ' · 지연 ' + (R.lat / 1000).toFixed(2) + '초' : '') + (R.stale ? '(끊김)' : '')).join('  |  ');
+        _dbgEl.textContent = `FPS ${fps} · 화질 ${_res.level} (${qRes(_res.level)}x) · 위치 보냄 ${sent}/초 · 서버 응답 ${NET.rtt === undefined ? '-' : Math.round(NET.rtt) + 'ms'} (대기 ${NET.inflight || 0}) · ${NET.online ? '온라인' : '오프라인'}` + (rem ? `\n받은 소식: ${rem}` : '');
+        _dbgT = 0; _dbgN = 0; _dbgSent = NET.sent || 0;
+      }
+    }
     function frame(now) {
       try {
-      const rawDt = (now - last) / 1000, dt = Math.min(rawDt, 0.05);
-      last = now; adaptResolution(rawDt);
+      const rawDt = (now - last) / 1000, dt = Math.min(rawDt, 0.1);                // (한 프레임에 최대 0.1초까지 진행: 10프레임 위에서는 게임 속도가 실제 시간과 같음)
+      last = now; adaptResolution(rawDt); updateDebug(rawDt); checkLatency(rawDt);
 
       const fwdX = -Math.sin(camYaw), fwdZ = -Math.cos(camYaw);
       const rightX = -fwdZ, rightZ = fwdX;
