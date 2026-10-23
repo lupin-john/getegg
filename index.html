@@ -4218,7 +4218,7 @@ function collectMeshBoxes(obj) {
 // ================= 알·펫 등급: 일반 < 다크 < 이터널 < 디바인 =================
 // 등급은 알 크기와 상관없이 알마다 따로 정해지고(둥지에서 알이 나올 때, 용부터), 부화한 펫에게 그대로 이어짐. 등급이 높을수록 돈을 더 많이 줌.
 const GRADE_NAME = ['일반', '다크', '이터널', '디바인'];
-const GRADE_MULT = [1, 2, 5, 10];                                    // 펫 수입 배율 (다크 ×2 · 이터널 ×5 · 디바인 ×10)
+const GRADE_MULT = [1, 1.5, 3, 5];                                   // 펫 수입 배율 (다크 ×1.5 · 이터널 ×3 · 디바인 ×5)
 const GRADE_ODDS = [0.015, 0.004, 0.0008];                           // 알 하나가 다크 1.5% · 이터널 0.4% · 디바인 0.08% (나머지는 일반) → 3분마다 알이 새로 나올 때 다크 평균 10분 · 이터널 36분 · 디바인 3시간에 한 번꼴
 const GRADE_ICON = ['', '🌑', '💠', '✨'];
 const GRADE_ZONES = ['dragon', 'eastern', 'lion', 'samjoko', 'demon', 'archangel'];      // 용부터 등급 알이 나옴 (닭·호랑이는 항상 일반)
@@ -5009,7 +5009,7 @@ function createBackground(scene) {
   const sun = new THREE.DirectionalLight(0xffffff, 1.0);
   sun.position.set(6, 14, -4);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.mapSize.set(1024, 1024);                         // (2048은 느린 기기에서 부담이 커서 1024로: 32m 범위에서 1m당 32픽셀)
   sun.shadow.camera.left = -16; sun.shadow.camera.right = 16;
   sun.shadow.camera.top = 16;   sun.shadow.camera.bottom = -16;
   sun.shadow.camera.far = 70;
@@ -5357,7 +5357,7 @@ function createBackground(scene) {
   <script>
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 320);
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: (window.devicePixelRatio || 1) < 1.5 });      // 화소 비율 1.5 이상인 화면은 계단 현상이 잘 안 보여서 MSAA를 생략(그래픽 부담 큼)
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     renderer.setSize(innerWidth, innerHeight);
     renderer.outputEncoding = THREE.sRGBEncoding;
@@ -5653,9 +5653,9 @@ function createBackground(scene) {
     }
 
     const TM_DECK_Y = 0.26, TM_HX = 1.05, TM_HZ = 1.95;          // 러닝머신 위 높이 / 올라타는 범위(가로·세로 반)
-    // ---- 러닝머신 레벨(10단계): 타고 있으면 초당 '속도 점수'가 오르고(Lv1 100 → 5배씩), 레벨업은 돈으로. 레벨이 오르면 실제 달리기도 조금씩 빨라짐 ----
+    // ---- 러닝머신 레벨(10단계): 타고 있으면 초당 '속도 점수'가 오르고(Lv1 100 → 4배씩), 레벨업은 돈으로. 레벨이 오르면 실제 달리기도 조금씩 빨라짐 ----
     const TM_MAX = 10, TM_COST = [0, 2e3, 4e4, 1e6, 2.5e7, 6e8, 1.5e10, 4e11, 1e13, 2.5e14];      // TM_COST[n-1] = 그 레벨로 올리는 데 드는 돈
-    const tmGain = (lv) => 100 * Math.pow(5, lv - 1);                                              // 초당 속도 점수: 100, 500, 2.5K, 12.5K ... 195M
+    const tmGain = (lv) => 100 * Math.pow(4, lv - 1);                                              // 초당 속도 점수: 100, 400, 1.6K, 6.4K ... 26.2M (레벨마다 ×4. 예전 ×5는 너무 빨리 대천사까지 갔음)
     const tmRunMult = (lv) => 1 + 0.05 * ((lv === undefined ? tmLevel : lv) - 1);                  // 실제 달리기 속도 배율: 레벨마다 +5% (Lv.10 = ×1.45)
     let tmLevel = 1, speedPoints = 0, onTm = null, tmCooldown = 0, tmTime = 0, _floatAcc = 0;
     const TM_COLORS = [[0x00f0ff, 0xa855f7], [0xf43f5e, 0xfacc15], [0x22c55e, 0x0ea5e9], [0xf97316, 0xa855f7], [0xec4899, 0x22d3ee], [0x84cc16, 0xfacc15],
@@ -6490,7 +6490,7 @@ function createBackground(scene) {
     const PET_R = { chicken: 0.8, tiger: 1.6, dragon: 2.4, eastern: 3.0, lion: 1.8, samjoko: 2.0, demon: 2.4, archangel: 2.2 };    // 펫 크기(대략), 판매하려고 다가가는 거리 계산용
     const PET_TIER = { chicken: 3, tiger: 110, dragon: 4e3, eastern: 1.5e5, lion: 5.5e6, samjoko: 2e8, demon: 7.5e9, archangel: 2.8e11 };      // '보통 크기' 펫이 초당 버는 돈 (등급마다 약 37배: 앞 등급은 적게, 뒤 등급은 크게)
     const SIZE_POW = 1.7;                                       // 수입 = 등급 × (상대 크기)^1.7. 상대 크기 = 알 크기 ÷ 그 동물의 보통 크기(EGG_TIER)
-    const petRate = (cid, scale, grade = 0) => (PET_TIER[cid] || 1) * Math.pow(scale / (EGG_TIER[cid] || 1), SIZE_POW) * (GRADE_MULT[clampGrade(grade)] || 1);      // 등급 배율: 다크 ×2 · 이터널 ×5 · 디바인 ×10
+    const petRate = (cid, scale, grade = 0) => (PET_TIER[cid] || 1) * Math.pow(scale / (EGG_TIER[cid] || 1), SIZE_POW) * (GRADE_MULT[clampGrade(grade)] || 1);      // 등급 배율: 다크 ×1.5 · 이터널 ×3 · 디바인 ×5
     const petPrice = (cid, scale, grade = 0) => Math.max(10, Math.round(petRate(cid, scale, grade) * SELL_SECONDS));
     let moneyBase = 0, moneyT0 = nowMs(), moneyShown = 0, _restoring = false, sellHold = 0, sellLock = false;
     const totalRate = () => pets.reduce((a, p) => a + petRate(p.cid, p.scale, p.grade), 0);
@@ -6882,7 +6882,7 @@ function createBackground(scene) {
 
     // ================= 트레일(잔상): 걸을 때 뒤에 따라오는 빛. 사서(단계별) 끼면 러닝머신에서 속도 점수가 배로 오름 =================
     const TRAIL_MAX = 10;
-    const TRAIL_MULT = [1.2, 1.4, 2, 2.5, 3, 4, 5, 7, 10, 15];                           // 러닝머신 속도 점수 증가 배율
+    const TRAIL_MULT = [1.1, 1.2, 1.4, 1.6, 1.8, 2.1, 2.5, 3, 3.8, 5];                   // 러닝머신 속도 점수 증가 배율 (최대 ×5. 예전 최대 ×15는 너무 빨랐음)
     const TRAIL_COST = [1e6, 1e7, 1e8, 1.5e9, 1.5e10, 2e11, 2e12, 2.5e13, 3e14, 3e15];       // 사는 값(엄청 비쌈, 최대 3Qa): 1M · 10M · 100M · 1.5B · 15B · 200B · 2T · 25T · 300T · 3Qa
     const TRAIL_DEF = [                                          // 단계가 높을수록 더 크고 길고 알록달록·반짝임 (rainbow: 빛깔이 계속 바뀌는 속도, spark: 초당 반짝이 수, twin: 두 줄)
       { name: '하얀 구름', cols: [0xffffff], rate: 18, life: 0.50, size: 0.50, spark: 0, rainbow: 0, twin: false },
@@ -8068,11 +8068,11 @@ function createBackground(scene) {
       }
       return zones;
     }
-    const ZONE_DECOR = createZoneDecor(); let zdClock = 0, ZD_FX = 2;                // ZD_FX: 화질 단계(2 전부 · 1 입자·불빛 끔 · 0 장식 끔)
+    const ZONE_DECOR = createZoneDecor(); let zdClock = 0, ZD_FX = 2, LOD_SHOW = 200, LOD_HIDE = 228;                // ZD_FX: 화질 단계(2 전부 · 1 입자·불빛 끔 · 0 장식 끔)
     function updateZoneDecor(dt, cam) {                              // 매 프레임: 가까운 구역만 보이게 · 움직이는 장식 · 입자 (cam: 카메라 위치, 코앞 입자 치우기용)
       zdClock += dt; const pz = charPos.z, t = zdClock;
       for (const Z of ZONE_DECOR) {
-        const z = Z.zone, d = pz < z.zMin ? z.zMin - pz : (pz > z.zMax ? pz - z.zMax : 0), vis = ZD_FX >= 2 ? d < 200 : (ZD_FX === 1 ? d < 110 : false);
+        const z = Z.zone, d = pz < z.zMin ? z.zMin - pz : (pz > z.zMax ? pz - z.zMax : 0), vis = ZD_FX >= 2 ? d < 200 : d < 160;
         if (vis !== Z.group.visible) Z.group.visible = vis;
         if (!vis) { for (const L of Z.parts) L.points.visible = false; continue; }
         for (const an of Z.anim) an.update(t, dt);
@@ -8098,12 +8098,12 @@ function createBackground(scene) {
     const targetSkyColor = new THREE.Color(0x9fd8ef);
 
     // 화질 단계: 한동안 느리면 한 단계씩 낮추고(해상도 → 입자·불빛 끄기 → 구역 장식 줄이기 → 장식 끄기), 한참 부드러우면 다시 올림. 느린 폰에서도 게임이 슬로모션이 되지 않게.
-    const QUALITY = [{ res: 1.5, sh: 1, fx: 2 }, { res: 1.25, sh: 1, fx: 2 }, { res: 1.0, sh: 1, fx: 2 }, { res: 1.0, sh: 0, fx: 2 }, { res: 0.8, sh: 0, fx: 2 }, { res: 0.8, sh: 0, fx: 1 }, { res: 0.65, sh: 0, fx: 0 }];      // sh 1 = 그림자 켬 · 0 = 끔 / fx 2 = 전부 · 1 = 입자·불빛 끄고 장식은 110m 안만 · 0 = 구역 장식 끔
+    const QUALITY = [{ res: 1.5, sh: 1, fx: 2, lod: 200 }, { res: 1.25, sh: 1, fx: 2, lod: 200 }, { res: 1.0, sh: 1, fx: 2, lod: 200 }, { res: 1.0, sh: 0, fx: 2, lod: 200 }, { res: 0.85, sh: 0, fx: 2, lod: 170 }, { res: 0.7, sh: 0, fx: 1, lod: 150 }];      // sh 1 = 그림자 켬 · 0 = 끔 / fx 2 = 전부 · 1 = 흩날리는 입자·번지는 불빛만 끔(장식은 그대로) / lod = 생물·큰 구조물을 그리는 거리(m). 구역 장식은 자동으로 끄지 않음
     const _dpr = Math.min(window.devicePixelRatio || 1, 2), qRes = (lv) => Math.min(_dpr, QUALITY[lv].res);
     const _res = { level: 0, start: 0, slow: 0, fast: 0, hold: 0, longRun: 0, born: performance.now() };
     _res.start = _res.level = Math.max(0, QUALITY.findIndex(q => q.res <= Math.min(_dpr, 1.5)));
     function setRes(v) { try { renderer.setPixelRatio(v); renderer.setSize(innerWidth, innerHeight); } catch (_) {} }
-    function applyQuality() { setRes(qRes(_res.level)); ZD_FX = QUALITY[_res.level].fx; try { bg.lights.sun.castShadow = QUALITY[_res.level].sh === 1; } catch (_) {} }
+    function applyQuality() { setRes(qRes(_res.level)); ZD_FX = QUALITY[_res.level].fx; LOD_SHOW = QUALITY[_res.level].lod; LOD_HIDE = LOD_SHOW + 28; try { bg.lights.sun.castShadow = QUALITY[_res.level].sh === 1; } catch (_) {} }
     function stepQuality(dir) {                                      // dir +1 = 낮춤, -1 = 올림. 실제로 달라지는 단계까지 건너뜀
       let j = _res.level + dir; const same = (x) => qRes(x) === qRes(_res.level) && QUALITY[x].fx === QUALITY[_res.level].fx && QUALITY[x].sh === QUALITY[_res.level].sh;
       while (j >= _res.start && j < QUALITY.length && same(j)) j += dir;
@@ -8121,9 +8121,9 @@ function createBackground(scene) {
       if (_res.slow > 1.5 || (very && _res.slow > 1.0)) { _res.slow = 0; const moved = stepQuality(1); if (moved && very) stepQuality(1); if (moved) _res.hold = 45; }
       else if (_res.fast > 10 && _res.hold <= 0) { _res.fast = 0; if (stepQuality(-1)) _res.hold = 20; }
     }
-    if (typeof renderer.getPixelRatio !== 'function' || qRes(_res.level) !== renderer.getPixelRatio()) applyQuality(); else { ZD_FX = QUALITY[_res.level].fx; try { bg.lights.sun.castShadow = QUALITY[_res.level].sh === 1; } catch (_) {} }
+    if (typeof renderer.getPixelRatio !== 'function' || qRes(_res.level) !== renderer.getPixelRatio()) applyQuality(); else { ZD_FX = QUALITY[_res.level].fx; LOD_SHOW = QUALITY[_res.level].lod; LOD_HIDE = LOD_SHOW + 28; try { bg.lights.sun.castShadow = QUALITY[_res.level].sh === 1; } catch (_) {} }
     // ---- 멀리 있는 것 숨기기: 안개가 210m부터 완전히 덮어서 그 너머는 안 보이는데도, 생물 8마리(메시 약 2,600개·그림자 2,300개)가 항상 그려지고 있었음 → 거리로 숨겨서 그리기·그림자 계산을 크게 줄임 ----
-    const LOD_SHOW = 200, LOD_HIDE = 228, _lodV = new THREE.Vector3(); let _lodT = 1, LOD_STATIC = null;
+    const _lodV = new THREE.Vector3(); let _lodT = 1, LOD_STATIC = null;
     function lodBuildStatic() {                                      // 처음 한 번: 안전구역 쪽(z>450)에 있는 큰 구조물(울타리·문 같은 메시 30개 이상 덩어리)을 찾아 둠
       LOD_STATIC = []; const skip = new Set(); for (const c of bg.creatures) skip.add(c.root); for (const Z of ZONE_DECOR) skip.add(Z.group); if (typeof character !== 'undefined' && character) skip.add(character);
       for (const ch of scene.children) {
@@ -8150,7 +8150,9 @@ function createBackground(scene) {
         for (const Z of ZONE_DECOR) { Z.group.visible = true; for (const L of Z.parts) L.points.visible = true; }
         for (const g of [1, 2, 3]) for (const kd of ['egg', 'pet']) attachGradeFx({ obj: tmp, rad: () => 1 }, g, kd);
         if (renderer.initTexture) { for (const k of ['glow', 'ring', 'star', 'rays', 'rays2', 'dash', 'dash2', 'beam']) { const tx = gradeTexture(k); if (tx) renderer.initTexture(tx); } for (const k of ['petal', 'leaf', 'feather', 'flake']) { const tx = zdTexture(k); if (tx) renderer.initTexture(tx); } }
+        const fc = []; scene.traverse(o => { if ((o.isMesh || o.isPoints || o.isSprite) && o.frustumCulled) { fc.push(o); o.frustumCulled = false; } });      // 카메라에 안 잡히는 먼 생물·장식까지 전부 그려서 준비해 둠(안 그러면 그 구역에 처음 다가가 화면에 들어오는 순간 수백 개를 한꺼번에 준비하느라 끊김)
         renderer.compile(scene, camera); renderer.render(scene, camera);
+        for (const o of fc) o.frustumCulled = true;
         ZONE_DECOR.forEach((Z, i) => { Z.group.visible = keep[i]; for (const L of Z.parts) L.points.visible = false; });
         scene.remove(tmp);                                           // 준비용 등급 효과는 다음 프레임에 알아서 정리됨
       } catch (_) {}
