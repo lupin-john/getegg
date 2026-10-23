@@ -4219,7 +4219,7 @@ function collectMeshBoxes(obj) {
 // 등급은 알 크기와 상관없이 알마다 따로 정해지고(둥지에서 알이 나올 때, 용부터), 부화한 펫에게 그대로 이어짐. 등급이 높을수록 돈을 더 많이 줌.
 const GRADE_NAME = ['일반', '다크', '이터널', '디바인'];
 const GRADE_MULT = [1, 2, 5, 10];                                    // 펫 수입 배율 (다크 ×2 · 이터널 ×5 · 디바인 ×10)
-const GRADE_ODDS = [0.05, 0.012, 0.0025];                            // 알 하나가 다크 5% · 이터널 1.2% · 디바인 0.25% (나머지는 일반)
+const GRADE_ODDS = [0.015, 0.004, 0.0008];                           // 알 하나가 다크 1.5% · 이터널 0.4% · 디바인 0.08% (나머지는 일반) → 3분마다 알이 새로 나올 때 다크 평균 10분 · 이터널 36분 · 디바인 3시간에 한 번꼴
 const GRADE_ICON = ['', '🌑', '💠', '✨'];
 const GRADE_ZONES = ['dragon', 'eastern', 'lion', 'samjoko', 'demon', 'archangel'];      // 용부터 등급 알이 나옴 (닭·호랑이는 항상 일반)
 const clampGrade = (g) => Math.max(0, Math.min(3, Math.floor(Number(g)) || 0));
@@ -4274,8 +4274,8 @@ const GRADE_FX_DEF = [
   { // 다크: 검은 빛줄기 + 검은 기둥 + 보라 번개빛
     beams: [{ h: 9, top: 0.35, op: 0.34, color: 0x000000, add: false }, { h: 7, top: 0.18, op: 0.35, color: 0x7c3aed, add: true }],
     rings: [{ r: 1.7, op: 0.65, color: 0x000000, add: false, spin: 0.9, tex: 'dash' }, { r: 2.6, op: 0.6, color: 0x7c3aed, add: true, spin: -0.6, tex: 'dash2' }],
-    layers: [{ map: 'rays', color: 0x000000, op: 0.6, size: 13, add: false, spin: 0.25, back: 1.2 }, { map: 'rays2', color: 0x2e1065, op: 0.55, size: 10, add: false, spin: -0.4, back: 1.2 },
-             { map: 'glow', color: 0x000000, op: 0.5, size: 6, add: false, pulse: 0.08, back: 1.2 }, { map: 'glow', color: 0x7c3aed, op: 0.5, size: 3.6, add: true, pulse: 0.15, back: 1.1 }],
+    layers: [{ map: 'rays', color: 0x000000, op: 0.5, size: 9.5, add: false, spin: 0.25, back: 1.2 }, { map: 'rays2', color: 0x2e1065, op: 0.45, size: 7.5, add: false, spin: -0.4, back: 1.2 },
+             { map: 'glow', color: 0x000000, op: 0.42, size: 4.8, add: false, pulse: 0.08, back: 1.2 }, { map: 'glow', color: 0x7c3aed, op: 0.5, size: 3.6, add: true, pulse: 0.15, back: 1.1 }],
     dots: [{ n: [14, 24], map: 'glow', cols: [0x000000, 0x0b0614, 0x1e0b3a], op: 0.8, size: 0.55, add: false, rr: [0.7, 1.3], rise: 0.6, life: [1.6, 2.6] },
            { n: [8, 14], map: 'star', cols: [0xc084fc, 0xe879f9, 0xa855f7], op: 1, size: 0.26, add: true, rr: [0.8, 1.6], rise: 0.8, life: [1.0, 1.9] }],
     pulse: { color: 0x000000, add: false, op: 0.55, every: 1.1, grow: 6.5, count: 3 }, tint: { to: 0x120a24, k: 0.6, em: 0x5b21b6, emI: 0.55 }
@@ -4283,7 +4283,7 @@ const GRADE_FX_DEF = [
   { // 이터널: 은은하지만 확실히 보이게 — 얼음빛 기둥 + 은빛 마법진 + 흐르는 하얀 아지랑이
     beams: [{ h: 7, top: 0.3, op: 0.24, color: 0x7dd3fc, add: false }, { h: 6, top: 0.15, op: 0.4, color: 0xffffff, add: true }],
     rings: [{ r: 1.8, op: 0.7, color: 0xe0f2fe, add: true, spin: 0.5, tex: 'dash' }, { r: 2.7, op: 0.45, color: 0x38bdf8, add: false, spin: -0.35, tex: 'dash2' }],
-    layers: [{ map: 'glow', color: 0x7dd3fc, op: 0.4, size: 7, add: false, pulse: 0.1, back: 1.2 }, { map: 'glow', color: 0xffffff, op: 0.4, size: 4, add: true, pulse: 0.1, back: 1.1 }, { map: 'rays', color: 0xffffff, op: 0.3, size: 11, add: true, spin: 0.2, back: 1.2 }],
+    layers: [{ map: 'glow', color: 0x7dd3fc, op: 0.4, size: 7, add: false, pulse: 0.1, back: 1.2 }, { map: 'glow', color: 0xffffff, op: 0.4, size: 4, add: true, pulse: 0.1, back: 1.1 }, { map: 'rays', color: 0xffffff, op: 0.3, size: 8, add: true, spin: 0.2, back: 1.2 }],
     dots: [{ n: [12, 20], map: 'glow', cols: [0xffffff, 0xbae6fd, 0xe0f2fe, 0xddd6fe], op: 0.6, size: 0.5, add: true, rr: [0.7, 1.4], rise: 0.55, life: [1.6, 2.6] },
            { n: [8, 14], map: 'star', cols: [0xffffff, 0xa5f3fc], op: 0.95, size: 0.24, add: true, rr: [0.8, 1.6], rise: 0.7, life: [1.2, 2.2] }],
     pulse: { color: 0xbae6fd, add: true, op: 0.55, every: 1.7, grow: 5.5, count: 2 }, tint: { to: 0xe0f2fe, k: 0.5, em: 0x7dd3fc, emI: 0.4 }
@@ -4291,8 +4291,8 @@ const GRADE_FX_DEF = [
   { // 디바인: 겁나게 화려 — 하늘 끝까지 솟는 금빛·무지개 기둥, 세 겹 마법진, 눈부신 후광·두 겹 빛줄기, 무지개 소용돌이, 쉴 새 없이 퍼지는 파동
     beams: [{ h: 17, top: 0.45, op: 0.4, color: 0xfbbf24, add: false }, { h: 15, top: 0.25, op: 0.6, color: 'rainbow', add: true }],
     rings: [{ r: 1.8, op: 0.85, color: 'rainbow', add: false, spin: 0.9, tex: 'dash' }, { r: 2.8, op: 0.75, color: 'rainbow', hue: 0.5, add: true, spin: -0.7, tex: 'dash2' }, { r: 3.8, op: 0.6, color: 0xfde68a, add: true, spin: 0.4, tex: 'dash' }],
-    layers: [{ map: 'glow', color: 0xffffff, op: 0.95, size: 6.5, add: true, pulse: 0.12, back: 1.0 }, { map: 'glow', color: 0xfbbf24, op: 0.6, size: 12, add: false, pulse: 0.1, back: 1.2 },
-             { map: 'rays', color: 0xffffff, op: 0.9, size: 26, add: true, spin: 0.35, back: 1.3 }, { map: 'rays2', color: 0xfde68a, op: 0.85, size: 19, add: true, spin: -0.55, back: 1.3 },
+    layers: [{ map: 'glow', color: 0xffffff, op: 0.95, size: 6.5, add: true, pulse: 0.12, back: 1.0 }, { map: 'glow', color: 0xfbbf24, op: 0.6, size: 10, add: false, pulse: 0.1, back: 1.2 },
+             { map: 'rays', color: 0xffffff, op: 0.9, size: 21, add: true, spin: 0.35, back: 1.3 }, { map: 'rays2', color: 0xfde68a, op: 0.85, size: 15.5, add: true, spin: -0.55, back: 1.3 },
              { map: 'ring', color: 'rainbow', op: 0.85, size: 9, add: true, spin: 0.6, back: 1.1, hue: 0 }],
     dots: [{ n: [28, 44], map: 'glow', cols: 'rainbow', op: 0.85, size: 0.6, add: true, rr: [0.7, 1.8], rise: 0.65, life: [1.4, 2.6] },
            { n: [20, 30], map: 'star', cols: 'rainbow', op: 1, size: 0.32, add: true, rr: [0.8, 2.0], rise: 0.9, life: [1.0, 2.0] }],
@@ -4348,14 +4348,14 @@ function updateGradeFx(dt, cam) {                                    // 매 프�
     o.obj.getWorldPosition(_gv); const ra = Math.max(GRADE_RA_MIN[fx.kind], o.rad()), cx = _gv.x, cz = _gv.z, cy = Math.max(0, _gv.y) + ra * 1.15;
     let dx = cam.x - cx, dy = cam.y - cy, dz = cam.z - cz; const dist = Math.hypot(dx, dy, dz) || 1; dx /= dist; dy /= dist; dz /= dist;
     const far = dist > 220; if (far !== fx.far) { fx.far = far; fx.node.visible = !far; } if (far) continue;                     // 아주 멀리 있는 건 안 그림
-    fx.t += dt; const t = fx.t, D = fx.def;
+    fx.t += dt; const t = fx.t, D = fx.def, nf = Math.min(1, Math.max(0.15, (dist - 2.5) / 9));      // nf: 카메라가 2.5m 안이면 15%, 11.5m 이상이면 100% — 코앞에서 화면을 덮지 않게 흐리게
     const col = (c, hue) => c === 'rainbow' ? gfxHex(((t * 0.25) + (hue || 0)) % 1, 1, 0.6) : c;
-    for (const b of fx.beams) { const B = b.B, h = B.h * ra, m = b.mesh; m.position.set(cx, h / 2, cz); m.scale.set(ra * (0.8 + 0.06 * Math.sin(t * 2 + b.ph)), h, ra * (0.8 + 0.06 * Math.sin(t * 2 + b.ph))); m.rotation.y = t * 0.3; m.material.opacity = B.op * (0.85 + 0.15 * Math.sin(t * 2.6 + b.ph)); m.material.color.setHex(col(B.color, 0)); }
+    for (const b of fx.beams) { const B = b.B, h = B.h * ra, m = b.mesh; m.position.set(cx, h / 2, cz); m.scale.set(ra * (0.8 + 0.06 * Math.sin(t * 2 + b.ph)), h, ra * (0.8 + 0.06 * Math.sin(t * 2 + b.ph))); m.rotation.y = t * 0.3; m.material.opacity = B.op * nf * (0.85 + 0.15 * Math.sin(t * 2.6 + b.ph)); m.material.color.setHex(col(B.color, 0)); }
     fx.rings.forEach((rg, k) => { const R = rg.R, m = rg.mesh, sz = 2 * R.r * ra * (1 + 0.03 * Math.sin(t * 2 + k)); m.position.set(cx, 0.05 + k * 0.015, cz); m.scale.set(sz, sz, 1); m.rotation.z = R.spin * t; m.material.opacity = R.op * (0.85 + 0.15 * Math.sin(t * 3 + k)); m.material.color.setHex(col(R.color, R.hue)); });
     for (const ly of fx.layers) {
       const L = ly.L, sz = L.size * ra * (1 + (L.pulse || 0) * Math.sin(t * 2.2 + ly.ph)), sp = ly.sp;
       sp.position.set(cx - dx * L.back * ra, cy - dy * L.back * ra, cz - dz * L.back * ra);          // 카메라 쪽으로 덮지 않고 몸 뒤에서 퍼지게
-      sp.scale.set(sz, sz, 1); sp.material.rotation = (L.spin || 0) * t; sp.material.opacity = L.op * (0.88 + 0.12 * Math.sin(t * 3 + ly.ph)); sp.material.color.setHex(col(L.color, L.hue));
+      sp.scale.set(sz, sz, 1); sp.material.rotation = (L.spin || 0) * t; sp.material.opacity = L.op * nf * (0.88 + 0.12 * Math.sin(t * 3 + ly.ph)); sp.material.color.setHex(col(L.color, L.hue));
     }
     for (const d of fx.dots) {
       d.age += dt;
@@ -6724,12 +6724,15 @@ function createBackground(scene) {
       swingT = BAT_SWING; swingCD = BAT_CD; swingN++; _hitPending = true; return true;
     }
     function batTargets() {                                     // 휘두르는 순간 앞쪽 부채꼴 안에 있는 다른 사람(안전구역 안은 제외)
+      // 상대 화면 위치는 네트워크·부드럽게 따라가기 때문에 실제보다 뒤처져 보임(달리기 초당 25m라 0.2초만 늦어도 5m). 그래서 '보이는 자리'와 '소식 기준 어림한 지금 자리' 중 하나라도 사거리 안이면 맞은 것으로 쳐 줌
       const out = [], fx = Math.sin(charYaw), fz = Math.cos(charYaw);
       for (const R of remotes.values()) {
         if (R.z >= SAFE_LINE_Z - 0.5) continue;
-        const dx = R.x - charPos.x, dz = R.z - charPos.z, d = Math.hypot(dx, dz);
-        if (d > BAT_RANGE || d < 1e-6 || (dx * fx + dz * fz) / d < BAT_CONE) continue;
-        out.push(R);
+        const cands = [[R.x, R.z]];
+        if (R.lastUpd !== undefined && R.mv > 0) { const lead = Math.min(0.35, (R.lat || 0) / 1000 + 0.12); cands.push([R.lastX + (R.vx || 0) * lead, R.lastZ + (R.vz || 0) * lead]); }
+        let hit = false;
+        for (const [x, z] of cands) { const dx = x - charPos.x, dz = z - charPos.z, d = Math.hypot(dx, dz); if (d > BAT_RANGE || d < 1e-6 || (dx * fx + dz * fz) / d < BAT_CONE) continue; hit = true; break; }
+        if (hit) out.push(R);
       }
       return out;
     }
@@ -6740,11 +6743,13 @@ function createBackground(scene) {
     function handleHit(key, v) {                                // 서버에서 온 이벤트: 내가 맞았거나(bat) / 내 함정에 누가 걸렸음(trapped)
       if (!v || seenHits.has(key)) return; seenHits.add(key); if (seenHits.size > 200) seenHits.clear();
       try { NET.db.ref('hits/' + NET.uid + '/' + key).remove(); } catch (_) {}
-      if (nowMs() - (v.t || 0) > 8000) return;                  // 너무 오래된 건 무시
+      if (nowMs() - (v.t || 0) > 15000) { pvpLog(`무시: 너무 늦게 도착(${Math.round((nowMs() - (v.t || 0)) / 1000)}초)`); return; }                  // 너무 오래된 건 무시
       if (v.kind === 'trapped') { toast(`🪤 ${v.nick || '누군가'} 걸림!`, 'good', 2500); return; }
       if (v.kind !== 'bat') return;
       if (!inField() || onTm || wardrobe.open || hitInvuln > 0) return;                                     // 안전구역 안이면 안 맞음
-      if (Math.hypot((v.x || 0) - charPos.x, (v.z || 0) - charPos.z) > BAT_RANGE + 4) return;               // 너무 멀면(지연·조작) 무효
+      { let dm = Math.hypot((v.x || 0) - charPos.x, (v.z || 0) - charPos.z); for (const h of posHist) dm = Math.min(dm, Math.hypot((v.x || 0) - h.x, (v.z || 0) - h.z));      // 때린 순간 상대 화면에서 내가 있던 자리는 최근 1.5초 안의 내 위치들 중 하나(빠르게 달리면 지금 위치는 이미 멀리 가 있음)
+        if (dm > BAT_RANGE + 2.5) { pvpLog(`무시: 너무 멀어요(${dm.toFixed(1)}m)`); return; }
+        pvpLog(`방망이 맞음(${dm.toFixed(1)}m)${carriedEgg ? ' → 알 떨어짐' : ''}`); }
       let dx = charPos.x - v.x, dz = charPos.z - v.z; const d = Math.hypot(dx, dz) || 1; dx /= d; dz /= d;   // 때린 사람에게서 멀어지는 방향
       if (carriedEgg) dropCarriedAsLoot();
       startKnock(dx, dz); hitInvuln = HIT_INVULN;
@@ -6761,7 +6766,9 @@ function createBackground(scene) {
     }
     function spawnLoot(id, rec) {
       if (!rec || lootEggs.has(id)) return; const c = bg.creatures.find(k => k.id === rec.cid); if (!c || !c.makeEgg) return;
-      if (nowMs() - (rec.t || 0) > LOOT_LIFE * 1000) return;
+      const age0 = nowMs() - (rec.t || 0);
+      if (age0 > 120000) { if (NET.online && rec.by === NET.uid) { try { NET.db.ref('loot/' + id).remove(); } catch (_) {} } return; }      // 2분 넘은 찌꺼기 기록은 버림
+      if (age0 > LOOT_LIFE * 1000) rec = Object.assign({}, rec, { t: nowMs() - 5000 });      // 30초~2분이면 기기 시계가 어긋난 것으로 보고, 도착한 지 5초 된 것으로 다시 잡음(안 그러면 태어나자마자 사라져서 훔칠 수 없음)
       const g = new THREE.Group(), parts = c.makeEgg(g), s0 = Number(rec.s0) || 1;
       g.scale.setScalar(s0); g.position.set(rec.x, 0, rec.z); g.rotation.y = Math.random() * 6.28; scene.add(g);
       const le = { group: g, parts, scale: s0, shell: parts.shell, radius: 0.64 * parts.shell * s0, baseY: rec.cid === 'archangel' ? 0.38 : 0.18, phase: Math.random() * 6.28, home: null, loot: id, grade: clampGrade(rec.gr) };
@@ -6834,7 +6841,10 @@ function createBackground(scene) {
       for (const [id, l] of [...lootEggs]) { removeLoot(id); if (NET.online && l.rec.by === NET.uid) { try { NET.db.ref('loot/' + id).remove(); } catch (_) {} } }
       for (const [id, t] of [...trapsMap]) { removeTrap(id); if (NET.online && t.rec.owner === NET.uid) { try { NET.db.ref('traps/' + id).remove(); } catch (_) {} } }
     }
+    const posHist = [], PVP_LOG = [];                           // posHist: 최근 2초 내 위치(맞은 사람이 '그때 있던 자리'를 확인용) / PVP_LOG: 방망이·알 처리 결과(?debug=1에 표시)
+    function pvpLog(msg) { PVP_LOG.push({ t: performance.now(), msg }); if (PVP_LOG.length > 3) PVP_LOG.shift(); }
     function updatePvp(dt) {                                    // 매 프레임: 쿨타임·휘두르는 순간 판정·정지 시간·떨어진 알/함정
+      { const nowP = performance.now(); posHist.push({ t: nowP, x: charPos.x, z: charPos.z }); while (posHist.length && nowP - posHist[0].t > 1500) posHist.shift(); }
       swingCD = Math.max(0, swingCD - dt); trapCD = Math.max(0, trapCD - dt); hitInvuln = Math.max(0, hitInvuln - dt);
       if (swingT > 0) { swingT = Math.max(0, swingT - dt); if (_hitPending && swingT <= BAT_SWING - BAT_HIT_AT) { _hitPending = false; for (const R of batTargets()) sendHit(R); } }
       if (stunT > 0) stunT = Math.max(0, stunT - dt);
@@ -7477,8 +7487,9 @@ function createBackground(scene) {
         if (plotSigns[i]) { scene.remove(plotSigns[i].spr); plotSigns[i] = null; }
         if (nick) { const w = plotFrame(i).toWorld(0, -1.0), spr = makeLabel(nick, i === myPlotIdx ? '#fde68a' : '#ffffff'); spr.position.set(w.x, 2.1, w.z); spr.scale.set(3.2, 0.8, 1); scene.add(spr); plotSigns[i] = { nick, spr }; }
       });
-      if (NET.online && !NET.failed) netInfoEl.firstChild.textContent = `👤 ${NET.nick} · 접속 ${remotes.size + 1}명 `;
+      if (NET.online && !NET.failed) setNetCount();
     }
+    function setNetCount() { if (NET.online && !NET.failed) { let n = 1; for (const R of remotes.values()) if (!R.stale && R.nick) n++; try { netInfoEl.firstChild.textContent = `👤 ${NET.nick} · 접속 ${n}명 `; } catch (_) {} } }      // 소식이 20초 넘게 끊긴 유령·이름 없는 기록은 세지 않음
 
     // ---- 다른 플레이어 ----
     function makeRemote(uid, v) {
@@ -7487,8 +7498,14 @@ function createBackground(scene) {
       const R = { uid, holder: H.holder, rig: H.rig, st: H.st, label, lookStr: v.look || '', nick: v.nick, plot: v.plot, x: v.x, z: v.z, y: v.y || 0, yaw: v.yaw || 0, tx: v.x, tz: v.z, ty: v.y || 0, tyaw: v.yaw || 0,
         mv: 0, cc: 0, cs: 0, tool: 0, sw: 0, swingT: 0, trail: 0, trailObj: null, eggObj: null, saveRef: null, saveCb: null, save: null, saveDirty: false, builtPlot: null, eggs: new Map(), pets: new Map(), savedOnce: false };
       H.holder.position.set(R.x, R.y, R.z); H.holder.rotation.y = R.yaw; remotes.set(uid, R);
-      R.saveRef = NET.db.ref('saves/' + uid); R.saveCb = (snap) => { R.save = snap.val(); R.saveDirty = true; }; R.saveRef.on('value', R.saveCb);
+      R.saveRef = NET.db.ref('saves/' + uid); R.saveCb = (snap) => { R.save = snap.val(); R.saveDirty = true; healRemoteInfo(R); }; R.saveRef.on('value', R.saveCb);
       return R;
+    }
+    function healRemoteInfo(R) {                                // 이름·칸이 빠진 반쪽 기록(끊겼다 돌아온 뒤 등)이면, 그 사람의 저장 데이터에 있는 이름·칸으로 채움 → 러닝머신·펫·표지판이 다시 보임
+      const sv = R.save; if (!sv) return; let changed = false;
+      if (!Number.isInteger(R.plot) && Number.isInteger(sv.plot)) { R.plot = sv.plot; changed = true; }
+      if (!R.nick && typeof sv.nick === 'string' && sv.nick) { R.nick = sv.nick; try { R.holder.remove(R.label); } catch (_) {} R.label = makeLabel(sv.nick); R.label.position.set(0, 2.2, 0); R.label.scale.set(3.2, 0.8, 1); R.holder.add(R.label); changed = true; }
+      if (changed) { R.saveDirty = true; refreshSigns(); }
     }
     function setRemoteCarry(R, cid, scale) {                    // 다른 사람이 들고 있는 알(머리 위)
       if (R.cc === (cid || 0) && R.cs === (scale || 0)) return;
@@ -7506,7 +7523,10 @@ function createBackground(scene) {
     }
     function onRemote(uid, v) {
       if (uid === NET.uid || !v) return;
-      const existing = remotes.get(uid), R = existing || makeRemote(uid, v), plotChanged = R.plot !== v.plot, nickChanged = R.nick !== v.nick;
+      const existing = remotes.get(uid), R = existing || makeRemote(uid, v);
+      const nickIn = (typeof v.nick === 'string' && v.nick) ? v.nick : (R.nick || (R.save && R.save.nick) || undefined);       // 이름·칸이 빠진 반쪽 소식이 와도 알던 값(없으면 그 사람의 저장 데이터 값)을 유지
+      const plotIn = Number.isInteger(v.plot) ? v.plot : (Number.isInteger(R.plot) ? R.plot : (R.save && Number.isInteger(R.save.plot) ? R.save.plot : undefined));
+      const plotChanged = R.plot !== plotIn, nickChanged = R.nick !== nickIn;
       const nowP = performance.now();
       if (existing && R.lastUpd !== undefined) {                 // 위치가 이어서 오는 중이면 속도를 어림해 둠(다음 소식이 올 때까지 그 방향으로 조금 더 가게 해서 끊겨 보이지 않게)
         const dtm = nowP - R.lastUpd;
@@ -7517,10 +7537,11 @@ function createBackground(scene) {
         }
         else { R.vx = 0; R.vz = 0; }
       }
+      if (v.ts || v.hb) R.beat = true;                            // 5초마다 신호를 보내는 새 버전 사람인지(예전 버전은 가만히 있으면 아무것도 안 보내서, 소식이 없다고 숨기면 안 됨)
       R.lastUpd = nowP; R.lastX = v.x; R.lastZ = v.z; R.updN = (R.updN || 0) + 1;
       if (v.ts) { const lat = Math.max(0, Date.now() + (NET.offset || 0) - v.ts); R.lat = R.lat === undefined ? lat : R.lat * 0.7 + lat * 0.3; }      // 상대가 보낸 시각과 지금의 차이 = 이 소식이 얼마나 늦게 도착했는지
-      R.tx = v.x; R.tz = v.z; R.ty = v.y || 0; R.tyaw = v.yaw || 0; R.mv = v.mv || 0; R.plot = v.plot;
-      if (nickChanged) { R.nick = v.nick; R.holder.remove(R.label); R.label = makeLabel(v.nick || '?'); R.label.position.set(0, 2.2, 0); R.label.scale.set(3.2, 0.8, 1); R.holder.add(R.label); }
+      R.tx = v.x; R.tz = v.z; R.ty = v.y || 0; R.tyaw = v.yaw || 0; R.mv = v.mv || 0; R.plot = plotIn;
+      if (nickChanged) { R.nick = nickIn; R.holder.remove(R.label); R.label = makeLabel(nickIn || '?'); R.label.position.set(0, 2.2, 0); R.label.scale.set(3.2, 0.8, 1); R.holder.add(R.label); }
       if ((v.look || '') !== R.lookStr) setRemoteLook(R, v.look || '');
       setRemoteCarry(R, v.cc, v.cs);
       R.trail = Math.max(0, Math.min(TRAIL_MAX, Math.floor(Number(v.tr)) || 0));
@@ -7571,8 +7592,8 @@ function createBackground(scene) {
       const now = nowMs(), t = performance.now() / 1000, k = 1 - Math.exp(-12 * dt); _petBudget = 1;
       const nowP = performance.now();
       for (const R of remotes.values()) {
-        const stale = R.lastUpd !== undefined && nowP - R.lastUpd > 20000;         // 20초 넘게 소식이 없으면(폰이 꺼졌거나 연결이 끊김) 가만히 서 있는 유령처럼 보이지 않게 숨김 — 소식이 오면 다시 나타남
-        if (stale !== !!R.stale) { R.stale = stale; R.holder.visible = !stale; }
+        const stale = R.lastUpd !== undefined && nowP - R.lastUpd > 20000 && (R.beat || !R.nick);         // 20초 넘게 소식이 없으면 숨김(폰이 꺼졌거나 연결이 끊긴 유령) — 새 버전 사람(5초마다 신호)과 이름 없는 찌꺼기 기록에만 적용. 예전 버전 사람은 가만히 있으면 원래 소식이 없으니 숨기지 않음. 소식이 오면 다시 나타남
+        if (stale !== !!R.stale) { R.stale = stale; R.holder.visible = !stale; setNetCount(); }
         if (R.mv > 0 && R.lastUpd !== undefined) { const age = Math.min(0.1, (nowP - R.lastUpd) / 1000); R.tx = R.lastX + (R.vx || 0) * age; R.tz = R.lastZ + (R.vz || 0) * age; }          // 다음 소식이 오기 전까지 가던 방향으로 최대 0.1초 더 감(빠르게 달려서 멈출 때 너무 앞서 갔다 되돌아오지 않게)
         R.x += (R.tx - R.x) * k; R.z += (R.tz - R.z) * k; R.y += (R.ty - R.y) * k; R.yaw += angDiff(R.yaw, R.tyaw) * k;
         R.holder.position.set(R.x, R.y, R.z); R.holder.rotation.y = R.yaw;
@@ -7602,7 +7623,7 @@ function createBackground(scene) {
       const stuck = (NET.inflight || 0) >= 3 && now - (NET.inflightAt || 0) < 3000;        // 서버 응답을 못 받은 전송이 3개 밀려 있으면 더 쌓지 않음(쌓이면 한참 뒤에 옛 위치가 차례로 재생됨)
       if (((str !== _lastStr && now - _lastSent >= 66) || beat) && !stuck) {
         const diff = {}; for (const k in st) if (beat || st[k] !== _sentFields[k]) diff[k] = st[k];        // 바뀐 값만 보냄(모습 같은 긴 값을 매번 안 보냄). 5초 신호 때는 전부
-        if (beat) diff.hb = Math.floor(now / 1000) % 1000000;      // 가만히 있어도 5초마다 바뀌는 숫자(서버는 값이 같으면 변화 신호를 안 보내서, 안 그러면 '살아있음'이 전달되지 않음)
+        if (beat) { diff.nick = NET.nick; diff.plot = myPlotIdx; diff.hb = Math.floor(now / 1000) % 1000000; }      // 5초 신호에는 이름·칸도 같이 보냄(서버가 기록을 지웠다 반쪽만 다시 생겨도 5초 안에 스스로 복구)      // 가만히 있어도 5초마다 바뀌는 숫자(서버는 값이 같으면 변화 신호를 안 보내서, 안 그러면 '살아있음'이 전달되지 않음)
         diff.ts = Math.round(Date.now() + (NET.offset || 0));      // 보낸 시각(서버 시각 기준): 받는 쪽이 지연이 얼마나 되는지 잴 수 있게
         NET.inflight = (NET.inflight || 0) + 1; NET.inflightAt = now;
         const pr = NET.meRef.update(diff);
@@ -8077,25 +8098,52 @@ function createBackground(scene) {
     const targetSkyColor = new THREE.Color(0x9fd8ef);
 
     // 화질 단계: 한동안 느리면 한 단계씩 낮추고(해상도 → 입자·불빛 끄기 → 구역 장식 줄이기 → 장식 끄기), 한참 부드러우면 다시 올림. 느린 폰에서도 게임이 슬로모션이 되지 않게.
-    const QUALITY = [{ res: 1.5, fx: 2 }, { res: 1.25, fx: 2 }, { res: 1.0, fx: 2 }, { res: 0.8, fx: 2 }, { res: 0.8, fx: 1 }, { res: 0.65, fx: 1 }, { res: 0.65, fx: 0 }];      // fx 2 = 전부 · 1 = 입자·불빛 끄고 장식은 110m 안만 · 0 = 구역 장식 끔
+    const QUALITY = [{ res: 1.5, sh: 1, fx: 2 }, { res: 1.25, sh: 1, fx: 2 }, { res: 1.0, sh: 1, fx: 2 }, { res: 1.0, sh: 0, fx: 2 }, { res: 0.8, sh: 0, fx: 2 }, { res: 0.8, sh: 0, fx: 1 }, { res: 0.65, sh: 0, fx: 0 }];      // sh 1 = 그림자 켬 · 0 = 끔 / fx 2 = 전부 · 1 = 입자·불빛 끄고 장식은 110m 안만 · 0 = 구역 장식 끔
     const _dpr = Math.min(window.devicePixelRatio || 1, 2), qRes = (lv) => Math.min(_dpr, QUALITY[lv].res);
-    const _res = { level: 0, start: 0, slow: 0, fast: 0, hold: 0 };
+    const _res = { level: 0, start: 0, slow: 0, fast: 0, hold: 0, longRun: 0, born: performance.now() };
     _res.start = _res.level = Math.max(0, QUALITY.findIndex(q => q.res <= Math.min(_dpr, 1.5)));
     function setRes(v) { try { renderer.setPixelRatio(v); renderer.setSize(innerWidth, innerHeight); } catch (_) {} }
-    function applyQuality() { setRes(qRes(_res.level)); ZD_FX = QUALITY[_res.level].fx; }
+    function applyQuality() { setRes(qRes(_res.level)); ZD_FX = QUALITY[_res.level].fx; try { bg.lights.sun.castShadow = QUALITY[_res.level].sh === 1; } catch (_) {} }
     function stepQuality(dir) {                                      // dir +1 = 낮춤, -1 = 올림. 실제로 달라지는 단계까지 건너뜀
-      let j = _res.level + dir; const same = (x) => qRes(x) === qRes(_res.level) && QUALITY[x].fx === QUALITY[_res.level].fx;
+      let j = _res.level + dir; const same = (x) => qRes(x) === qRes(_res.level) && QUALITY[x].fx === QUALITY[_res.level].fx && QUALITY[x].sh === QUALITY[_res.level].sh;
       while (j >= _res.start && j < QUALITY.length && same(j)) j += dir;
       if (j < _res.start || j >= QUALITY.length) return false; _res.level = j; applyQuality(); return true;
     }
-    function adaptResolution(raw) {                                  // 매 프레임: 1초 넘게 느리면 낮추고, 10초 넘게 부드러우면(최근에 낮춘 게 아니면) 올림
-      if (!(raw > 0) || raw > 0.25) return;                          // 탭 전환·로딩 같은 긴 멈춤은 무시
+    function adaptResolution(raw) {                                  // 매 프레임: 한동안 느리면(약 22프레임 아래로 1.5초) 낮추고, 10초 넘게 부드러우면(최근에 낮춘 게 아니면) 올림
+      if (!(raw > 0)) return;
+      if (typeof document !== 'undefined' && document.hidden) { _res.longRun = 0; return; }                     // 다른 탭에 가 있는 동안은 무시
+      if (performance.now() - _res.born < 3000) return;               // 시작 직후 3초(불러오기·준비)는 무시
+      if (raw > 0.25) { _res.longRun++; if (_res.longRun < 3) return; raw = Math.min(raw, 1.5); }      // 0.25초 넘는 프레임이 3번 연속이면 '진짜 느림'(한 번뿐이면 탭 전환 같은 멈춤으로 보고 무시)
+      else _res.longRun = 0;
       if (_res.hold > 0) _res.hold -= raw;
-      if (raw > 0.028) { _res.slow += raw; _res.fast = 0; } else { _res.slow = Math.max(0, _res.slow - raw * 0.5); _res.fast = raw < 0.0195 ? _res.fast + raw : 0; }
-      if (_res.slow > 1.0) { _res.slow = 0; if (stepQuality(1)) _res.hold = 45; }
+      if (raw > 0.045) { _res.slow += raw; _res.fast = 0; } else { _res.slow = Math.max(0, _res.slow - raw * 0.5); _res.fast = raw < 0.026 ? _res.fast + raw : 0; }
+      const very = raw > 0.5;                                          // 한 프레임이 0.5초 넘는 아주 느린 기기는 빨리, 두 단계씩
+      if (_res.slow > 1.5 || (very && _res.slow > 1.0)) { _res.slow = 0; const moved = stepQuality(1); if (moved && very) stepQuality(1); if (moved) _res.hold = 45; }
       else if (_res.fast > 10 && _res.hold <= 0) { _res.fast = 0; if (stepQuality(-1)) _res.hold = 20; }
     }
-    if (typeof renderer.getPixelRatio !== 'function' || qRes(_res.level) !== renderer.getPixelRatio()) applyQuality(); else ZD_FX = QUALITY[_res.level].fx;
+    if (typeof renderer.getPixelRatio !== 'function' || qRes(_res.level) !== renderer.getPixelRatio()) applyQuality(); else { ZD_FX = QUALITY[_res.level].fx; try { bg.lights.sun.castShadow = QUALITY[_res.level].sh === 1; } catch (_) {} }
+    // ---- 멀리 있는 것 숨기기: 안개가 210m부터 완전히 덮어서 그 너머는 안 보이는데도, 생물 8마리(메시 약 2,600개·그림자 2,300개)가 항상 그려지고 있었음 → 거리로 숨겨서 그리기·그림자 계산을 크게 줄임 ----
+    const LOD_SHOW = 200, LOD_HIDE = 228, _lodV = new THREE.Vector3(); let _lodT = 1, LOD_STATIC = null;
+    function lodBuildStatic() {                                      // 처음 한 번: 안전구역 쪽(z>450)에 있는 큰 구조물(울타리·문 같은 메시 30개 이상 덩어리)을 찾아 둠
+      LOD_STATIC = []; const skip = new Set(); for (const c of bg.creatures) skip.add(c.root); for (const Z of ZONE_DECOR) skip.add(Z.group); if (typeof character !== 'undefined' && character) skip.add(character);
+      for (const ch of scene.children) {
+        if (skip.has(ch) || ch.isLight || ch.isCamera || ch.isSprite || (ch.userData && ch.userData.noLod)) continue;
+        let m = 0, sx = 0, sz = 0; ch.traverse(o => { if (o.isMesh) { m++; o.getWorldPosition(_lodV); sx += _lodV.x; sz += _lodV.z; } }); if (m < 30) continue;
+        const cx = sx / m, cz = sz / m; let r = 0; ch.traverse(o => { if (o.isMesh) { o.getWorldPosition(_lodV); r = Math.max(r, Math.hypot(_lodV.x - cx, _lodV.z - cz)); } });
+        if (cz > 450) LOD_STATIC.push({ obj: ch, x: cx, z: cz, r: r + 15 });
+      }
+    }
+    function updateLod(dt) {
+      _lodT += dt; if (_lodT < 0.2) return; _lodT = 0;
+      if (!LOD_STATIC) lodBuildStatic();
+      const px = charPos.x, pz = charPos.z;
+      for (const c of bg.creatures) { const d = Math.hypot(c.root.position.x - px, c.root.position.z - pz), was = c.root.visible, vis = was ? d < LOD_HIDE : d < LOD_SHOW; if (vis !== was) c.root.visible = vis; }
+      for (const c of bg.creatures) for (const e of c.eggs) {         // 둥지·내 칸의 알(들고 있는 알은 건드리지 않음)
+        const g = e.group; if (!g || (g.parent !== scene && g.parent !== c.root)) continue;
+        g.getWorldPosition(_lodV); const d = Math.hypot(_lodV.x - px, _lodV.z - pz), was = g.visible, vis = was ? d < LOD_HIDE : d < LOD_SHOW; if (vis !== was) g.visible = vis;
+      }
+      for (const S of LOD_STATIC) { const d = Math.hypot(S.x - px, S.z - pz) - S.r, was = S.obj.visible, vis = was ? d < LOD_HIDE - LOD_SHOW + LOD_SHOW : d < LOD_SHOW; if (vis !== was) S.obj.visible = vis; }
+    }
     function prewarmDecor() {                                        // 처음 한 번: 구역 장식·입자·등급 효과의 화면 처리 준비(셰이더·버퍼·그림)를 미리 해 둬서, 구역에 들어설 때 멈칫하지 않게
       try {
         const keep = ZONE_DECOR.map(Z => Z.group.visible), tmp = new THREE.Group(); scene.add(tmp);
@@ -8117,7 +8165,8 @@ function createBackground(scene) {
       if (_dbgT >= 0.5) {
         const fps = Math.round(_dbgN / _dbgT), sent = Math.round(((NET.sent || 0) - _dbgSent) / _dbgT), nowP = performance.now();
         const rem = [...remotes.values()].map(R => (R.nick || '?') + ' ' + (R.lastUpd === undefined ? '-' : ((nowP - R.lastUpd) / 1000).toFixed(1) + '초 전') + (R.lat !== undefined ? ' · 지연 ' + (R.lat / 1000).toFixed(2) + '초' : '') + (R.stale ? '(끊김)' : '')).join('  |  ');
-        _dbgEl.textContent = `FPS ${fps} · 화질 ${_res.level} (${qRes(_res.level)}x) · 위치 보냄 ${sent}/초 · 서버 응답 ${NET.rtt === undefined ? '-' : Math.round(NET.rtt) + 'ms'} (대기 ${NET.inflight || 0}) · ${NET.online ? '온라인' : '오프라인'}` + (rem ? `\n받은 소식: ${rem}` : '');
+        const pv = PVP_LOG.filter(x => nowP - x.t < 15000).map(x => x.msg).join(' | ');
+        _dbgEl.textContent = `FPS ${fps} · 화질 ${_res.level} (${qRes(_res.level)}x · 그림자 ${QUALITY[_res.level].sh ? '켬' : '끔'}) · 위치 보냄 ${sent}/초 · 서버 응답 ${NET.rtt === undefined ? '-' : Math.round(NET.rtt) + 'ms'} (대기 ${NET.inflight || 0}) · ${NET.online ? '온라인' : '오프라인'}` + (rem ? `\n받은 소식: ${rem}` : '') + (pv ? `\n최근 방망이·알: ${pv}` : '');
         _dbgT = 0; _dbgN = 0; _dbgSent = NET.sent || 0;
       }
     }
@@ -8187,6 +8236,7 @@ function createBackground(scene) {
       updateMyTrail(dt);                                       // 트레일(걸을 때 뒤에 따라오는 빛)
       updateGradeFx(dt, camera.position);                      // 등급 알·펫의 빛줄기·아우라
       updateZoneDecor(dt, camera.position);                    // 구역 장식·흩날리는 입자
+      updateLod(dt);                                           // 멀리 있는 생물·알·큰 구조물은 안 그림
       updateEggGame(dt);       // 안전선 확인 + 깨어난 동물들 움직임
       updateDanger(dt);        // 쫓기는 동안 화면 가장자리가 은은하게 붉어짐
       updateMoney(dt);         // 돈 표시 + 1분마다 자동 저장·순위 갱신
